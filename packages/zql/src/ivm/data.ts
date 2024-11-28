@@ -14,7 +14,7 @@ import type {Stream} from './stream.js';
  */
 export type Node = {
   row: Row;
-  relationships: Record<string, Stream<Node>>;
+  relationships: Record<string, () => Stream<Node>>;
 };
 
 /**

@@ -27,7 +27,7 @@ export function applyChange(
           change.node.relationships,
         )) {
           const childSchema = must(schema.relationships[relationship]);
-          for (const node of children) {
+          for (const node of children()) {
             applyChange(
               parentEntry,
               {type: change.type, node},
@@ -94,7 +94,7 @@ export function applyChange(
 
         const newView = childFormat.singular ? undefined : ([] as EntryList);
         newEntry[relationship] = newView;
-        for (const node of children) {
+        for (const node of children()) {
           applyChange(
             newEntry,
             {type: 'add', node},
@@ -247,7 +247,7 @@ function makeEntryPreserveRelationships(
 
 function drainStreams(node: Node) {
   for (const stream of Object.values(node.relationships)) {
-    for (const node of stream) {
+    for (const node of stream()) {
       drainStreams(node);
     }
   }

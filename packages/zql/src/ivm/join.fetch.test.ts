@@ -5,9 +5,8 @@ import type {CompoundKey, Ordering} from '../../../zero-protocol/src/ast.js';
 import type {Row} from '../../../zero-protocol/src/data.js';
 import type {PrimaryKey} from '../../../zero-protocol/src/primary-key.js';
 import type {SchemaValue} from '../../../zero-schema/src/table-schema.js';
-import {Catch} from './catch.js';
+import {Catch, type CaughtNode} from './catch.js';
 import {SetOfConstraint} from './constraint.js';
-import type {Node} from './data.js';
 import {Join, makeStorageKey, makeStorageKeyPrefix} from './join.js';
 import {MemoryStorage} from './memory-storage.js';
 import type {SourceSchema} from './schema.js';
@@ -2272,7 +2271,7 @@ type FetchTest = {
 
 type FetchTestResults = {
   fetchMessages: SnitchMessage[];
-  hydrate: Node[];
+  hydrate: CaughtNode[];
   storage: Record<string, JSONValue>[];
 };
 

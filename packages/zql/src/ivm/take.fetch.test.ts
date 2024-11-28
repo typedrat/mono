@@ -5,8 +5,7 @@ import type {Ordering} from '../../../zero-protocol/src/ast.js';
 import type {Row, Value} from '../../../zero-protocol/src/data.js';
 import type {PrimaryKey} from '../../../zero-protocol/src/primary-key.js';
 import type {SchemaValue} from '../../../zero-schema/src/table-schema.js';
-import {Catch} from './catch.js';
-import type {Node} from './data.js';
+import {Catch, type CaughtNode} from './catch.js';
 import {MemoryStorage} from './memory-storage.js';
 import {Snitch, type SnitchMessage} from './snitch.js';
 import {Take, type PartitionKey} from './take.js';
@@ -1566,5 +1565,5 @@ type PartitionTestResults = {
     cleanup: SnitchMessage[];
   };
   storage: Record<string, JSONValue>;
-  hydrate: Node[];
+  hydrate: CaughtNode[];
 };

@@ -248,7 +248,7 @@ export class Join implements Input {
 
   #processParentNode(
     parentNodeRow: Row,
-    parentNodeRelations: Record<string, Stream<Node>>,
+    parentNodeRelations: Record<string, () => Stream<Node>>,
     mode: ProcessParentMode,
   ): Node {
     // This storage key tracks the primary keys seen for each unique
@@ -270,14 +270,15 @@ export class Join implements Input {
       method = second ? 'fetch' : 'cleanup';
     }
 
-    const childStream = this.#child[method]({
-      constraint: Object.fromEntries(
-        this.#childKey.map((key, i) => [
-          key,
-          parentNodeRow[this.#parentKey[i]],
-        ]),
-      ),
-    });
+    const childStream = () =>
+      this.#child[method]({
+        constraint: Object.fromEntries(
+          this.#childKey.map((key, i) => [
+            key,
+            parentNodeRow[this.#parentKey[i]],
+          ]),
+        ),
+      });
 
     if (mode === 'fetch') {
       this.#storage.set(storageKey, true);

@@ -1,8 +1,26 @@
 import {unreachable} from '../../../shared/src/asserts.js';
 import type {Row} from '../../../zero-protocol/src/data.js';
-import type {AddChange, Change, RemoveChange} from './change.js';
+import type {Change} from './change.js';
 import type {Node} from './data.js';
 import type {FetchRequest, Input, Output} from './operator.js';
+
+export type AddChange = {
+  type: 'add';
+  node: CaughtNode;
+};
+
+/**
+ * Represents a node (and all its children) getting removed from the result.
+ */
+export type RemoveChange = {
+  type: 'remove';
+  node: CaughtNode;
+};
+
+export type CaughtNode = {
+  row: Row;
+  relationships: Record<string, CaughtNode[]>;
+};
 
 export type CaughtChildChange = {
   type: 'child';
@@ -86,13 +104,13 @@ export function expandChange(change: Change): CaughtChange {
   }
 }
 
-export function expandNode(node: Node): Node {
+export function expandNode(node: Node): CaughtNode {
   return {
     ...node,
     relationships: Object.fromEntries(
       Object.entries(node.relationships).map(([k, v]) => [
         k,
-        [...v].map(expandNode),
+        [...v()].map(expandNode),
       ]),
     ),
   };

@@ -564,7 +564,7 @@ test('collapse', () => {
         name: 'issue',
       },
       relationships: {
-        labels: [
+        labels: () => [
           {
             row: {
               id: 1,
@@ -573,7 +573,7 @@ test('collapse', () => {
               extra: 'a',
             },
             relationships: {
-              labels: [
+              labels: () => [
                 {
                   row: {
                     id: 1,
@@ -640,7 +640,7 @@ test('collapse', () => {
             extra: 'b',
           },
           relationships: {
-            labels: [
+            labels: () => [
               {
                 row: {
                   id: 2,
@@ -858,7 +858,7 @@ test('collapse-single', () => {
         name: 'issue',
       },
       relationships: {
-        labels: [
+        labels: () => [
           {
             row: {
               id: 1,
@@ -866,7 +866,7 @@ test('collapse-single', () => {
               labelId: 1,
             },
             relationships: {
-              labels: [
+              labels: () => [
                 {
                   row: {
                     id: 1,
@@ -1201,7 +1201,7 @@ test('edit to preserve relationships', () => {
     node: {
       row: {id: 1, title: 'issue1'},
       relationships: {
-        labels: [
+        labels: () => [
           {
             row: {id: 1, name: 'label1'},
             relationships: {},
@@ -1215,7 +1215,7 @@ test('edit to preserve relationships', () => {
     node: {
       row: {id: 2, title: 'issue2'},
       relationships: {
-        labels: [
+        labels: () => [
           {
             row: {id: 2, name: 'label2'},
             relationships: {},

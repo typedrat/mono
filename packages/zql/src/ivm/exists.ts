@@ -217,7 +217,7 @@ export class Exists implements Operator {
       this.#fetchNodeForRow(row).relationships[this.#relationshipName];
     assert(relationship);
     let size = 0;
-    for (const _relatedNode of relationship) {
+    for (const _relatedNode of relationship()) {
       size++;
     }
     this.#setSize(row, size);
