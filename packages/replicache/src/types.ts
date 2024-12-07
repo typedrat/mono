@@ -44,10 +44,11 @@ export type MakeMutator<
   ) => MutatorReturn,
 > = F extends (tx: WriteTransaction, ...args: infer Args) => infer Ret
   ? (...args: Args) => ToPromise<Ret>
-  : never; /**
+  : never;
+
+/**
  * Base options for {@link PullOptions} and {@link PushOptions}
  */
-
 export interface RequestOptions {
   /**
    * When there are pending pull or push requests this is the _minimum_ amount

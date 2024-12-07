@@ -1,12 +1,51 @@
 import type {LogLevel} from '@rocicorp/logger';
-import type {KVStoreProvider} from '../../../replicache/src/mod.js';
+import type {ClientID, KVStoreProvider} from '../../../replicache/src/mod.js';
 import type {MaybePromise} from '../../../shared/src/types.js';
 import type {Schema} from '../../../zero-schema/src/mod.js';
+import type {ReadonlyJSONValue} from '../mod.js';
+
+export type MutatorReturn<T extends ReadonlyJSONValue = ReadonlyJSONValue> =
+  MaybePromise<T | void>; /**
+ * The type used to describe the mutator definitions passed into [Replicache](classes/Replicache)
+ * constructor as part of the {@link ReplicacheOptions}.
+ *
+ * See {@link ReplicacheOptions} {@link ReplicacheOptions.mutators | mutators} for more
+ * info.
+ */
+
+export type MutatorDefs = {
+  [key: string]: (
+    tx: Transaction,
+    // Not sure how to not use any here...
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    args?: any,
+  ) => MutatorReturn;
+};
+
+export type TransactionReason = 'optimistic' | 'rebase';
+
+/**
+ * WriteTransactions are used with *mutators* which are registered using
+ * {@link ReplicacheOptions.mutators} and allows read and write operations on the
+ * database.
+ */
+export interface Transaction {
+  readonly clientID: ClientID;
+  /**
+   * The ID of the mutation that is being applied.
+   */
+  readonly mutationID: number;
+
+  /**
+   * The reason for the transaction.
+   */
+  readonly reason: TransactionReason;
+}
 
 /**
  * Configuration for [[Zero]].
  */
-export interface ZeroOptions<S extends Schema> {
+export interface ZeroOptions<S extends Schema, MD extends MutatorDefs> {
   /**
    * URL to the server. This can be a simple hostname, e.g.
    * - "https://myapp-myteam.zero.ms"
@@ -65,6 +104,74 @@ export interface ZeroOptions<S extends Schema> {
    * to one another.
    */
   schema: S;
+
+  /**
+   * An object used as a map to define the *mutators*. These gets registered at
+   * startup of {@link Replicache}.
+   *
+   * *Mutators* are used to make changes to the data.
+   *
+   * #### Example
+   *
+   * The registered *mutations* are reflected on the
+   * {@link Replicache.mutate | mutate} property of the {@link Replicache} instance.
+   *
+   * ```ts
+   * const rep = new Replicache({
+   *   name: 'user-id',
+   *   mutators: {
+   *     async createTodo(tx: WriteTransaction, args: JSONValue) {
+   *       const key = `/todo/${args.id}`;
+   *       if (await tx.has(key)) {
+   *         throw new Error('Todo already exists');
+   *       }
+   *       await tx.set(key, args);
+   *     },
+   *     async deleteTodo(tx: WriteTransaction, id: number) {
+   *       ...
+   *     },
+   *   },
+   * });
+   * ```
+   *
+   * This will create the function to later use:
+   *
+   * ```ts
+   * await rep.mutate.createTodo({
+   *   id: 1234,
+   *   title: 'Make things work offline',
+   *   complete: true,
+   * });
+   * ```
+   *
+   * #### Replays
+   *
+   * *Mutators* run once when they are initially invoked, but they might also be
+   * *replayed* multiple times during sync. As such *mutators* should not modify
+   * application state directly. Also, it is important that the set of
+   * registered mutator names only grows over time. If Replicache syncs and
+   * needed *mutator* is not registered, it will substitute a no-op mutator, but
+   * this might be a poor user experience.
+   *
+   * #### Server application
+   *
+   * During push, a description of each mutation is sent to the server's [push
+   * endpoint](https://doc.replicache.dev/reference/server-push) where it is applied. Once
+   * the *mutation* has been applied successfully, as indicated by the client
+   * view's
+   * [`lastMutationId`](https://doc.replicache.dev/reference/server-pull#lastmutationid)
+   * field, the local version of the *mutation* is removed. See the [design
+   * doc](https://doc.replicache.dev/design#commits) for additional details on
+   * the sync protocol.
+   *
+   * #### Transactionality
+   *
+   * *Mutators* are atomic: all their changes are applied together, or none are.
+   * Throwing an exception aborts the transaction. Otherwise, it is committed.
+   * As with {@link query} and {@link subscribe} all reads will see a consistent view of
+   * the cache while they run.
+   */
+  mutators?: MD | undefined;
 
   /**
    * `onOnlineChange` is called when the Zero instance's online status changes.
@@ -137,7 +244,8 @@ export interface ZeroOptions<S extends Schema> {
   maxHeaderLength?: number | undefined;
 }
 
-export interface ZeroAdvancedOptions<S extends Schema> extends ZeroOptions<S> {
+export interface ZeroAdvancedOptions<S extends Schema, MD extends MutatorDefs>
+  extends ZeroOptions<S, MD> {
   /**
    * UI rendering libraries will often provide a utility for batching multiple
    * state updates into a single render. Some examples are React's

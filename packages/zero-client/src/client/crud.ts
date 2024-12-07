@@ -18,9 +18,14 @@ import type {
 import {toPrimaryKeyString} from './keys.js';
 import type {MutatorDefs, WriteTransaction} from './replicache-types.js';
 import type {Schema} from '../../../zero-schema/src/mod.js';
-import type {ReadonlyJSONObject} from '../mod.js';
+import type {
+  MutatorReturn,
+  ReadonlyJSONObject,
+  ReadonlyJSONValue,
+} from '../mod.js';
 import type {NormalizedTableSchema} from '../../../zero-schema/src/normalize-table-schema.js';
 import type {NormalizedSchema} from '../../../zero-schema/src/normalized-schema.js';
+import type {ToPromise} from '../../../replicache/src/types.js';
 
 export type InsertValue<S extends TableSchema> = Expand<
   PrimaryKeyFields<S> & {
@@ -87,12 +92,31 @@ export type TableMutator<S extends TableSchema> = {
   delete: (id: DeleteID<S>) => Promise<void>;
 };
 
-export type DBMutator<S extends Schema> = {
-  [K in keyof S['tables']]: TableMutator<S['tables'][K]>;
+export type DBMutator<
+  S extends Schema,
+  MD extends MutatorDefs,
+> = CRUDMutators<S> & CustomMutator<MD>;
+
+export type CustomMutator<MD extends MutatorDefs> = {
+  readonly [P in keyof MD]: MakeMutator<MD[P]>;
 };
 
+export type MakeMutator<
+  F extends (
+    tx: WriteTransaction,
+    ...args: [] | [ReadonlyJSONValue]
+  ) => MutatorReturn,
+> = F extends (tx: WriteTransaction, ...args: infer Args) => infer Ret
+  ? (...args: Args) => ToPromise<Ret>
+  : never;
+
+export type CRUDMutators<S extends Schema> = {
+  readonly [K in keyof S['tables']]: TableMutator<S['tables'][K]>;
+};
+
+// TODO: Do we even still want this? Probably not.
 export type BatchMutator<S extends Schema> = <R>(
-  body: (m: DBMutator<S>) => MaybePromise<R>,
+  body: (m: CRUDMutators<S>) => MaybePromise<R>,
 ) => Promise<R>;
 
 type ZeroCRUDMutate = {
@@ -107,11 +131,13 @@ type ZeroCRUDMutate = {
 export function makeCRUDMutate<const S extends Schema>(
   schema: NormalizedSchema,
   repMutate: ZeroCRUDMutate,
-): {mutate: DBMutator<S>; mutateBatch: BatchMutator<S>} {
+): {mutate: CRUDMutators<S>; mutateBatch: BatchMutator<S>} {
   const {[CRUD_MUTATION_NAME]: zeroCRUD} = repMutate;
   let inBatch = false;
 
-  const mutateBatch = async <R>(body: (m: DBMutator<S>) => R): Promise<R> => {
+  const mutateBatch = async <R>(
+    body: (m: CRUDMutators<S>) => R,
+  ): Promise<R> => {
     if (inBatch) {
       throw new Error('Cannot call mutate inside a batch');
     }
@@ -124,7 +150,7 @@ export function makeCRUDMutate<const S extends Schema>(
         m[name] = makeBatchCRUDMutate(name, schema, ops);
       }
 
-      const rv = await body(m as DBMutator<S>);
+      const rv = await body(m as CRUDMutators<S>);
       await zeroCRUD({ops});
       return rv;
     } finally {
@@ -148,7 +174,7 @@ export function makeCRUDMutate<const S extends Schema>(
     );
   }
   return {
-    mutate: mutate as DBMutator<S>,
+    mutate: mutate as CRUDMutator<S>,
     mutateBatch: mutateBatch as BatchMutator<S>,
   };
 }

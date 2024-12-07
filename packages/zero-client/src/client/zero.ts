@@ -8,7 +8,8 @@ import {
   type ClientGroupID,
   type ClientID,
   type ExperimentalNoIndexDiff,
-  type MutatorDefs,
+  // TODO: consider importing entire thing as `rep`
+  type MutatorDefs as ReplicacheMutatorDefs,
   type PullRequestV0,
   type PullRequestV1,
   type Puller,
@@ -27,7 +28,6 @@ import {
   mustGetBrowserGlobal,
 } from '../../../shared/src/browser-env.js';
 import {getDocumentVisibilityWatcher} from '../../../shared/src/document-visible.js';
-import {must} from '../../../shared/src/must.js';
 import {navigator} from '../../../shared/src/navigator.js';
 import {sleep, sleepWithAbort} from '../../../shared/src/sleep.js';
 import * as valita from '../../../shared/src/valita.js';
@@ -72,7 +72,7 @@ import {send} from '../util/socket.js';
 import {ZeroContext} from './context.js';
 import {
   type BatchMutator,
-  type DBMutator,
+  type CRUDMutators,
   type WithCRUD,
   makeCRUDMutate,
   makeCRUDMutator,
@@ -95,6 +95,7 @@ import {
   getLastConnectErrorValue,
 } from './metrics.js';
 import type {
+  MutatorDefs,
   UpdateNeededReason,
   ZeroAdvancedOptions,
   ZeroOptions,
@@ -147,7 +148,9 @@ interface TestZero {
   }) => LogOptions;
 }
 
-function asTestZero<S extends Schema>(z: Zero<S>): TestZero {
+function asTestZero<S extends Schema, MD extends MutatorDefs>(
+  z: Zero<S, MD>,
+): TestZero {
   return z as TestZero;
 }
 
@@ -242,17 +245,10 @@ export interface ReplicacheInternalAPI {
 
 const internalReplicacheImplMap = new WeakMap<object, ReplicacheImpl>();
 
-export function getInternalReplicacheImplForTesting<
-  MD extends MutatorDefs,
-  S extends Schema,
->(z: Zero<S>): ReplicacheImpl<MD> {
-  return must(internalReplicacheImplMap.get(z)) as ReplicacheImpl<MD>;
-}
-
-export class Zero<const S extends Schema> {
+export class Zero<const S extends Schema, const MD extends MutatorDefs> {
   readonly version = version;
 
-  readonly #rep: ReplicacheImpl<WithCRUD<MutatorDefs>>;
+  readonly #rep: ReplicacheImpl<WithCRUD<ReplicacheMutatorDefs>>;
   readonly #server: HTTPString | null;
   readonly userID: string;
 
@@ -350,7 +346,7 @@ export class Zero<const S extends Schema> {
   // 2. client successfully connects
   #totalToConnectStart: number | undefined = undefined;
 
-  readonly #options: ZeroOptions<S>;
+  readonly #options: ZeroOptions<S, MD>;
 
   readonly query: MakeEntityQueriesFromSchema<S>;
 
@@ -365,7 +361,7 @@ export class Zero<const S extends Schema> {
   /**
    * Constructs a new Zero client.
    */
-  constructor(options: ZeroOptions<S>) {
+  constructor(options: ZeroOptions<S, MD>) {
     const {
       userID,
       onOnlineChange,
@@ -375,7 +371,7 @@ export class Zero<const S extends Schema> {
       kvStore = 'idb',
       schema,
       batchViewUpdates = applyViewUpdates => applyViewUpdates(),
-    } = options as ZeroAdvancedOptions<S>;
+    } = options as ZeroAdvancedOptions<S, MD>;
     if (!userID) {
       throw new Error('ZeroOptions.userID must not be empty.');
     }
@@ -407,7 +403,9 @@ export class Zero<const S extends Schema> {
       ['_zero_crud']: makeCRUDMutator(normalizedSchema),
     };
 
-    const replicacheOptions: ReplicacheOptions<WithCRUD<MutatorDefs>> = {
+    const replicacheOptions: ReplicacheOptions<
+      WithCRUD<ReplicacheMutatorDefs>
+    > = {
       // The schema stored in IDB is dependent upon both the application schema
       // and the AST schema (i.e. PROTOCOL_VERSION).
       schemaVersion: `${normalizedSchema.version}.${PROTOCOL_VERSION}`,
@@ -609,7 +607,7 @@ export class Zero<const S extends Schema> {
    * await zero.mutate.issue.update({id: '1', title: 'Updated title'});
    * ```
    */
-  readonly mutate: DBMutator<S>;
+  readonly mutate: CRUDMutators<S>;
 
   /**
    * Provides a way to batch multiple CRUD mutations together:

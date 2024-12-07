@@ -30,6 +30,7 @@ import {
   exposedToTestingSymbol,
   onSetConnectionStateSymbol,
 } from './zero.js';
+import type {MutatorDefs} from '../mod.js';
 
 export async function tickAFewTimes(clock: SinonFakeTimers, duration = 100) {
   const n = 10;
@@ -63,7 +64,10 @@ export class MockSocket extends EventTarget {
   }
 }
 
-export class TestZero<const S extends Schema> extends Zero<S> {
+export class TestZero<
+  const S extends Schema = Schema,
+  const MD extends MutatorDefs = MutatorDefs,
+> extends Zero<S, MD> {
   #connectionStateResolvers: Set<{
     state: ConnectionState;
     resolve: (state: ConnectionState) => void;
@@ -200,10 +204,13 @@ declare const TESTING: boolean;
 
 let testZeroCounter = 0;
 
-export function zeroForTest<const S extends Schema>(
-  options: Partial<ZeroOptions<S>> = {},
+export function zeroForTest<
+  const S extends Schema,
+  const MD extends MutatorDefs,
+>(
+  options: Partial<ZeroOptions<S, MD>> = {},
   errorOnUpdateNeeded = true,
-): TestZero<S> {
+): TestZero<S, MD> {
   // Special case kvStore. If not present we default to 'mem'. This allows
   // passing `undefined` to get the default behavior.
   const newOptions = {...options};
@@ -227,13 +234,13 @@ export function zeroForTest<const S extends Schema>(
         }
       : undefined,
     ...newOptions,
-  } satisfies ZeroOptions<S>);
+  } satisfies ZeroOptions<S, MD>);
 
   return r;
 }
 
 export async function waitForUpstreamMessage(
-  r: TestZero<Schema>,
+  r: TestZero<Schema, MutatorDefs>,
   name: string,
   clock: SinonFakeTimers,
 ) {

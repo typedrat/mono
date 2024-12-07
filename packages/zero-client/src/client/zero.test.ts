@@ -27,7 +27,7 @@ import {
 import type {NullableVersion} from '../../../zero-protocol/src/version.js';
 import type {Schema} from '../../../zero-schema/src/mod.js';
 import type {WSString} from './http-string.js';
-import type {UpdateNeededReason, ZeroOptions} from './options.js';
+import type {MutatorDefs, UpdateNeededReason, ZeroOptions} from './options.js';
 import type {QueryManager} from './query-manager.js';
 import {RELOAD_REASON_STORAGE_KEY} from './reload-error-handler.js';
 import {ServerError} from './server-error.js';
@@ -48,6 +48,7 @@ import {
   PING_TIMEOUT_MS,
   PULL_TIMEOUT_MS,
   RUN_LOOP_INTERVAL_MS,
+  Zero,
 } from './zero.js';
 import {PROTOCOL_VERSION} from '../../../zero-protocol/src/protocol-version.js';
 
@@ -1440,7 +1441,7 @@ test('Ping timeout', async () => {
 
 const connectTimeoutMessage = 'Rejecting connect resolver due to timeout';
 
-function expectLogMessages(r: TestZero<Schema>) {
+function expectLogMessages(r: TestZero) {
   return expect(
     r.testLogSink.messages.flatMap(([level, _context, msg]) =>
       level === 'debug' ? msg : [],
@@ -1568,9 +1569,7 @@ test('New connection logs', async () => {
   expect(disconnectIndex).to.not.equal(-1);
 });
 
-async function testWaitsForConnection(
-  fn: (r: TestZero<Schema>) => Promise<unknown>,
-) {
+async function testWaitsForConnection(fn: (r: TestZero) => Promise<unknown>) {
   const r = zeroForTest();
 
   const log: ('resolved' | 'rejected')[] = [];
@@ -1767,12 +1766,29 @@ test('Constructing Zero with a negative hiddenTabDisconnectDelay option throws a
     );
 });
 
+test('custom', () => {
+  const z = new Zero({
+    userID: 'u1',
+    schema: {
+      version: 1,
+      tables: {},
+    },
+    mutators: {
+      // TODO: allow multiple params
+      foo: (tx, {foo}: {foo: string}) => {
+        console.log(tx, foo);
+      },
+    },
+  });
+  console.log(z);
+});
+
 suite('Disconnect on hide', () => {
   type Case = {
     name: string;
     hiddenTabDisconnectDelay?: number | undefined;
     test: (
-      r: TestZero<Schema>,
+      r: TestZero,
       changeVisibilityState: (
         newVisibilityState: DocumentVisibilityState,
       ) => void,
@@ -2053,8 +2069,8 @@ test('kvStore option', async () => {
     value: number;
   };
 
-  const t = async <S extends Schema>(
-    kvStore: ZeroOptions<S>['kvStore'],
+  const t = async (
+    kvStore: ZeroOptions<Schema, MutatorDefs>['kvStore'],
     userID: string,
     expectedIDBOpenCalled: boolean,
     expectedValue: E[],
