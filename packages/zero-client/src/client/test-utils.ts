@@ -66,7 +66,7 @@ export class MockSocket extends EventTarget {
 
 export class TestZero<
   const S extends Schema = Schema,
-  const MD extends MutatorDefs = MutatorDefs,
+  const MD extends MutatorDefs<Schema> = MutatorDefs<Schema>,
 > extends Zero<S, MD> {
   #connectionStateResolvers: Set<{
     state: ConnectionState;
@@ -206,7 +206,7 @@ let testZeroCounter = 0;
 
 export function zeroForTest<
   const S extends Schema,
-  const MD extends MutatorDefs,
+  const MD extends MutatorDefs<Schema>,
 >(
   options: Partial<ZeroOptions<S, MD>> = {},
   errorOnUpdateNeeded = true,
@@ -240,7 +240,7 @@ export function zeroForTest<
 }
 
 export async function waitForUpstreamMessage(
-  r: TestZero<Schema, MutatorDefs>,
+  r: TestZero<Schema, MutatorDefs<Schema>>,
   name: string,
   clock: SinonFakeTimers,
 ) {

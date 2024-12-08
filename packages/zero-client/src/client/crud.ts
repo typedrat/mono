@@ -18,14 +18,11 @@ import type {
 import {toPrimaryKeyString} from './keys.js';
 import type {MutatorDefs, WriteTransaction} from './replicache-types.js';
 import type {Schema} from '../../../zero-schema/src/mod.js';
-import type {
-  MutatorReturn,
-  ReadonlyJSONObject,
-  ReadonlyJSONValue,
-} from '../mod.js';
+import type {ReadonlyJSONObject, ReadonlyJSONValue} from '../mod.js';
 import type {NormalizedTableSchema} from '../../../zero-schema/src/normalize-table-schema.js';
 import type {NormalizedSchema} from '../../../zero-schema/src/normalized-schema.js';
 import type {ToPromise} from '../../../replicache/src/types.js';
+import {must} from '../../../shared/src/must.js';
 
 export type InsertValue<S extends TableSchema> = Expand<
   PrimaryKeyFields<S> & {
@@ -102,10 +99,7 @@ export type CustomMutator<MD extends MutatorDefs> = {
 };
 
 export type MakeMutator<
-  F extends (
-    tx: WriteTransaction,
-    ...args: [] | [ReadonlyJSONValue]
-  ) => MutatorReturn,
+  F extends (tx: WriteTransaction, ...args: [] | [ReadonlyJSONValue]) => void,
 > = F extends (tx: WriteTransaction, ...args: infer Args) => infer Ret
   ? (...args: Args) => ToPromise<Ret>
   : never;
@@ -173,9 +167,44 @@ export function makeCRUDMutate<const S extends Schema>(
       assertNotInBatch,
     );
   }
+
   return {
-    mutate: mutate as CRUDMutator<S>,
+    mutate: mutate as CRUDMutators<S>,
     mutateBatch: mutateBatch as BatchMutator<S>,
+  };
+}
+
+export type CustomMutate<S extends Schema> = {
+  [P in keyof S['tables']]: TableMutator<S['tables'][P]>;
+};
+
+export function makeCustomMutate(
+  schema: NormalizedSchema,
+  tx: WriteTransaction,
+) {
+  const mutate: Record<string, TableMutator<TableSchema>> = {};
+  for (const [name] of Object.entries(schema.tables)) {
+    mutate[name] = makeEntityCustomMutate(schema, name, tx);
+  }
+  return mutate;
+}
+
+function makeEntityCustomMutate(
+  schema: NormalizedSchema,
+  tableName: string,
+  tx: WriteTransaction,
+) {
+  const table = must(schema.tables[tableName]);
+  const {primaryKey} = table;
+  return {
+    insert: (value: InsertValue<NormalizedTableSchema>) =>
+      insertImpl(tx, {op: 'insert', tableName, primaryKey, value}, schema),
+    upsert: (value: UpsertValue<NormalizedTableSchema>) =>
+      upsertImpl(tx, {op: 'upsert', tableName, primaryKey, value}, schema),
+    update: (value: UpdateValue<NormalizedTableSchema>) =>
+      updateImpl(tx, {op: 'update', tableName, primaryKey, value}, schema),
+    delete: (id: DeleteID<NormalizedTableSchema>) =>
+      deleteImpl(tx, {op: 'delete', tableName, primaryKey, value: id}, schema),
   };
 }
 

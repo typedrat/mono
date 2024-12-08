@@ -21,6 +21,7 @@ import {
   type ReplicacheOptions,
   type UpdateNeededReason as ReplicacheUpdateNeededReason,
   dropDatabase,
+  type ReadonlyJSONValue,
 } from '../../../replicache/src/mod.js';
 import {assert, unreachable} from '../../../shared/src/asserts.js';
 import {
@@ -94,11 +95,13 @@ import {
   type Series,
   getLastConnectErrorValue,
 } from './metrics.js';
-import type {
-  MutatorDefs,
-  UpdateNeededReason,
-  ZeroAdvancedOptions,
-  ZeroOptions,
+import {
+  TransactionImpl,
+  type Mutator,
+  type MutatorDefs,
+  type UpdateNeededReason,
+  type ZeroAdvancedOptions,
+  type ZeroOptions,
 } from './options.js';
 import {QueryManager} from './query-manager.js';
 import {
@@ -116,6 +119,7 @@ import {
 import {getServer} from './server-option.js';
 import {version} from './version.js';
 import {PokeHandler} from './zero-poke-handler.js';
+import type {WriteTransaction} from './replicache-types.js';
 
 export type NoRelations = Record<string, never>;
 
@@ -148,7 +152,7 @@ interface TestZero {
   }) => LogOptions;
 }
 
-function asTestZero<S extends Schema, MD extends MutatorDefs>(
+function asTestZero<S extends Schema, MD extends MutatorDefs<S>>(
   z: Zero<S, MD>,
 ): TestZero {
   return z as TestZero;
@@ -245,7 +249,7 @@ export interface ReplicacheInternalAPI {
 
 const internalReplicacheImplMap = new WeakMap<object, ReplicacheImpl>();
 
-export class Zero<const S extends Schema, const MD extends MutatorDefs> {
+export class Zero<const S extends Schema, const MD extends MutatorDefs<S>> {
   readonly version = version;
 
   readonly #rep: ReplicacheImpl<WithCRUD<ReplicacheMutatorDefs>>;
@@ -400,8 +404,22 @@ export class Zero<const S extends Schema, const MD extends MutatorDefs> {
     const normalizedSchema = normalizeSchema(schema);
 
     const replicacheMutators = {
-      ['_zero_crud']: makeCRUDMutator(normalizedSchema),
+      [CRUD_MUTATION_NAME]: makeCRUDMutator(normalizedSchema),
     };
+
+    // eslint-disable-next-line arrow-body-style
+    const makeCustomMutator = (mutator: Mutator<Schema>) => {
+      return (repTx: WriteTransaction, args: ReadonlyJSONValue) => {
+        const tx = new TransactionImpl(repTx, normalizedSchema);
+        mutator(tx, args as CRUDMutationArg);
+      };
+    };
+
+    for (const [name, mutator] of Object.entries(options.mutators ?? {})) {
+      (replicacheMutators as ReplicacheMutatorDefs)[name] = makeCustomMutator(
+        mutator as Mutator<Schema>,
+      );
+    }
 
     const replicacheOptions: ReplicacheOptions<
       WithCRUD<ReplicacheMutatorDefs>

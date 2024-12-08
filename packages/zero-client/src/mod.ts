@@ -75,10 +75,5 @@ export type {
   Rows,
 } from '../../zql/src/query/query.js';
 export type {TypedView} from '../../zql/src/query/typed-view.js';
-export type {
-  ZeroOptions,
-  MutatorDefs,
-  MutatorReturn,
-  Transaction,
-} from './client/options.js';
+export type {ZeroOptions, MutatorDefs, Transaction} from './client/options.js';
 export {Zero} from './client/zero.js';

@@ -1771,7 +1771,16 @@ test('custom', () => {
     userID: 'u1',
     schema: {
       version: 1,
-      tables: {},
+      tables: {
+        issues: {
+          columns: {
+            id: {type: 'string'},
+            value: {type: 'number'},
+          },
+          primaryKey: ['id'],
+          tableName: 'issues',
+        },
+      },
     },
     mutators: {
       // TODO: allow multiple params
@@ -2070,7 +2079,7 @@ test('kvStore option', async () => {
   };
 
   const t = async (
-    kvStore: ZeroOptions<Schema, MutatorDefs>['kvStore'],
+    kvStore: ZeroOptions<Schema, MutatorDefs<Schema>>['kvStore'],
     userID: string,
     expectedIDBOpenCalled: boolean,
     expectedValue: E[],
