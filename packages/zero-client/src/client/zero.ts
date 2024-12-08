@@ -8,7 +8,6 @@ import {
   type ClientGroupID,
   type ClientID,
   type ExperimentalNoIndexDiff,
-  // TODO: consider importing entire thing as `rep`
   type MutatorDefs as ReplicacheMutatorDefs,
   type PullRequestV0,
   type PullRequestV1,
@@ -72,7 +71,7 @@ import {send} from '../util/socket.js';
 import {ZeroContext} from './context.js';
 import {
   type BatchMutator,
-  type CRUDMutators,
+  type DBMutator,
   type WithCRUD,
   makeCRUDMutate,
   makeCRUDMutator,
@@ -491,8 +490,7 @@ export class Zero<
     for (const [name] of Object.entries(options.mutators ?? {})) {
       (mutate as Record<string, unknown>)[name] = this.#rep.mutate[name];
     }
-    this.mutate = mutate as CRUDMutators<S> &
-      MakeCustomMutatorInterfaces<S, MD>;
+    this.mutate = mutate as DBMutator<S> & MakeCustomMutatorInterfaces<S, MD>;
     this.mutateBatch = mutateBatch;
 
     this.#queryManager = new QueryManager(
@@ -627,7 +625,7 @@ export class Zero<
    * await zero.mutate.issue.update({id: '1', title: 'Updated title'});
    * ```
    */
-  readonly mutate: CRUDMutators<S> & MakeCustomMutatorInterfaces<S, MD>;
+  readonly mutate: DBMutator<S> & MakeCustomMutatorInterfaces<S, MD>;
 
   /**
    * Provides a way to batch multiple CRUD mutations together:

@@ -56,7 +56,7 @@ type PrimaryKeyFields<S extends TableSchema> = {
 /**
  * This is the type of the generated mutate.<table> function.
  */
-export type TableCRUD<S extends TableSchema> = {
+export type TableMutator<S extends TableSchema> = {
   /**
    * Writes a row if a row with the same primary key doesn't already exists.
    * Non-primary-key fields that are 'optional' can be omitted or set to
@@ -87,13 +87,12 @@ export type TableCRUD<S extends TableSchema> = {
   delete: (id: DeleteID<S>) => Promise<void>;
 };
 
-export type CRUDMutators<S extends Schema> = {
-  readonly [K in keyof S['tables']]: TableCRUD<S['tables'][K]>;
+export type DBMutator<S extends Schema> = {
+  readonly [K in keyof S['tables']]: TableMutator<S['tables'][K]>;
 };
 
-// TODO: Do we even still want this? Probably not.
 export type BatchMutator<S extends Schema> = <R>(
-  body: (m: CRUDMutators<S>) => MaybePromise<R>,
+  body: (m: DBMutator<S>) => MaybePromise<R>,
 ) => Promise<R>;
 
 type ZeroCRUDMutate = {
@@ -108,13 +107,11 @@ type ZeroCRUDMutate = {
 export function makeCRUDMutate<const S extends Schema>(
   schema: NormalizedSchema,
   repMutate: ZeroCRUDMutate,
-): {mutate: CRUDMutators<S>; mutateBatch: BatchMutator<S>} {
+): {mutate: DBMutator<S>; mutateBatch: BatchMutator<S>} {
   const {[CRUD_MUTATION_NAME]: zeroCRUD} = repMutate;
   let inBatch = false;
 
-  const mutateBatch = async <R>(
-    body: (m: CRUDMutators<S>) => R,
-  ): Promise<R> => {
+  const mutateBatch = async <R>(body: (m: DBMutator<S>) => R): Promise<R> => {
     if (inBatch) {
       throw new Error('Cannot call mutate inside a batch');
     }
@@ -127,7 +124,7 @@ export function makeCRUDMutate<const S extends Schema>(
         m[name] = makeBatchCRUDMutate(name, schema, ops);
       }
 
-      const rv = await body(m as CRUDMutators<S>);
+      const rv = await body(m as DBMutator<S>);
       await zeroCRUD({ops});
       return rv;
     } finally {
@@ -141,7 +138,7 @@ export function makeCRUDMutate<const S extends Schema>(
     }
   };
 
-  const mutate: Record<string, TableCRUD<TableSchema>> = {};
+  const mutate: Record<string, TableMutator<TableSchema>> = {};
   for (const [name, tableSchema] of Object.entries(schema.tables)) {
     mutate[name] = makeEntityCRUDMutate(
       name,
@@ -152,46 +149,10 @@ export function makeCRUDMutate<const S extends Schema>(
   }
 
   return {
-    mutate: mutate as CRUDMutators<S>,
+    mutate: mutate as DBMutator<S>,
     mutateBatch: mutateBatch as BatchMutator<S>,
   };
 }
-
-/*
-export type CustomMutate<S extends Schema> = {
-  [P in keyof S['tables']]: TableCRUD<S['tables'][P]>;
-};
-
-export function makeCustomMutate(
-  schema: NormalizedSchema,
-  tx: WriteTransaction,
-) {
-  const mutate: Record<string, TableCRUD<TableSchema>> = {};
-  for (const [name] of Object.entries(schema.tables)) {
-    mutate[name] = makeEntityCustomMutate(schema, name, tx);
-  }
-  return mutate;
-}
-
-function makeEntityCustomMutate(
-  schema: NormalizedSchema,
-  tableName: string,
-  tx: WriteTransaction,
-) {
-  const table = must(schema.tables[tableName]);
-  const {primaryKey} = table;
-  return {
-    insert: (value: InsertValue<NormalizedTableSchema>) =>
-      insertImpl(tx, {op: 'insert', tableName, primaryKey, value}, schema),
-    upsert: (value: UpsertValue<NormalizedTableSchema>) =>
-      upsertImpl(tx, {op: 'upsert', tableName, primaryKey, value}, schema),
-    update: (value: UpdateValue<NormalizedTableSchema>) =>
-      updateImpl(tx, {op: 'update', tableName, primaryKey, value}, schema),
-    delete: (id: DeleteID<NormalizedTableSchema>) =>
-      deleteImpl(tx, {op: 'delete', tableName, primaryKey, value: id}, schema),
-  };
-}
-  */
 
 /**
  * Creates the `{insert, upsert, update, delete}` object for use outside a
@@ -202,7 +163,7 @@ function makeEntityCRUDMutate<S extends NormalizedTableSchema>(
   primaryKey: S['primaryKey'],
   zeroCRUD: CRUDMutate,
   assertNotInBatch: (tableName: string, op: CRUDOpKind) => void,
-): TableCRUD<S> {
+): TableMutator<S> {
   return {
     insert: (value: InsertValue<S>) => {
       assertNotInBatch(tableName, 'insert');
@@ -255,7 +216,7 @@ export function makeBatchCRUDMutate<S extends TableSchema>(
   tableName: string,
   schema: NormalizedSchema,
   ops: CRUDOp[],
-): TableCRUD<S> {
+): TableMutator<S> {
   const {primaryKey} = schema.tables[tableName];
   return {
     insert: (value: InsertValue<S>) => {

@@ -1,7 +1,7 @@
 import type {LogLevel} from '@rocicorp/logger';
 import type {KVStoreProvider} from '../../../replicache/src/mod.js';
 import type {MaybePromise} from '../../../shared/src/types.js';
-import type {Schema} from '../../../zero-schema/src/schema.js';
+import type {Schema} from '../../../zero-schema/src/mod.js';
 import {type CustomMutatorDefs} from './custom.js';
 
 /**
@@ -70,72 +70,6 @@ export interface ZeroOptions<
    */
   schema: S;
 
-  /**
-   * An object used as a map to define the *mutators*. These gets registered at
-   * startup of {@link Replicache}.
-   *
-   * *Mutators* are used to make changes to the data.
-   *
-   * #### Example
-   *
-   * The registered *mutations* are reflected on the
-   * {@link Replicache.mutate | mutate} property of the {@link Replicache} instance.
-   *
-   * ```ts
-   * const rep = new Replicache({
-   *   name: 'user-id',
-   *   mutators: {
-   *     async createTodo(tx: WriteTransaction, args: JSONValue) {
-   *       const key = `/todo/${args.id}`;
-   *       if (await tx.has(key)) {
-   *         throw new Error('Todo already exists');
-   *       }
-   *       await tx.set(key, args);
-   *     },
-   *     async deleteTodo(tx: WriteTransaction, id: number) {
-   *       ...
-   *     },
-   *   },
-   * });
-   * ```
-   *
-   * This will create the function to later use:
-   *
-   * ```ts
-   * await rep.mutate.createTodo({
-   *   id: 1234,
-   *   title: 'Make things work offline',
-   *   complete: true,
-   * });
-   * ```
-   *
-   * #### Replays
-   *
-   * *Mutators* run once when they are initially invoked, but they might also be
-   * *replayed* multiple times during sync. As such *mutators* should not modify
-   * application state directly. Also, it is important that the set of
-   * registered mutator names only grows over time. If Replicache syncs and
-   * needed *mutator* is not registered, it will substitute a no-op mutator, but
-   * this might be a poor user experience.
-   *
-   * #### Server application
-   *
-   * During push, a description of each mutation is sent to the server's [push
-   * endpoint](https://doc.replicache.dev/reference/server-push) where it is applied. Once
-   * the *mutation* has been applied successfully, as indicated by the client
-   * view's
-   * [`lastMutationId`](https://doc.replicache.dev/reference/server-pull#lastmutationid)
-   * field, the local version of the *mutation* is removed. See the [design
-   * doc](https://doc.replicache.dev/design#commits) for additional details on
-   * the sync protocol.
-   *
-   * #### Transactionality
-   *
-   * *Mutators* are atomic: all their changes are applied together, or none are.
-   * Throwing an exception aborts the transaction. Otherwise, it is committed.
-   * As with {@link query} and {@link subscribe} all reads will see a consistent view of
-   * the cache while they run.
-   */
   mutators?: MD | undefined;
 
   /**
