@@ -15,11 +15,12 @@ import {
   type PullerResultV1,
   type PushRequestV0,
   type PushRequestV1,
-  type Pusher,
+  type Pusher as ReplicachePusher,
   type PusherResult,
   type ReplicacheOptions,
   type UpdateNeededReason as ReplicacheUpdateNeededReason,
   dropDatabase,
+  type MutationV1,
 } from '../../../replicache/src/mod.js';
 import {assert, unreachable} from '../../../shared/src/asserts.js';
 import {
@@ -36,7 +37,6 @@ import {
   type CRUDMutationArg,
   CRUD_MUTATION_NAME,
   type ConnectedMessage,
-  type CustomMutation,
   type Downstream,
   ErrorKind,
   type ErrorMessage,
@@ -131,7 +131,7 @@ declare const TESTING: boolean;
 
 export type TestingContext = {
   puller: Puller;
-  pusher: Pusher;
+  pusher: ReplicachePusher;
   setReload: (r: () => void) => void;
   logOptions: LogOptions;
   connectStart: () => number | undefined;
@@ -1121,6 +1121,10 @@ export class Zero<
     assert(req.pushVersion === 1);
     // If we are connecting we wait until we are connected.
     await this.#connectResolver.promise;
+
+    // We're never connectng , making test time out
+    console.log('pushing', req.mutations);
+
     const lc = this.#lc.withContext('requestID', requestID);
     lc.debug?.(`pushing ${req.mutations.length} mutations`);
     const socket = this.#socket;
@@ -1142,45 +1146,59 @@ export class Zero<
       req.mutations.length,
       'mutations.',
     );
+
+    let customBatch: MutationV1[] = [];
+    const flushCustomBatch = () => {
+      if (customBatch.length === 0) {
+        return;
+      }
+      assert(this.#options.pusher);
+      console.log('flushing, customBatch:', customBatch);
+      this.#options.pusher(
+        {
+          ...req,
+          mutations: customBatch,
+        },
+        requestID,
+      );
+      customBatch = [];
+    };
+
     const now = Date.now();
     for (let i = start; i < req.mutations.length; i++) {
       const m = req.mutations[i];
-      const timestamp = now - Math.round(performance.now() - m.timestamp);
-      const zeroM =
-        m.name === CRUD_MUTATION_NAME
-          ? ({
-              type: MutationType.CRUD,
-              timestamp,
-              id: m.id,
-              clientID: m.clientID,
-              name: m.name,
-              args: [m.args as CRUDMutationArg],
-            } satisfies CRUDMutation)
-          : ({
-              type: MutationType.Custom,
-              timestamp,
-              id: m.id,
-              clientID: m.clientID,
-              name: m.name,
-              args: [m.args],
-            } satisfies CustomMutation);
-      const msg: PushMessage = [
-        'push',
-        {
-          timestamp: now,
-          clientGroupID: req.clientGroupID,
-          mutations: [zeroM],
-          pushVersion: req.pushVersion,
-          // Zero schema versions are always numbers.
-          schemaVersion: parseInt(req.schemaVersion),
-          requestID,
-        },
-      ];
-      send(socket, msg);
+      if (m.name === CRUD_MUTATION_NAME) {
+        flushCustomBatch();
+        const timestamp = now - Math.round(performance.now() - m.timestamp);
+        const zeroM = {
+          type: MutationType.CRUD,
+          timestamp,
+          id: m.id,
+          clientID: m.clientID,
+          name: m.name,
+          args: [m.args as CRUDMutationArg],
+        } satisfies CRUDMutation;
+        const msg: PushMessage = [
+          'push',
+          {
+            timestamp: now,
+            clientGroupID: req.clientGroupID,
+            mutations: [zeroM],
+            pushVersion: req.pushVersion,
+            // Zero schema versions are always numbers.
+            schemaVersion: parseInt(req.schemaVersion),
+            requestID,
+          },
+        ];
+        send(socket, msg);
+      } else {
+        customBatch.push(m);
+      }
       if (!isMutationRecoveryPush) {
         this.#lastMutationIDSent = {clientID: m.clientID, id: m.id};
       }
     }
+    flushCustomBatch();
     return {
       httpRequestInfo: {
         errorMessage: '',

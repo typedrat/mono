@@ -8,7 +8,6 @@ import type {MutatorDefs, RequestOptions} from './types.js';
 /**
  * The options passed to {@link Replicache}.
  */
-
 export interface ReplicacheOptions<MD extends MutatorDefs> {
   /**
    * This is the URL to the server endpoint dealing with the push updates. See

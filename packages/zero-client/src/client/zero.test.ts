@@ -1767,7 +1767,9 @@ test('Constructing Zero with a negative hiddenTabDisconnectDelay option throws a
     );
 });
 
-test('custom', () => {
+test('custom', async () => {
+  const pushRequests: unknown[] = [];
+  const {promise, resolve} = resolver();
   const z = new Zero({
     userID: 'u1',
     schema: {
@@ -1789,9 +1791,32 @@ test('custom', () => {
         tx.mutate.issues.insert({id: 'a', value: foo});
       },
     },
+    pusher: (req, _reqID) => {
+      pushRequests.push(req);
+      resolve();
+    },
   });
   z.mutate.foo({foo: 42});
-  console.log(z);
+  await promise;
+
+  expect(pushRequests).to.deep.equal([
+    {
+      profileID: '',
+      clientGroupID: z.clientGroupID,
+      pushVersion: 1,
+      schemaVersion: '1',
+      mutations: [
+        {
+          type: MutationType.Custom,
+          clientID: z.clientID,
+          id: 1,
+          name: 'foo',
+          args: [{foo: 42}],
+          timestamp: 0,
+        },
+      ],
+    },
+  ]);
 });
 
 suite('Disconnect on hide', () => {
