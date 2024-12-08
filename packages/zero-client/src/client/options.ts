@@ -1,66 +1,16 @@
 import type {LogLevel} from '@rocicorp/logger';
-import type {
-  ClientID,
-  KVStoreProvider,
-  WriteTransaction,
-} from '../../../replicache/src/mod.js';
+import type {KVStoreProvider} from '../../../replicache/src/mod.js';
 import type {MaybePromise} from '../../../shared/src/types.js';
-import {must} from '../../../shared/src/must.js';
-import {makeCustomMutate, type CustomMutate} from './crud.js';
 import type {Schema} from '../../../zero-schema/src/schema.js';
-import {NormalizedSchema} from '../../../zero-schema/src/normalized-schema.js';
-
-export type MutatorDefs<S extends Schema> = {
-  [key: string]: Mutator<S>;
-};
-
-export type Mutator<S extends Schema> = (
-  tx: Transaction<S>,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  args: any,
-) => void;
-
-export type TransactionReason = 'optimistic' | 'rebase';
-
-/**
- * WriteTransactions are used with *mutators* which are registered using
- * {@link ReplicacheOptions.mutators} and allows read and write operations on the
- * database.
- */
-export interface Transaction<S extends Schema> {
-  readonly clientID: ClientID;
-  /**
-   * The ID of the mutation that is being applied.
-   */
-  readonly mutationID: number;
-
-  /**
-   * The reason for the transaction.
-   */
-  readonly reason: TransactionReason;
-
-  readonly mutate: CustomMutate<S>;
-}
-
-export class TransactionImpl implements Transaction<Schema> {
-  constructor(repTx: WriteTransaction, schema: NormalizedSchema) {
-    must(repTx.reason === 'initial' || repTx.reason === 'rebase');
-    this.clientID = repTx.clientID;
-    this.mutationID = repTx.mutationID;
-    this.reason = repTx.reason === 'initial' ? 'optimistic' : 'rebase';
-    this.mutate = makeCustomMutate(schema, repTx);
-  }
-
-  readonly clientID: ClientID;
-  readonly mutationID: number;
-  readonly reason: TransactionReason;
-  readonly mutate: CustomMutate<Schema>;
-}
+import {type CustomMutatorDefs} from './custom.js';
 
 /**
  * Configuration for [[Zero]].
  */
-export interface ZeroOptions<S extends Schema, MD extends MutatorDefs<S>> {
+export interface ZeroOptions<
+  S extends Schema,
+  MD extends CustomMutatorDefs<S>,
+> {
   /**
    * URL to the server. This can be a simple hostname, e.g.
    * - "https://myapp-myteam.zero.ms"
@@ -261,7 +211,7 @@ export interface ZeroOptions<S extends Schema, MD extends MutatorDefs<S>> {
 
 export interface ZeroAdvancedOptions<
   S extends Schema,
-  MD extends MutatorDefs<S>,
+  MD extends CustomMutatorDefs<S>,
 > extends ZeroOptions<S, MD> {
   /**
    * UI rendering libraries will often provide a utility for batching multiple

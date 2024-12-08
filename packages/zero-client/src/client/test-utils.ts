@@ -30,7 +30,7 @@ import {
   exposedToTestingSymbol,
   onSetConnectionStateSymbol,
 } from './zero.js';
-import type {MutatorDefs} from '../mod.js';
+import type {CustomMutatorDefs} from '../mod.js';
 
 export async function tickAFewTimes(clock: SinonFakeTimers, duration = 100) {
   const n = 10;
@@ -66,7 +66,7 @@ export class MockSocket extends EventTarget {
 
 export class TestZero<
   const S extends Schema = Schema,
-  const MD extends MutatorDefs<Schema> = MutatorDefs<Schema>,
+  const MD extends CustomMutatorDefs<S> = CustomMutatorDefs<S>,
 > extends Zero<S, MD> {
   #connectionStateResolvers: Set<{
     state: ConnectionState;
@@ -206,7 +206,7 @@ let testZeroCounter = 0;
 
 export function zeroForTest<
   const S extends Schema,
-  const MD extends MutatorDefs<Schema>,
+  const MD extends CustomMutatorDefs<S>,
 >(
   options: Partial<ZeroOptions<S, MD>> = {},
   errorOnUpdateNeeded = true,
@@ -240,7 +240,7 @@ export function zeroForTest<
 }
 
 export async function waitForUpstreamMessage(
-  r: TestZero<Schema, MutatorDefs<Schema>>,
+  r: TestZero<Schema, CustomMutatorDefs<Schema>>,
   name: string,
   clock: SinonFakeTimers,
 ) {

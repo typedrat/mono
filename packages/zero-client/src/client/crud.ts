@@ -18,11 +18,9 @@ import type {
 import {toPrimaryKeyString} from './keys.js';
 import type {MutatorDefs, WriteTransaction} from './replicache-types.js';
 import type {Schema} from '../../../zero-schema/src/mod.js';
-import type {ReadonlyJSONObject, ReadonlyJSONValue} from '../mod.js';
+import type {ReadonlyJSONObject} from '../mod.js';
 import type {NormalizedTableSchema} from '../../../zero-schema/src/normalize-table-schema.js';
 import type {NormalizedSchema} from '../../../zero-schema/src/normalized-schema.js';
-import type {ToPromise} from '../../../replicache/src/types.js';
-import {must} from '../../../shared/src/must.js';
 
 export type InsertValue<S extends TableSchema> = Expand<
   PrimaryKeyFields<S> & {
@@ -56,9 +54,9 @@ type PrimaryKeyFields<S extends TableSchema> = {
 };
 
 /**
- * This is the type of the generated mutate.<name>.<verb> function.
+ * This is the type of the generated mutate.<table> function.
  */
-export type TableMutator<S extends TableSchema> = {
+export type TableCRUD<S extends TableSchema> = {
   /**
    * Writes a row if a row with the same primary key doesn't already exists.
    * Non-primary-key fields that are 'optional' can be omitted or set to
@@ -89,23 +87,8 @@ export type TableMutator<S extends TableSchema> = {
   delete: (id: DeleteID<S>) => Promise<void>;
 };
 
-export type DBMutator<
-  S extends Schema,
-  MD extends MutatorDefs,
-> = CRUDMutators<S> & CustomMutator<MD>;
-
-export type CustomMutator<MD extends MutatorDefs> = {
-  readonly [P in keyof MD]: MakeMutator<MD[P]>;
-};
-
-export type MakeMutator<
-  F extends (tx: WriteTransaction, ...args: [] | [ReadonlyJSONValue]) => void,
-> = F extends (tx: WriteTransaction, ...args: infer Args) => infer Ret
-  ? (...args: Args) => ToPromise<Ret>
-  : never;
-
 export type CRUDMutators<S extends Schema> = {
-  readonly [K in keyof S['tables']]: TableMutator<S['tables'][K]>;
+  readonly [K in keyof S['tables']]: TableCRUD<S['tables'][K]>;
 };
 
 // TODO: Do we even still want this? Probably not.
@@ -158,7 +141,7 @@ export function makeCRUDMutate<const S extends Schema>(
     }
   };
 
-  const mutate: Record<string, TableMutator<TableSchema>> = {};
+  const mutate: Record<string, TableCRUD<TableSchema>> = {};
   for (const [name, tableSchema] of Object.entries(schema.tables)) {
     mutate[name] = makeEntityCRUDMutate(
       name,
@@ -174,15 +157,16 @@ export function makeCRUDMutate<const S extends Schema>(
   };
 }
 
+/*
 export type CustomMutate<S extends Schema> = {
-  [P in keyof S['tables']]: TableMutator<S['tables'][P]>;
+  [P in keyof S['tables']]: TableCRUD<S['tables'][P]>;
 };
 
 export function makeCustomMutate(
   schema: NormalizedSchema,
   tx: WriteTransaction,
 ) {
-  const mutate: Record<string, TableMutator<TableSchema>> = {};
+  const mutate: Record<string, TableCRUD<TableSchema>> = {};
   for (const [name] of Object.entries(schema.tables)) {
     mutate[name] = makeEntityCustomMutate(schema, name, tx);
   }
@@ -207,6 +191,7 @@ function makeEntityCustomMutate(
       deleteImpl(tx, {op: 'delete', tableName, primaryKey, value: id}, schema),
   };
 }
+  */
 
 /**
  * Creates the `{insert, upsert, update, delete}` object for use outside a
@@ -217,7 +202,7 @@ function makeEntityCRUDMutate<S extends NormalizedTableSchema>(
   primaryKey: S['primaryKey'],
   zeroCRUD: CRUDMutate,
   assertNotInBatch: (tableName: string, op: CRUDOpKind) => void,
-): TableMutator<S> {
+): TableCRUD<S> {
   return {
     insert: (value: InsertValue<S>) => {
       assertNotInBatch(tableName, 'insert');
@@ -270,7 +255,7 @@ export function makeBatchCRUDMutate<S extends TableSchema>(
   tableName: string,
   schema: NormalizedSchema,
   ops: CRUDOp[],
-): TableMutator<S> {
+): TableCRUD<S> {
   const {primaryKey} = schema.tables[tableName];
   return {
     insert: (value: InsertValue<S>) => {
@@ -364,7 +349,7 @@ function defaultOptionalFieldsToNull(
   return rv;
 }
 
-async function insertImpl(
+export async function insertImpl(
   tx: WriteTransaction,
   arg: InsertOp,
   schema: NormalizedSchema,
@@ -383,7 +368,7 @@ async function insertImpl(
   }
 }
 
-async function upsertImpl(
+export async function upsertImpl(
   tx: WriteTransaction,
   arg: InsertOp | UpsertOp,
   schema: NormalizedSchema,
@@ -400,7 +385,7 @@ async function upsertImpl(
   await tx.set(key, val);
 }
 
-async function updateImpl(
+export async function updateImpl(
   tx: WriteTransaction,
   arg: UpdateOp,
   schema: NormalizedSchema,
@@ -424,7 +409,7 @@ async function updateImpl(
   await tx.set(key, next);
 }
 
-async function deleteImpl(
+export async function deleteImpl(
   tx: WriteTransaction,
   arg: DeleteOp,
   schema: NormalizedSchema,

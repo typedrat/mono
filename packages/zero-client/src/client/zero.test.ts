@@ -27,7 +27,8 @@ import {
 import type {NullableVersion} from '../../../zero-protocol/src/version.js';
 import type {Schema} from '../../../zero-schema/src/mod.js';
 import type {WSString} from './http-string.js';
-import type {MutatorDefs, UpdateNeededReason, ZeroOptions} from './options.js';
+import type {UpdateNeededReason, ZeroOptions} from './options.js';
+import type {CustomMutatorDefs} from './custom.js';
 import type {QueryManager} from './query-manager.js';
 import {RELOAD_REASON_STORAGE_KEY} from './reload-error-handler.js';
 import {ServerError} from './server-error.js';
@@ -1784,11 +1785,12 @@ test('custom', () => {
     },
     mutators: {
       // TODO: allow multiple params
-      foo: (tx, {foo}: {foo: string}) => {
-        console.log(tx, foo);
+      foo: (tx, {foo}: {foo: number}) => {
+        tx.mutate.issues.insert({id: 'a', value: foo});
       },
     },
   });
+  z.mutate.foo({foo: 42});
   console.log(z);
 });
 
@@ -2079,7 +2081,7 @@ test('kvStore option', async () => {
   };
 
   const t = async (
-    kvStore: ZeroOptions<Schema, MutatorDefs<Schema>>['kvStore'],
+    kvStore: ZeroOptions<Schema, CustomMutatorDefs<Schema>>['kvStore'],
     userID: string,
     expectedIDBOpenCalled: boolean,
     expectedValue: E[],
