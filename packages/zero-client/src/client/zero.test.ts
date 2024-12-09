@@ -28,7 +28,7 @@ import type {NullableVersion} from '../../../zero-protocol/src/version.js';
 import type {Schema} from '../../../zero-schema/src/mod.js';
 import type {WSString} from './http-string.js';
 import type {UpdateNeededReason, ZeroOptions} from './options.js';
-import type {CustomMutatorDefs} from './custom.js';
+import type {CustomMutatorDefs, PushRequest} from './custom.js';
 import type {QueryManager} from './query-manager.js';
 import {RELOAD_REASON_STORAGE_KEY} from './reload-error-handler.js';
 import {ServerError} from './server-error.js';
@@ -49,7 +49,6 @@ import {
   PING_TIMEOUT_MS,
   PULL_TIMEOUT_MS,
   RUN_LOOP_INTERVAL_MS,
-  Zero,
 } from './zero.js';
 import {PROTOCOL_VERSION} from '../../../zero-protocol/src/protocol-version.js';
 
@@ -1767,13 +1766,12 @@ test('Constructing Zero with a negative hiddenTabDisconnectDelay option throws a
     );
 });
 
-test('custom', async () => {
-  const pushRequests: unknown[] = [];
+test('custom-mutators', async () => {
+  const pushRequests: PushRequest[] = [];
   const {promise, resolve} = resolver();
-  const z = new Zero({
-    userID: 'u1',
+  const z = zeroForTest({
     schema: {
-      version: 1,
+      version: 42,
       tables: {
         issues: {
           columns: {
@@ -1791,28 +1789,30 @@ test('custom', async () => {
         tx.mutate.issues.insert({id: 'a', value: foo});
       },
     },
-    pusher: (req, _reqID) => {
+    pusher: req => {
       pushRequests.push(req);
       resolve();
     },
   });
+  await z.triggerConnected();
   z.mutate.foo({foo: 42});
   await promise;
 
+  expect(pushRequests[0].requestID).not.empty;
+
   expect(pushRequests).to.deep.equal([
     {
-      profileID: '',
-      clientGroupID: z.clientGroupID,
       pushVersion: 1,
-      schemaVersion: '1',
+      requestID: pushRequests[0].requestID,
+      schemaVersion: 42,
+      profileID: await z.profileID,
+      clientGroupID: await z.clientGroupID,
       mutations: [
         {
-          type: MutationType.Custom,
           clientID: z.clientID,
           id: 1,
           name: 'foo',
-          args: [{foo: 42}],
-          timestamp: 0,
+          args: {foo: 42},
         },
       ],
     },

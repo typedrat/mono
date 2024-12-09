@@ -1,7 +1,7 @@
 import type {TableSchema} from '../../../zero-schema/src/table-schema.js';
 import type {WriteTransaction} from './replicache-types.js';
 import type {Schema} from '../../../zero-schema/src/mod.js';
-import type {ClientID, ReadonlyJSONValue} from '../mod.js';
+import type {ClientGroupID, ClientID, ReadonlyJSONValue} from '../mod.js';
 import type {NormalizedTableSchema} from '../../../zero-schema/src/normalize-table-schema.js';
 import type {NormalizedSchema} from '../../../zero-schema/src/normalized-schema.js';
 import {must} from '../../../shared/src/must.js';
@@ -15,6 +15,24 @@ import {
   type UpdateValue,
   type UpsertValue,
 } from './crud.js';
+
+export type Mutation = {
+  clientID: ClientID;
+  id: number;
+  name: string;
+  args: ReadonlyJSONValue;
+};
+
+export type PushRequest = {
+  pushVersion: 1;
+  requestID: string;
+  schemaVersion: number;
+  profileID: string;
+  clientGroupID: ClientGroupID;
+  mutations: Mutation[];
+};
+
+export type Pusher = (request: PushRequest) => void;
 
 export type CustomMutatorDefs<S extends Schema> = {
   [key: string]: CustomMutatorImpl<S>;

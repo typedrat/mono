@@ -1,8 +1,5 @@
 import type {LogLevel} from '@rocicorp/logger';
-import type {
-  KVStoreProvider,
-  PushRequestV1,
-} from '../../../replicache/src/mod.js';
+import type {KVStoreProvider} from '../../../replicache/src/mod.js';
 import type {MaybePromise} from '../../../shared/src/types.js';
 import type {Schema} from '../../../zero-schema/src/mod.js';
 import {type CustomMutatorDefs} from './custom.js';
@@ -147,8 +144,6 @@ export interface ZeroOptions<
    */
   maxHeaderLength?: number | undefined;
 }
-
-export type Pusher = (request: PushRequestV1, requestID: string) => void;
 
 export interface ZeroAdvancedOptions<
   S extends Schema,

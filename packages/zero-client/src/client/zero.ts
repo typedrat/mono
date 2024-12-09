@@ -20,7 +20,6 @@ import {
   type ReplicacheOptions,
   type UpdateNeededReason as ReplicacheUpdateNeededReason,
   dropDatabase,
-  type MutationV1,
 } from '../../../replicache/src/mod.js';
 import {assert, unreachable} from '../../../shared/src/asserts.js';
 import {
@@ -119,6 +118,7 @@ import {
   type CustomMutatorDefs,
   makeReplicacheMutator,
   type MakeCustomMutatorInterfaces,
+  type Mutation,
 } from './custom.js';
 
 export type NoRelations = Record<string, never>;
@@ -605,6 +605,10 @@ export class Zero<
 
   get clientGroupID(): Promise<ClientGroupID> {
     return this.#rep.clientGroupID;
+  }
+
+  get profileID(): Promise<string> {
+    return this.#rep.profileID;
   }
 
   /**
@@ -1122,9 +1126,6 @@ export class Zero<
     // If we are connecting we wait until we are connected.
     await this.#connectResolver.promise;
 
-    // We're never connectng , making test time out
-    console.log('pushing', req.mutations);
-
     const lc = this.#lc.withContext('requestID', requestID);
     lc.debug?.(`pushing ${req.mutations.length} mutations`);
     const socket = this.#socket;
@@ -1147,20 +1148,18 @@ export class Zero<
       'mutations.',
     );
 
-    let customBatch: MutationV1[] = [];
+    let customBatch: Mutation[] = [];
     const flushCustomBatch = () => {
       if (customBatch.length === 0) {
         return;
       }
       assert(this.#options.pusher);
-      console.log('flushing, customBatch:', customBatch);
-      this.#options.pusher(
-        {
-          ...req,
-          mutations: customBatch,
-        },
+      this.#options.pusher({
+        ...req,
         requestID,
-      );
+        schemaVersion: parseInt(req.schemaVersion),
+        mutations: customBatch,
+      });
       customBatch = [];
     };
 
@@ -1185,14 +1184,19 @@ export class Zero<
             clientGroupID: req.clientGroupID,
             mutations: [zeroM],
             pushVersion: req.pushVersion,
-            // Zero schema versions are always numbers.
+            // Zero schema versions are always integers.
             schemaVersion: parseInt(req.schemaVersion),
             requestID,
           },
         ];
         send(socket, msg);
       } else {
-        customBatch.push(m);
+        customBatch.push({
+          clientID: m.clientID,
+          id: m.id,
+          name: m.name,
+          args: m.args,
+        });
       }
       if (!isMutationRecoveryPush) {
         this.#lastMutationIDSent = {clientID: m.clientID, id: m.id};
