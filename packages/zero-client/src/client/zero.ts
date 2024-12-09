@@ -1148,26 +1148,19 @@ export class Zero<
       'mutations.',
     );
 
-    let customBatch: Mutation[] = [];
-    const flushCustomBatch = () => {
-      if (customBatch.length === 0) {
-        return;
-      }
-      assert(this.#options.pusher);
-      this.#options.pusher({
-        ...req,
-        requestID,
-        schemaVersion: parseInt(req.schemaVersion),
-        mutations: customBatch,
-      });
-      customBatch = [];
-    };
+    const custom: Mutation[] = [];
 
     const now = Date.now();
     for (let i = start; i < req.mutations.length; i++) {
       const m = req.mutations[i];
-      if (m.name === CRUD_MUTATION_NAME) {
-        flushCustomBatch();
+      if (m.name !== CRUD_MUTATION_NAME) {
+        custom.push({
+          clientID: m.clientID,
+          id: m.id,
+          name: m.name,
+          args: m.args,
+        });
+      } else {
         const timestamp = now - Math.round(performance.now() - m.timestamp);
         const zeroM = {
           type: MutationType.CRUD,
@@ -1190,19 +1183,22 @@ export class Zero<
           },
         ];
         send(socket, msg);
-      } else {
-        customBatch.push({
-          clientID: m.clientID,
-          id: m.id,
-          name: m.name,
-          args: m.args,
-        });
       }
       if (!isMutationRecoveryPush) {
         this.#lastMutationIDSent = {clientID: m.clientID, id: m.id};
       }
     }
-    flushCustomBatch();
+
+    if (custom.length > 0) {
+      assert(this.#options.pusher);
+      this.#options.pusher({
+        ...req,
+        requestID,
+        schemaVersion: parseInt(req.schemaVersion),
+        mutations: custom,
+      });
+    }
+
     return {
       httpRequestInfo: {
         errorMessage: '',

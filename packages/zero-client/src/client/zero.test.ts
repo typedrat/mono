@@ -1819,6 +1819,75 @@ test('custom-mutators', async () => {
   ]);
 });
 
+test('custom-mutators-interleaved', async () => {
+  const pushRequests: PushRequest[] = [];
+  const {promise, resolve} = resolver();
+  const z = zeroForTest({
+    schema: {
+      version: 42,
+      tables: {
+        issues: {
+          columns: {
+            id: {type: 'string'},
+            value: {type: 'number'},
+          },
+          primaryKey: ['id'],
+          tableName: 'issues',
+        },
+      },
+    },
+    mutators: {
+      // TODO: allow multiple params
+      foo: (tx, {foo}: {foo: number}) => {
+        tx.mutate.issues.insert({id: 'a', value: foo});
+      },
+    },
+    pusher: req => {
+      pushRequests.push(req);
+      resolve();
+    },
+  });
+  await z.triggerConnected();
+  z.mutate.foo({foo: 42});
+  z.mutate.foo({foo: 43});
+  void z.mutate.issues.insert({id: 'b', value: 2});
+  z.mutate.foo({foo: 44});
+  void z.mutate.issues.insert({id: 'b', value: 3});
+  await promise;
+
+  expect(pushRequests[0].requestID).not.empty;
+
+  expect(pushRequests).to.deep.equal([
+    {
+      pushVersion: 1,
+      requestID: pushRequests[0].requestID,
+      schemaVersion: 42,
+      profileID: await z.profileID,
+      clientGroupID: await z.clientGroupID,
+      mutations: [
+        {
+          clientID: z.clientID,
+          id: 1,
+          name: 'foo',
+          args: {foo: 42},
+        },
+        {
+          clientID: z.clientID,
+          id: 2,
+          name: 'foo',
+          args: {foo: 43},
+        },
+        {
+          clientID: z.clientID,
+          id: 4,
+          name: 'foo',
+          args: {foo: 44},
+        },
+      ],
+    },
+  ]);
+});
+
 suite('Disconnect on hide', () => {
   type Case = {
     name: string;
