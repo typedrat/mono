@@ -6,11 +6,21 @@ import {
   unreachable,
 } from '../../../shared/src/asserts.js';
 import {must} from '../../../shared/src/must.js';
-import type {Row} from '../../../zero-protocol/src/data.js';
+import type {Row, Value} from '../../../zero-protocol/src/data.js';
 import type {Change} from './change.js';
 import type {Comparator, Node} from './data.js';
 import type {SourceSchema} from './schema.js';
-import type {Entry, EntryList, Format} from './view.js';
+import type {Entry, EntryList, Format, View} from './view.js';
+
+interface Delegate {
+  setProperty(entry: Entry, key: string, value: Value | View): Entry;
+  toSpliced<T>(
+    list: readonly T[],
+    start: number,
+    deleteCount: number,
+    ...items: T[]
+  ): T[];
+}
 
 export function applyChange(
   parentEntry: Entry,
@@ -18,7 +28,8 @@ export function applyChange(
   schema: SourceSchema,
   relationship: string,
   format: Format,
-) {
+  delegate: Delegate,
+): Entry {
   if (schema.isHidden) {
     switch (change.type) {
       case 'add':
@@ -28,7 +39,7 @@ export function applyChange(
         )) {
           const childSchema = must(schema.relationships[relationship]);
           for (const node of children) {
-            applyChange(
+            parentEntry = applyChange(
               parentEntry,
               {type: change.type, node},
               childSchema,
@@ -37,25 +48,24 @@ export function applyChange(
             );
           }
         }
-        return;
+        return parentEntry;
       case 'edit':
         // If hidden at this level it means that the hidden row was changed. If
         // the row was changed in such a way that it would change the
         // relationships then the edit would have been split into remove and
         // add.
-        return;
+        return parentEntry;
       case 'child': {
         const childSchema = must(
           schema.relationships[change.child.relationshipName],
         );
-        applyChange(
+        return applyChange(
           parentEntry,
           change.child.change,
           childSchema,
           relationship,
           format,
         );
-        return;
       }
       default:
         unreachable(change);
@@ -65,23 +75,48 @@ export function applyChange(
   const {singular, relationships: childFormats} = format;
   switch (change.type) {
     case 'add': {
-      // TODO: Only create a new entry if we need to mutate the existing one.
-      const newEntry: Entry = {
-        ...change.node.row,
-      };
+      const entry = change.node.row;
       if (singular) {
         assertUndefined(
           parentEntry[relationship],
           'single output already exists',
         );
-        parentEntry[relationship] = newEntry;
-      } else {
-        const view = getChildEntryList(parentEntry, relationship);
-        const {pos, found} = binarySearch(view, newEntry, schema.compareRows);
-        assert(!found, 'node already exists');
-        // @ts-expect-error view is readonly
-        view.splice(pos, 0, newEntry);
+
+        let newEntry = entry;
+
+        for (const [relationship, children] of Object.entries(
+          change.node.relationships,
+        )) {
+          // TODO: Is there a flag to make TypeScript complain that dictionary access might be undefined?
+          const childSchema = must(schema.relationships[relationship]);
+          const childFormat = childFormats[relationship];
+          if (childFormat === undefined) {
+            continue;
+          }
+
+          const newView = childFormat.singular ? undefined : ([] as EntryList);
+          newEntry = delegate.setProperty(newEntry, relationship, newView);
+          // newEntry = {...newEntry, [relationship]: newView};
+
+          for (const node of children) {
+            newEntry = applyChange(
+              newEntry,
+              {type: 'add', node},
+              childSchema,
+              relationship,
+              childFormat,
+              delegate,
+            );
+          }
+        }
+        return delegate.setProperty(parentEntry, relationship, newEntry);
       }
+
+      const view = getChildEntryList(parentEntry, relationship);
+      const {pos, found} = binarySearch(view, entry, schema.compareRows);
+      assert(!found, 'node already exists');
+
+      let newEntry: Entry = entry;
       for (const [relationship, children] of Object.entries(
         change.node.relationships,
       )) {
@@ -93,23 +128,32 @@ export function applyChange(
         }
 
         const newView = childFormat.singular ? undefined : ([] as EntryList);
-        newEntry[relationship] = newView;
+        newEntry = delegate.setProperty(newEntry, relationship, newView);
         for (const node of children) {
-          applyChange(
+          newEntry = applyChange(
             newEntry,
             {type: 'add', node},
             childSchema,
             relationship,
             childFormat,
+            delegate,
           );
         }
       }
-      break;
+
+      return delegate.setProperty(
+        parentEntry,
+        relationship,
+        delegate.toSpliced(view, pos, 0, newEntry),
+      );
     }
     case 'remove': {
       if (singular) {
         assertObject(parentEntry[relationship]);
-        parentEntry[relationship] = undefined;
+        parentEntry = {
+          ...parentEntry,
+          [relationship]: undefined,
+        };
       } else {
         const view = getChildEntryList(parentEntry, relationship);
         const {pos, found} = binarySearch(
@@ -118,95 +162,125 @@ export function applyChange(
           schema.compareRows,
         );
         assert(found, 'node does not exist');
-        // @ts-expect-error view is readonly
-        view.splice(pos, 1);
+        parentEntry = {
+          ...parentEntry,
+          [relationship]: view.toSpliced(pos, 1),
+        };
       }
       // Needed to ensure cleanup of operator state is fully done.
       drainStreams(change.node);
-      break;
+      return parentEntry;
     }
-    case 'child': {
-      let existing: Entry;
-      if (singular) {
-        assertObject(parentEntry[relationship]);
-        existing = parentEntry[relationship];
-      } else {
-        const view = getChildEntryList(parentEntry, relationship);
-        const {pos, found} = binarySearch(view, change.row, schema.compareRows);
-        assert(found, 'node does not exist');
-        existing = view[pos];
-      }
 
+    case 'child': {
       const childSchema = must(
         schema.relationships[change.child.relationshipName],
       );
       const childFormat = format.relationships[change.child.relationshipName];
       if (childFormat !== undefined) {
-        applyChange(
-          existing,
+        if (singular) {
+          assertObject(parentEntry[relationship]);
+          const existingChild: Entry = parentEntry[relationship];
+
+          const newChild = applyChange(
+            existingChild,
+            change.child.change,
+            childSchema,
+            change.child.relationshipName,
+            childFormat,
+            delegate,
+          );
+          return {
+            ...parentEntry,
+            [relationship]: newChild,
+          };
+        }
+
+        const view = getChildEntryList(parentEntry, relationship);
+        const {pos, found} = binarySearch(view, change.row, schema.compareRows);
+        assert(found, 'node does not exist');
+        const existingChild = view[pos];
+
+        const newChild = applyChange(
+          existingChild,
           change.child.change,
           childSchema,
           change.child.relationshipName,
           childFormat,
+          delegate,
+        );
+        return delegate.setProperty(
+          parentEntry,
+          relationship,
+          delegate.toSpliced(view, pos, 1, newChild),
         );
       }
-      break;
+      return parentEntry;
     }
     case 'edit': {
       if (singular) {
         assertObject(parentEntry[relationship]);
-        parentEntry[relationship] = {
-          ...parentEntry[relationship],
-          ...change.node.row,
+        return {
+          ...parentEntry,
+          [relationship]: {
+            ...parentEntry[relationship],
+            ...change.node.row,
+          },
         };
-      } else {
-        const view = parentEntry[relationship] as EntryList | undefined;
-        assertArray(view);
-        // If the order changed due to the edit, we need to remove and reinsert.
-        if (schema.compareRows(change.oldNode.row, change.node.row) === 0) {
-          const {pos, found} = binarySearch(
-            view,
-            change.oldNode.row,
-            schema.compareRows,
-          );
-          assert(found, 'node does not exists');
-          view[pos] = makeEntryPreserveRelationships(
-            change.node.row,
-            view[pos],
-            schema.relationships,
-          );
-        } else {
-          // Remove
-          const {pos, found} = binarySearch(
-            view,
-            change.oldNode.row,
-            schema.compareRows,
-          );
-          assert(found, 'node does not exists');
-          const oldEntry = view[pos];
-          view.splice(pos, 1);
-
-          // Insert
-          {
-            const {pos, found} = binarySearch(
-              view,
-              change.node.row,
-              schema.compareRows,
-            );
-            assert(!found, 'node already exists');
-            view.splice(
-              pos,
-              0,
-              makeEntryPreserveRelationships(
-                change.node.row,
-                oldEntry,
-                schema.relationships,
-              ),
-            );
-          }
-        }
       }
-      break;
+
+      const view = getChildEntryList(parentEntry, relationship);
+      // If the order changed due to the edit, we need to remove and reinsert.
+      if (schema.compareRows(change.oldNode.row, change.node.row) === 0) {
+        const {pos, found} = binarySearch(
+          view,
+          change.oldNode.row,
+          schema.compareRows,
+        );
+        assert(found, 'node does not exists');
+        return {
+          ...parentEntry,
+          [relationship]: view.with(
+            pos,
+            makeNewEntryPreserveRelationships(
+              change.node.row,
+              view[pos],
+              schema.relationships,
+            ),
+          ),
+        };
+      }
+
+      // Remove
+      const {pos, found} = binarySearch(
+        view,
+        change.oldNode.row,
+        schema.compareRows,
+      );
+      assert(found, 'node does not exists');
+      const oldEntry = view[pos];
+      const newView = view.toSpliced(pos, 1);
+
+      // Insert
+      {
+        const {pos, found} = binarySearch(
+          newView,
+          change.node.row,
+          schema.compareRows,
+        );
+        assert(!found, 'node already exists');
+        newView.splice(
+          pos,
+          0,
+          makeNewEntryPreserveRelationships(
+            change.node.row,
+            oldEntry,
+            schema.relationships,
+          ),
+        );
+      }
+
+      return delegate.setProperty(parentEntry, relationship, newView);
     }
     default:
       unreachable(change);
@@ -231,17 +305,20 @@ function binarySearch(view: EntryList, target: Entry, comparator: Comparator) {
   return {pos: low, found: false};
 }
 
-function makeEntryPreserveRelationships(
+function makeNewEntryPreserveRelationships(
   row: Row,
   entry: Entry,
   relationships: {[key: string]: SourceSchema},
 ): Entry {
-  const result: Entry = {...row};
+  let result: Entry | undefined;
   for (const relationship in relationships) {
+    if (!result) {
+      result = {...row};
+    }
     assert(!(relationship in row), 'Relationship already exists');
     result[relationship] = entry[relationship];
   }
-  return result;
+  return result ?? row;
 }
 
 function drainStreams(node: Node) {

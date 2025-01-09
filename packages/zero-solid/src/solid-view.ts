@@ -1,9 +1,4 @@
-import {
-  createStore,
-  produce,
-  type SetStoreFunction,
-  type Store,
-} from 'solid-js/store';
+import {createStore, type SetStoreFunction, type Store} from 'solid-js/store';
 import {
   applyChange,
   type Change,
@@ -29,6 +24,27 @@ type State = [Entry, QueryResultDetails];
 const complete = {type: 'complete'} as const;
 const unknown = {type: 'unknown'} as const;
 
+const delegate = {
+  setProperty(entry: Entry, key: string, value: Entry[string]): Entry {
+    entry[key] = value;
+    return entry; //{...entry, [key]: value};
+  },
+  toSpliced<T>(
+    list: readonly T[],
+    start: number,
+    deleteCount: number,
+    ...items: T[]
+  ): readonly T[] {
+    (list as T[]).splice(start, deleteCount, ...items);
+    return list;
+    // return [
+    //   ...list.slice(0, start),
+    //   ...items,
+    //   ...list.slice(start + deleteCount),
+    // ];
+  },
+};
+
 export class SolidView<V extends View> implements Output {
   readonly #input: Input;
   readonly #format: Format;
@@ -52,19 +68,19 @@ export class SolidView<V extends View> implements Output {
     ]);
     input.setOutput(this);
 
-    this.#setState(
-      produce(draftState => {
-        for (const node of input.fetch({})) {
-          applyChange(
-            draftState[0],
-            {type: 'add', node},
-            input.getSchema(),
-            '',
-            this.#format,
-          );
-        }
-      }),
-    );
+    this.#setState(state => {
+      for (const node of input.fetch({})) {
+        state[0] = applyChange(
+          state[0],
+          {type: 'add', node},
+          input.getSchema(),
+          '',
+          this.#format,
+          delegate,
+        );
+      }
+      return [state[0], state[1]];
+    });
     if (queryComplete !== true) {
       void queryComplete.then(() => {
         this.#setState(oldState => [oldState[0], complete]);
@@ -85,17 +101,17 @@ export class SolidView<V extends View> implements Output {
   }
 
   push(change: Change): void {
-    this.#setState(
-      produce((draftState: State) => {
-        applyChange(
-          draftState[0],
-          change,
-          this.#input.getSchema(),
-          '',
-          this.#format,
-        );
-      }),
-    );
+    this.#setState((state: State) => [
+      applyChange(
+        state[0],
+        change,
+        this.#input.getSchema(),
+        '',
+        this.#format,
+        delegate,
+      ),
+      state[1],
+    ]);
   }
 }
 
