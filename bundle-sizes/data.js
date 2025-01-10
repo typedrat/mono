@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736539848769,
+  "lastUpdate": 1736541790929,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -50393,6 +50393,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 30991,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c051c606cd753cb0ff4700f98333b7db3ac47c43",
+          "message": "chore(replicache)!: Remove Pull/Push V0 (#3509)\n\nBREAKING CHANGE!\n\nThis removes support for the old pull and push formats.\n\n - PullResponseOKV0\n - PullResponseV0\n - PullerResultV0\n - MutationV0\n - PushRequestV0\n\nIt also removes the V1 types in favor of the non versioned ones now that there is only one version.",
+          "timestamp": "2025-01-10T20:42:13Z",
+          "tree_id": "b3252ed8ec85fc0400847f5dbb764e48c9ddccad",
+          "url": "https://github.com/rocicorp/mono/commit/c051c606cd753cb0ff4700f98333b7db3ac47c43"
+        },
+        "date": 1736541779791,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 295645,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53251,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 108714,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 30923,
             "unit": "bytes"
           }
         ]
