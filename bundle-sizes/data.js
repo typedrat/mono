@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736525285707,
+  "lastUpdate": 1736527916516,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -50305,6 +50305,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31941,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "bcf1d3904c8e0398f67c4385a0e3e534e0b7e355",
+          "message": "chore(replicache): Remove MetaType.LocalSDD (#3502)",
+          "timestamp": "2025-01-10T16:51:02Z",
+          "tree_id": "c82bf465a42138f5a6ca9102fdc0ae2d54fcf106",
+          "url": "https://github.com/rocicorp/mono/commit/bcf1d3904c8e0398f67c4385a0e3e534e0b7e355"
+        },
+        "date": 1736527906301,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 310099,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54522,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 113992,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31856,
             "unit": "bytes"
           }
         ]
