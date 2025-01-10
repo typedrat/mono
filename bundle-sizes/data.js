@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1734652411749,
+  "lastUpdate": 1736525285707,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -50261,6 +50261,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 32005,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b13fdd0f5726bfc4f659d9b44c966f9ed5aafc36",
+          "message": "chore(replicache): Remove MetaType.IndexChangeSDD (#3500)\n\nThis is one of many to remove SDD from Replicache",
+          "timestamp": "2025-01-10T16:07:12Z",
+          "tree_id": "b5512ddb1a45982321d99ba43b9bea225e80823c",
+          "url": "https://github.com/rocicorp/mono/commit/b13fdd0f5726bfc4f659d9b44c966f9ed5aafc36"
+        },
+        "date": 1736525275856,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 312138,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54633,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 114822,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31941,
             "unit": "bytes"
           }
         ]
