@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736772617187,
+  "lastUpdate": 1736781920024,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -50481,6 +50481,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 30918,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ae1b72df765234261115e557ea18f2006dc17585",
+          "message": "chore(zero): Statically disable mutation recovery (#3519)\n\nThis allows dead code elimination to remove the mutation recovery code.",
+          "timestamp": "2025-01-13T15:24:27Z",
+          "tree_id": "664ef723517adcfe4e809c268d2ad77d48c73edc",
+          "url": "https://github.com/rocicorp/mono/commit/ae1b72df765234261115e557ea18f2006dc17585"
+        },
+        "date": 1736781909742,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 295731,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53263,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 108714,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 30953,
             "unit": "bytes"
           }
         ]
