@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736541790929,
+  "lastUpdate": 1736772617187,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -50437,6 +50437,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 30923,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fe4e0b135292630cb88a793abd61e978d79ead78",
+          "message": "chore: Ban TS types throughout (#3518)\n\nThis was previously only done for replicache.\n\nThe motivation is to be able to run ts directly using node at some\npoint. This is a step in that direction.\n\nThe way to transition old TS enums to non TS enums is to do:\n\n```ts\nconst enum E = {\n  A = 1,\n  B = 2,\n  D = 4,\n}\n```\n\n```ts\n// e-enum.ts\nexport const A = 1;\nexport const B = 2;\nexport const D = 4;\nexport type A = typeof A;\nexport type B = typeof B;\nexport type D = typeof D;\n```\n\nThen in the importer do:\n\n```ts\nimport * as E from './e-enum.ts';\nimport type {Enum} from 'shared/enum.ts';\ntype E = Enum<typeof E>;\n```\n\nThen you can use E and E.A as both a type and a value.\n\nhttps://esbuild.github.io/try/#YgAwLjI0LjIALS1taW5pZnkgLS1idW5kbGUgLS1mb3JtYXQ9ZXNtAGUAZW50cnkuanMAaW1wb3J0ICogYXMgRSBmcm9tICcuL2UtZW51bS50cyc7CgppZiAoRS5BID09PSAxKSB7CiAgY29uc29sZS5sb2coRS5CKTsKfSBlbHNlIHsKICBjb25zb2xlLmxvZygndW5yZWFjaGFibGUnKTsKfQAAZS1lbnVtLnRzAGV4cG9ydCBjb25zdCBBID0gMTsKZXhwb3J0IGNvbnN0IEIgPSAyOwpleHBvcnQgY29uc3QgRCA9IDQ7CiAKZXhwb3J0IHR5cGUgQSA9IHR5cGVvZiBBOwpleHBvcnQgdHlwZSBCID0gdHlwZW9mIEI7CmV4cG9ydCB0eXBlIEQgPSB0eXBlb2YgRDs",
+          "timestamp": "2025-01-13T12:49:24Z",
+          "tree_id": "9befa6260cfb2601b2d92bab0bdb8a4109a02851",
+          "url": "https://github.com/rocicorp/mono/commit/fe4e0b135292630cb88a793abd61e978d79ead78"
+        },
+        "date": 1736772606847,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 295645,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53251,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 108714,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 30918,
             "unit": "bytes"
           }
         ]
