@@ -1,10 +1,8 @@
 name: zero-cache
-description: A minimal AWS TypeScript Pulumi program
 runtime:
   name: nodejs
   options:
     packagemanager: npm
 config:
-  pulumi:tags:
-    value:
-      pulumi:template: aws-typescript
+  aws:region: us-west-2
+  zero-cache:namespace: zero-cache
