@@ -14,10 +14,11 @@ import {must} from '../../../../shared/src/must.js';
 import {promiseVoid} from '../../../../shared/src/resolved-promises.js';
 import {sleep} from '../../../../shared/src/sleep.js';
 import {astSchema} from '../../../../zero-protocol/src/ast.js';
-import {ErrorKind} from '../../../../zero-protocol/src/error.js';
-import {Mode, TransactionPool} from '../../db/transaction-pool.js';
+import * as ErrorKind from '../../../../zero-protocol/src/error-kind-enum.js';
+import * as Mode from '../../db/mode-enum.js';
+import {TransactionPool} from '../../db/transaction-pool.js';
 import type {JSONValue} from '../../types/bigint-json.js';
-import {ErrorForClient} from '../../types/error-for-client.js';
+import {ErrorForClient, ErrorWithLevel} from '../../types/error-for-client.js';
 import type {PostgresDB, PostgresTransaction} from '../../types/pg.js';
 import {rowIDString} from '../../types/row-key.js';
 import type {Patch, PatchToVersion} from './client-handler.js';
@@ -362,18 +363,29 @@ class RowRecordCache {
            ON CONFLICT ("clientGroupID") 
            DO UPDATE SET ${tx(rowsVersion)}`.execute(),
     ];
-    let i = 0;
-    while (i < rowRecordRows.length) {
+
+    if (rowRecordRows.length) {
       pending.push(
-        tx`INSERT INTO cvr.rows ${tx(
-          rowRecordRows.slice(i, i + ROW_RECORD_UPSERT_BATCH_SIZE),
-        )} 
-          ON CONFLICT ("clientGroupID", "schema", "table", "rowKey")
-          DO UPDATE SET "rowVersion" = excluded."rowVersion",
-            "patchVersion" = excluded."patchVersion",
-            "refCounts" = excluded."refCounts"`.execute(),
+        tx`
+  INSERT INTO cvr.rows(
+      "clientGroupID", "schema", "table", "rowKey", "rowVersion", "patchVersion", "refCounts"
+  ) SELECT
+      "clientGroupID", "schema", "table", "rowKey", "rowVersion", "patchVersion", "refCounts"
+    FROM json_to_recordset(${rowRecordRows}) AS x(
+      "clientGroupID" TEXT,
+      "schema" TEXT,
+      "table" TEXT,
+      "rowKey" JSONB,
+      "rowVersion" TEXT,
+      "patchVersion" TEXT,
+      "refCounts" JSONB
+  ) ON CONFLICT ("clientGroupID", "schema", "table", "rowKey")
+    DO UPDATE SET "rowVersion" = excluded."rowVersion",
+      "patchVersion" = excluded."patchVersion",
+      "refCounts" = excluded."refCounts"
+    `.execute(),
       );
-      i += ROW_RECORD_UPSERT_BATCH_SIZE;
+      this.#lc.debug?.(`flushing ${rowRecordRows.length} rows`);
     }
     return pending;
   }
@@ -592,7 +604,11 @@ export class CVRStore {
 
     for (const row of desiresRows) {
       const client = cvr.clients[row.clientID];
-      assert(client, 'Client not found');
+      if (!client) {
+        // should be impossible unless CVR is corrupted
+        lc.error?.(`Client ${row.clientID} not found`, cvr);
+        throw new Error(`Client ${row.clientID} not found`);
+      }
       client.desiredQueryIDs.push(row.queryHash);
 
       const query = cvr.queries[row.queryHash];
@@ -993,11 +1009,6 @@ export class CVRStore {
   }
 }
 
-// Max number of parameters for our sqlite build is 65534.
-// Each row record has 7 parameters (1 per column).
-// 65534 / 7 = 9362
-const ROW_RECORD_UPSERT_BATCH_SIZE = 9_360;
-
 /**
  * This is similar to {@link CVRStore.#checkVersionAndOwnership} except
  * that it only checks the version and is suitable for snapshot reads
@@ -1018,17 +1029,18 @@ async function checkVersion(
   }
 }
 
-export class ConcurrentModificationException extends Error {
+export class ConcurrentModificationException extends ErrorWithLevel {
   readonly name = 'ConcurrentModificationException';
 
   constructor(expectedVersion: string, actualVersion: string) {
     super(
       `CVR has been concurrently modified. Expected ${expectedVersion}, got ${actualVersion}`,
+      'warn',
     );
   }
 }
 
-export class OwnershipError extends Error {
+export class OwnershipError extends ErrorWithLevel {
   readonly name = 'OwnershipError';
 
   constructor(owner: string | null, grantedAt: number | null) {
@@ -1036,6 +1048,7 @@ export class OwnershipError extends Error {
       `CVR ownership was transferred to ${owner} at ${new Date(
         grantedAt ?? 0,
       ).toISOString()}`,
+      'info',
     );
   }
 }

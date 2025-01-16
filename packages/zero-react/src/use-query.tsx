@@ -8,16 +8,16 @@ import type {
   Smash,
   TypedView,
 } from '../../zero-client/src/mod.js';
-import type {AdvancedQuery} from '../../zql/src/query/query-internal.js';
-import {useZero} from './use-zero.js';
 import type {TableSchema} from '../../zero-schema/src/table-schema.js';
+import type {AdvancedQuery} from '../../zql/src/query/query-internal.js';
 import type {ResultType} from '../../zql/src/query/typed-view.js';
+import {useZero} from './use-zero.js';
 
-export type QueryResultDetails = {
+export type QueryResultDetails = Readonly<{
   type: ResultType;
-};
+}>;
 
-export type QueryResult<TReturn extends QueryType> = [
+export type QueryResult<TReturn extends QueryType> = readonly [
   Smash<TReturn>,
   QueryResultDetails,
 ];
@@ -30,10 +30,14 @@ export function useQuery<
   const view = viewStore.getView(
     z.clientID,
     q as AdvancedQuery<TSchema, TReturn>,
-    enable,
+    enable && z.server !== null,
   );
   // https://react.dev/reference/react/useSyncExternalStore
-  return useSyncExternalStore(view.subscribeReactInternals, view.getSnapshot);
+  return useSyncExternalStore(
+    view.subscribeReactInternals,
+    view.getSnapshot,
+    view.getSnapshot,
+  );
 }
 
 const emptyArray: unknown[] = [];

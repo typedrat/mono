@@ -25,12 +25,6 @@ import * as MetaType from './meta-type-enum.js';
 
 export const DEFAULT_HEAD_NAME = 'main';
 
-export function commitIsLocalSDD(
-  commit: Commit<Meta>,
-): commit is Commit<LocalMetaSDD> {
-  return isLocalMetaSDD(commit.meta);
-}
-
 export function commitIsLocalDD31(
   commit: Commit<Meta>,
 ): commit is Commit<LocalMetaDD31> {
@@ -39,26 +33,14 @@ export function commitIsLocalDD31(
 
 export function commitIsLocal(
   commit: Commit<Meta>,
-): commit is Commit<LocalMetaDD31 | LocalMetaSDD> {
-  return commitIsLocalDD31(commit) || commitIsLocalSDD(commit);
-}
-
-function commitIsSnapshotDD31(
-  commit: Commit<Meta>,
-): commit is Commit<SnapshotMetaDD31> {
-  return isSnapshotMetaDD31(commit.meta);
-}
-
-function commitIsSnapshotSDD(
-  commit: Commit<Meta>,
-): commit is Commit<SnapshotMetaSDD> {
-  return isSnapshotMetaSDD(commit.meta);
+): commit is Commit<LocalMetaDD31> {
+  return commitIsLocalDD31(commit);
 }
 
 export function commitIsSnapshot(
   commit: Commit<Meta>,
-): commit is Commit<SnapshotMetaDD31 | SnapshotMetaSDD> {
-  return commitIsSnapshotDD31(commit) || commitIsSnapshotSDD(commit);
+): commit is Commit<SnapshotMetaDD31> {
+  return isSnapshotMetaDD31(commit.meta);
 }
 
 export class Commit<M extends Meta> {
@@ -100,17 +82,8 @@ export async function getMutationID(
   meta: Meta,
 ): Promise<number> {
   switch (meta.type) {
-    case MetaType.IndexChangeSDD:
-      return meta.lastMutationID;
-
-    case MetaType.SnapshotSDD:
-      return meta.lastMutationID;
-
     case MetaType.SnapshotDD31:
       return meta.lastMutationIDs[clientID] ?? 0;
-
-    case MetaType.LocalSDD:
-      return meta.mutationID;
 
     case MetaType.LocalDD31: {
       if (meta.clientID === clientID) {
@@ -139,12 +112,10 @@ export async function getMutationID(
 export async function localMutations(
   fromCommitHash: Hash,
   dagRead: Read,
-): Promise<Commit<LocalMetaSDD | LocalMetaDD31>[]> {
+): Promise<Commit<LocalMetaDD31>[]> {
   const commits = await commitChain(fromCommitHash, dagRead);
   // Filter does not deal with type narrowing.
-  return commits.filter(c => commitIsLocal(c)) as Commit<
-    LocalMetaSDD | LocalMetaDD31
-  >[];
+  return commits.filter(c => commitIsLocal(c)) as Commit<LocalMetaDD31>[];
 }
 
 export async function localMutationsDD31(
@@ -187,7 +158,7 @@ export async function localMutationsGreaterThan(
 export async function baseSnapshotFromHead(
   name: string,
   dagRead: Read,
-): Promise<Commit<SnapshotMetaSDD | SnapshotMetaDD31>> {
+): Promise<Commit<SnapshotMetaDD31>> {
   const hash = await dagRead.getHead(name);
   assert(hash, `Missing head ${name}`);
   return baseSnapshotFromHash(hash, dagRead);
@@ -203,7 +174,7 @@ export async function baseSnapshotHashFromHash(
 export async function baseSnapshotFromHash(
   hash: Hash,
   dagRead: Read,
-): Promise<Commit<SnapshotMetaSDD | SnapshotMetaDD31>> {
+): Promise<Commit<SnapshotMetaDD31>> {
   const commit = await commitFromHash(hash, dagRead);
   return baseSnapshotFromCommit(commit, dagRead);
 }
@@ -211,7 +182,7 @@ export async function baseSnapshotFromHash(
 export async function baseSnapshotFromCommit(
   commit: Commit<Meta>,
   dagRead: Read,
-): Promise<Commit<SnapshotMetaSDD | SnapshotMetaDD31>> {
+): Promise<Commit<SnapshotMetaDD31>> {
   while (!commitIsSnapshot(commit)) {
     const {meta} = commit;
     if (isLocalMetaDD31(meta)) {
@@ -228,15 +199,12 @@ export async function baseSnapshotFromCommit(
 }
 
 export function snapshotMetaParts(
-  c: Commit<SnapshotMetaSDD | SnapshotMetaDD31>,
+  c: Commit<SnapshotMetaDD31>,
   clientID: ClientID,
 ): [lastMutationID: number, cookie: FrozenCookie | FrozenJSONValue] {
   const m = c.meta;
-  if (isSnapshotMetaDD31(m)) {
-    const lmid = m.lastMutationIDs[clientID] ?? 0;
-    return [lmid, m.cookieJSON];
-  }
-  return [m.lastMutationID, m.cookieJSON];
+  const lmid = m.lastMutationIDs[clientID] ?? 0;
+  return [lmid, m.cookieJSON];
 }
 
 export function compareCookiesForSnapshots(
@@ -286,54 +254,25 @@ export async function commitFromHead(
   return commitFromHash(hash, dagRead);
 }
 
-export type IndexChangeMetaSDD = {
-  readonly type: MetaType.IndexChangeSDD;
-  readonly basisHash: Hash;
-  readonly lastMutationID: number;
-};
-
-function assertIndexChangeMeta(
-  v: Record<string, unknown>,
-): asserts v is IndexChangeMetaSDD {
-  // type already asserted
-  assertNumber(v.lastMutationID);
-
-  // Note: indexes are already validated for all commit types. Only additional
-  // things to validate are:
-  //   - lastMutationID is equal to the basis
-  //   - valueHash has not been changed
-  // However we don't have a write transaction this deep, so these validated at
-  // commit time.
-}
-
-export function assertIndexChangeCommit(
-  c: Commit<Meta>,
-): asserts c is Commit<IndexChangeMetaSDD> {
-  assertIndexChangeMeta(c.meta);
-}
-
-export type LocalMetaSDD = {
-  readonly type: MetaType.LocalSDD;
+export type LocalMetaDD31 = {
+  readonly type: MetaType.LocalDD31;
   readonly basisHash: Hash;
   readonly mutationID: number;
   readonly mutatorName: string;
   readonly mutatorArgsJSON: FrozenJSONValue;
   readonly originalHash: Hash | null;
   readonly timestamp: number;
-};
-
-export type LocalMetaDD31 = Omit<LocalMetaSDD, 'type'> & {
-  readonly type: MetaType.LocalDD31;
   readonly clientID: ClientID;
   readonly baseSnapshotHash: Hash;
 };
 
-export type LocalMeta = LocalMetaSDD | LocalMetaDD31;
+export type LocalMeta = LocalMetaDD31;
 
-function assertLocalMetaSDD(
+export function assertLocalMetaDD31(
   v: Record<string, unknown>,
-): asserts v is LocalMetaSDD {
+): asserts v is LocalMetaDD31 {
   // type already asserted
+  assertString(v.clientID);
   assertNumber(v.mutationID);
   assertString(v.mutatorName);
   if (!v.mutatorName) {
@@ -346,20 +285,8 @@ function assertLocalMetaSDD(
   assertNumber(v.timestamp);
 }
 
-export function assertLocalMetaDD31(
-  v: Record<string, unknown>,
-): asserts v is LocalMetaDD31 {
-  // type already asserted
-  assertString(v.clientID);
-  assertLocalMetaSDD(v);
-}
-
 export function isLocalMetaDD31(meta: Meta): meta is LocalMetaDD31 {
   return meta.type === MetaType.LocalDD31;
-}
-
-function isLocalMetaSDD(meta: Meta): meta is LocalMetaSDD {
-  return meta.type === MetaType.LocalSDD;
 }
 
 export function assertLocalCommitDD31(
@@ -368,19 +295,6 @@ export function assertLocalCommitDD31(
   assertLocalMetaDD31(c.meta);
 }
 
-export function assertLocalCommitSDD(
-  c: Commit<Meta>,
-): asserts c is Commit<LocalMetaSDD> {
-  assertLocalMetaSDD(c.meta);
-}
-
-export type SnapshotMetaSDD = {
-  readonly type: MetaType.SnapshotSDD;
-  readonly basisHash: Hash | null;
-  readonly lastMutationID: number;
-  readonly cookieJSON: FrozenJSONValue;
-};
-
 export type SnapshotMetaDD31 = {
   readonly type: MetaType.SnapshotDD31;
   readonly basisHash: Hash | null;
@@ -388,27 +302,16 @@ export type SnapshotMetaDD31 = {
   readonly cookieJSON: FrozenCookie;
 };
 
-export type SnapshotMeta = SnapshotMetaSDD | SnapshotMetaDD31;
+export type SnapshotMeta = SnapshotMetaDD31;
 
-function assertSnapshotMetaBase(v: Record<string, unknown>) {
+export function assertSnapshotMetaDD31(
+  v: Record<string, unknown>,
+): asserts v is SnapshotMetaDD31 {
   // type already asserted
   if (v.basisHash !== null) {
     assertHash(v.basisHash);
   }
   assertJSONValue(v.cookieJSON);
-}
-
-export function assertSnapshotMetaSDD(
-  v: Record<string, unknown>,
-): asserts v is SnapshotMetaSDD {
-  assertSnapshotMetaBase(v);
-  assertNumber(v.lastMutationID);
-}
-
-export function assertSnapshotMetaDD31(
-  v: Record<string, unknown>,
-): asserts v is SnapshotMetaDD31 {
-  assertSnapshotMetaBase(v);
   assertLastMutationIDs(v.lastMutationIDs);
 }
 
@@ -421,18 +324,7 @@ function assertLastMutationIDs(
   }
 }
 
-export function assertSnapshotCommitSDD(
-  c: Commit<Meta>,
-): asserts c is Commit<SnapshotMetaSDD> {
-  assertSnapshotMetaSDD(c.meta);
-}
-
-export type Meta =
-  | IndexChangeMetaSDD
-  | LocalMetaSDD
-  | LocalMetaDD31
-  | SnapshotMetaSDD
-  | SnapshotMetaDD31;
+export type Meta = LocalMetaDD31 | SnapshotMetaDD31;
 
 export function assertSnapshotCommitDD31(
   c: Commit<Meta>,
@@ -444,10 +336,6 @@ function isSnapshotMetaDD31(meta: Meta): meta is SnapshotMetaDD31 {
   return meta.type === MetaType.SnapshotDD31;
 }
 
-function isSnapshotMetaSDD(meta: Meta): meta is SnapshotMetaSDD {
-  return meta.type === MetaType.SnapshotSDD;
-}
-
 function assertMeta(v: unknown): asserts v is Meta {
   assertObject(v);
   assertDeepFrozen(v);
@@ -457,17 +345,8 @@ function assertMeta(v: unknown): asserts v is Meta {
 
   assertNumber(v.type);
   switch (v.type) {
-    case MetaType.IndexChangeSDD:
-      assertIndexChangeMeta(v);
-      break;
-    case MetaType.LocalSDD:
-      assertLocalMetaSDD(v);
-      break;
     case MetaType.LocalDD31:
       assertLocalMetaDD31(v);
-      break;
-    case MetaType.SnapshotSDD:
-      assertSnapshotMetaSDD(v);
       break;
     case MetaType.SnapshotDD31:
       assertSnapshotMetaDD31(v);
@@ -546,32 +425,6 @@ function assertIndexRecords(v: unknown): asserts v is IndexRecord[] {
   }
 }
 
-export function newLocalSDD(
-  createChunk: CreateChunk,
-  basisHash: Hash,
-  mutationID: number,
-  mutatorName: string,
-  mutatorArgsJSON: FrozenJSONValue,
-  originalHash: Hash | null,
-  valueHash: Hash,
-  indexes: readonly IndexRecord[],
-  timestamp: number,
-): Commit<LocalMetaSDD | LocalMetaDD31> {
-  const meta: LocalMetaSDD = {
-    type: MetaType.LocalSDD,
-    basisHash,
-    mutationID,
-    mutatorName,
-    mutatorArgsJSON,
-    originalHash,
-    timestamp,
-  };
-  return commitFromCommitData(
-    createChunk,
-    makeCommitData(meta, valueHash, indexes),
-  );
-}
-
 export function newLocalDD31(
   createChunk: CreateChunk,
   basisHash: Hash,
@@ -602,26 +455,6 @@ export function newLocalDD31(
   );
 }
 
-export function newSnapshotSDD(
-  createChunk: CreateChunk,
-  basisHash: Hash | null,
-  lastMutationID: number,
-  cookieJSON: FrozenJSONValue,
-  valueHash: Hash,
-  indexes: readonly IndexRecord[],
-): Commit<SnapshotMetaSDD> {
-  return commitFromCommitData(
-    createChunk,
-    newSnapshotCommitDataSDD(
-      basisHash,
-      lastMutationID,
-      cookieJSON,
-      valueHash,
-      indexes,
-    ),
-  );
-}
-
 export function newSnapshotDD31(
   createChunk: CreateChunk,
   basisHash: Hash | null,
@@ -642,22 +475,6 @@ export function newSnapshotDD31(
   );
 }
 
-export function newSnapshotCommitDataSDD(
-  basisHash: Hash | null,
-  lastMutationID: number,
-  cookieJSON: FrozenJSONValue,
-  valueHash: Hash,
-  indexes: readonly IndexRecord[],
-): CommitData<SnapshotMetaSDD> {
-  const meta: SnapshotMetaSDD = {
-    type: MetaType.SnapshotSDD,
-    basisHash,
-    lastMutationID,
-    cookieJSON,
-  };
-  return makeCommitData(meta, valueHash, indexes);
-}
-
 export function newSnapshotCommitDataDD31(
   basisHash: Hash | null,
   lastMutationIDs: Record<ClientID, number>,
@@ -672,24 +489,6 @@ export function newSnapshotCommitDataDD31(
     cookieJSON,
   };
   return makeCommitData(meta, valueHash, indexes);
-}
-
-export function newIndexChange(
-  createChunk: CreateChunk,
-  basisHash: Hash,
-  lastMutationID: number,
-  valueHash: Hash,
-  indexes: readonly IndexRecord[],
-): Commit<IndexChangeMetaSDD> {
-  const meta: IndexChangeMetaSDD = {
-    type: MetaType.IndexChangeSDD,
-    basisHash,
-    lastMutationID,
-  };
-  return commitFromCommitData(
-    createChunk,
-    makeCommitData(meta, valueHash, indexes),
-  );
 }
 
 export function fromChunk(chunk: Chunk): Commit<Meta> {
@@ -709,15 +508,10 @@ export function getRefs(data: CommitData<Meta>): Refs {
   refs.add(data.valueHash);
   const {meta} = data;
   switch (meta.type) {
-    case MetaType.IndexChangeSDD:
-      meta.basisHash && refs.add(meta.basisHash);
-      break;
-    case MetaType.LocalSDD:
     case MetaType.LocalDD31:
       meta.basisHash && refs.add(meta.basisHash);
       // Local has weak originalHash
       break;
-    case MetaType.SnapshotSDD:
     case MetaType.SnapshotDD31:
       // Snapshot has weak basisHash
       break;

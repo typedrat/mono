@@ -2,17 +2,14 @@ import type postgres from 'postgres';
 import {afterAll, afterEach, beforeEach, describe, expect, test} from 'vitest';
 import {createSilentLogContext} from '../../../shared/src/logging-test-utils.js';
 import {Database} from '../../../zqlite/src/db.js';
-import {getPublicationInfo} from '../services/change-streamer/pg/schema/published.js';
+import {getPublicationInfo} from '../services/change-source/pg/schema/published.js';
 import {testDBs} from '../test/db.js';
 import {createTableStatement} from './create.js';
 import {listTables} from './lite-tables.js';
 import {mapPostgresToLite} from './pg-to-lite.js';
+import * as PostgresTypeClass from './postgres-type-class-enum.js';
 import {stripCommentsAndWhitespace} from './query-test-util.js';
-import {
-  PostgresTypeClass,
-  type LiteTableSpec,
-  type TableSpec,
-} from './specs.js';
+import {type LiteTableSpec, type TableSpec} from './specs.js';
 
 describe('tables/create', () => {
   type Case = {

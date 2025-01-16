@@ -1,7 +1,8 @@
+import {resolver} from '@rocicorp/resolver';
 import {expect, test} from 'vitest';
 import {MemorySource} from '../../zql/src/ivm/memory-source.js';
-import {SolidView, solidViewFactory} from './solid-view.js';
 import type {Query, Smash} from '../../zql/src/query/query.js';
+import {SolidView, solidViewFactory} from './solid-view.js';
 
 test('basics', () => {
   const ms = new MemorySource(
@@ -23,6 +24,8 @@ test('basics', () => {
     {a: 1, b: 'a'},
     {a: 2, b: 'b'},
   ]);
+
+  expect(view.resultDetails).toEqual({type: 'complete'});
 
   ms.push({row: {a: 3, b: 'c'}, type: 'add'});
 
@@ -71,6 +74,39 @@ test('single-format', () => {
   expect(view.data).toEqual(undefined);
 });
 
+test('queryComplete promise', async () => {
+  const ms = new MemorySource(
+    'table',
+    {a: {type: 'number'}, b: {type: 'string'}},
+    ['a'],
+  );
+  ms.push({row: {a: 1, b: 'a'}, type: 'add'});
+  ms.push({row: {a: 2, b: 'b'}, type: 'add'});
+
+  const queryCompleteResolver = resolver<true>();
+
+  const view = new SolidView(
+    ms.connect([
+      ['b', 'asc'],
+      ['a', 'asc'],
+    ]),
+    undefined,
+    undefined,
+    queryCompleteResolver.promise,
+  );
+
+  expect(view.data).toEqual([
+    {a: 1, b: 'a'},
+    {a: 2, b: 'b'},
+  ]);
+
+  expect(view.resultDetails).toEqual({type: 'unknown'});
+
+  queryCompleteResolver.resolve(true);
+  await 1;
+  expect(view.resultDetails).toEqual({type: 'complete'});
+});
+
 type TestSchema = {
   tableName: 'test';
   columns: {
@@ -114,6 +150,8 @@ test('factory', () => {
     ]),
     {singular: false, relationships: {}},
     onDestroy,
+    () => undefined,
+    true,
   );
   expect(view).toBeDefined();
   expect(onDestroyCalled).false;

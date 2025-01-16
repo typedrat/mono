@@ -19,21 +19,19 @@ import {testDBs} from '../../test/db.js';
 import type {PostgresDB} from '../../types/pg.js';
 import type {Source} from '../../types/streams.js';
 import {Subscription} from '../../types/subscription.js';
+import {type ChangeStreamMessage} from '../change-source/protocol/current/downstream.js';
+import type {StatusMessage} from '../change-source/protocol/current/status.js';
 import {
   getSubscriptionState,
   initReplicationState,
 } from '../replicator/schema/replication-state.js';
 import {ReplicationMessages} from '../replicator/test-utils.js';
+import {initializeStreamer} from './change-streamer-service.js';
 import {
-  initializeStreamer,
-  type ChangeStreamMessage,
-} from './change-streamer-service.js';
-import {
-  ErrorType,
   type ChangeStreamerService,
-  type Commit,
   type Downstream,
 } from './change-streamer.js';
+import * as ErrorType from './error-type-enum.js';
 import {
   AutoResetSignal,
   ensureReplicationConfig,
@@ -47,7 +45,7 @@ describe('change-streamer/service', () => {
   let changeDB: PostgresDB;
   let streamer: ChangeStreamerService;
   let changes: Subscription<ChangeStreamMessage>;
-  let acks: Queue<Commit>;
+  let acks: Queue<StatusMessage>;
   let streamerDone: Promise<void>;
 
   // vi.useFakeTimers() does not play well with the postgres client.
@@ -77,7 +75,7 @@ describe('change-streamer/service', () => {
           Promise.resolve({
             initialWatermark: '02',
             changes,
-            acks: {push: commit => acks.enqueue(commit)},
+            acks: {push: status => acks.enqueue(status)},
           }),
       },
       replicaConfig,
@@ -108,18 +106,25 @@ describe('change-streamer/service', () => {
     return down[1];
   }
 
+  async function expectAcks(...watermarks: string[]) {
+    for (const watermark of watermarks) {
+      expect((await acks.dequeue())[2].watermark).toBe(watermark);
+    }
+  }
+
   const messages = new ReplicationMessages({foo: 'id'});
 
   test('immediate forwarding, transaction storage', async () => {
     const sub = await streamer.subscribe({
       id: 'myid',
+      mode: 'serving',
       watermark: '01',
       replicaVersion: REPLICA_VERSION,
       initial: true,
     });
     const downstream = drainToQueue(sub);
 
-    changes.push(['begin', messages.begin()]);
+    changes.push(['begin', messages.begin(), {commitWatermark: '09'}]);
     changes.push(['data', messages.insert('foo', {id: 'hello'})]);
     changes.push(['data', messages.insert('foo', {id: 'world'})]);
     changes.push([
@@ -127,6 +132,8 @@ describe('change-streamer/service', () => {
       messages.commit({extra: 'fields'}),
       {watermark: '09'},
     ]);
+
+    changes.push(['status', {}, {watermark: '0b'}]);
 
     expect(await nextChange(downstream)).toMatchObject({tag: 'begin'});
     expect(await nextChange(downstream)).toMatchObject({
@@ -142,8 +149,8 @@ describe('change-streamer/service', () => {
       extra: 'fields',
     });
 
-    // Await the ACK for the single commit.
-    await acks.dequeue();
+    // Await the ACK for the single commit, then the status message.
+    await expectAcks('09', '0b');
 
     const logEntries = await changeDB<
       ChangeLogEntry[]
@@ -158,7 +165,7 @@ describe('change-streamer/service', () => {
 
   test('subscriber catchup and continuation', async () => {
     // Process some changes upstream.
-    changes.push(['begin', messages.begin()]);
+    changes.push(['begin', messages.begin(), {commitWatermark: '09'}]);
     changes.push(['data', messages.insert('foo', {id: 'hello'})]);
     changes.push(['data', messages.insert('foo', {id: 'world'})]);
     changes.push([
@@ -170,19 +177,24 @@ describe('change-streamer/service', () => {
     // Subscribe to the original watermark.
     const sub = await streamer.subscribe({
       id: 'myid',
+      mode: 'serving',
       watermark: '01',
       replicaVersion: REPLICA_VERSION,
       initial: true,
     });
 
+    changes.push(['status', {}, {watermark: '0a'}]);
+
     // Process more upstream changes.
-    changes.push(['begin', messages.begin()]);
+    changes.push(['begin', messages.begin(), {commitWatermark: '0b'}]);
     changes.push(['data', messages.delete('foo', {id: 'world'})]);
     changes.push([
       'commit',
       messages.commit({more: 'stuff'}),
       {watermark: '0b'},
     ]);
+
+    changes.push(['status', {}, {watermark: '0d'}]);
 
     // Verify that all changes were sent to the subscriber ...
     const downstream = drainToQueue(sub);
@@ -209,9 +221,8 @@ describe('change-streamer/service', () => {
       more: 'stuff',
     });
 
-    // Two commits
-    await acks.dequeue();
-    await acks.dequeue();
+    // Two commits with intervening status messages
+    await expectAcks('09', '0a', '0b', '0d');
 
     const logEntries = await changeDB<
       ChangeLogEntry[]
@@ -229,7 +240,7 @@ describe('change-streamer/service', () => {
 
   test('subscriber catchup and continuation after rollback', async () => {
     // Process some changes upstream.
-    changes.push(['begin', messages.begin()]);
+    changes.push(['begin', messages.begin(), {commitWatermark: '09'}]);
     changes.push(['data', messages.insert('foo', {id: 'hello'})]);
     changes.push(['data', messages.insert('foo', {id: 'world'})]);
     changes.push([
@@ -241,15 +252,18 @@ describe('change-streamer/service', () => {
     // Subscribe to the original watermark.
     const sub = await streamer.subscribe({
       id: 'myid',
+      mode: 'serving',
       watermark: '01',
       replicaVersion: REPLICA_VERSION,
       initial: true,
     });
 
     // Process more upstream changes.
-    changes.push(['begin', messages.begin()]);
+    changes.push(['begin', messages.begin(), {commitWatermark: '0a'}]);
     changes.push(['data', messages.delete('foo', {id: 'world'})]);
     changes.push(['rollback', messages.rollback()]);
+
+    changes.push(['status', {}, {watermark: '0d'}]);
 
     // Verify that all changes were sent to the subscriber ...
     const downstream = drainToQueue(sub);
@@ -273,8 +287,8 @@ describe('change-streamer/service', () => {
     });
     expect(await nextChange(downstream)).toMatchObject({tag: 'rollback'});
 
-    // One commit to ACK
-    await acks.dequeue();
+    // One commit to ACK, then the status message
+    await expectAcks('09', '0d');
 
     // Only the changes for the committed (i.e. first) transaction are persisted.
     const logEntries = await changeDB<
@@ -291,13 +305,14 @@ describe('change-streamer/service', () => {
   test('data types (forwarded and catchup)', async () => {
     const sub = await streamer.subscribe({
       id: 'myid',
+      mode: 'serving',
       watermark: '01',
       replicaVersion: REPLICA_VERSION,
       initial: true,
     });
     const downstream = drainToQueue(sub);
 
-    changes.push(['begin', messages.begin()]);
+    changes.push(['begin', messages.begin(), {commitWatermark: '09'}]);
     changes.push([
       'data',
       messages.insert('foo', {
@@ -330,7 +345,7 @@ describe('change-streamer/service', () => {
       extra: 'info',
     });
 
-    await acks.dequeue();
+    await expectAcks('09');
 
     const logEntries = await changeDB<
       ChangeLogEntry[]
@@ -353,6 +368,7 @@ describe('change-streamer/service', () => {
     // Also verify when loading from the Store as opposed to direct forwarding.
     const catchupSub = await streamer.subscribe({
       id: 'myid2',
+      mode: 'serving',
       watermark: '01',
       replicaVersion: REPLICA_VERSION,
       initial: true,
@@ -389,6 +405,7 @@ describe('change-streamer/service', () => {
     // Start two subscribers: one at 06 and one at 04
     await streamer.subscribe({
       id: 'myid1',
+      mode: 'serving',
       watermark: '06',
       replicaVersion: REPLICA_VERSION,
       initial: true,
@@ -396,6 +413,7 @@ describe('change-streamer/service', () => {
 
     const sub2 = await streamer.subscribe({
       id: 'myid2',
+      mode: 'serving',
       watermark: '04',
       replicaVersion: REPLICA_VERSION,
       initial: true,
@@ -444,6 +462,7 @@ describe('change-streamer/service', () => {
     // New connections earlier than 06 should now be rejected.
     const sub3 = await streamer.subscribe({
       id: 'myid2',
+      mode: 'serving',
       watermark: '04',
       replicaVersion: REPLICA_VERSION,
       initial: true,
@@ -462,6 +481,7 @@ describe('change-streamer/service', () => {
   test('wrong replica version', async () => {
     const sub = await streamer.subscribe({
       id: 'myid1',
+      mode: 'serving',
       watermark: '06',
       replicaVersion: REPLICA_VERSION + 'foobar',
       initial: true,
@@ -497,6 +517,15 @@ describe('change-streamer/service', () => {
     );
     void streamer.run();
 
+    // Kick off the initial stream with a serving request.
+    void streamer.subscribe({
+      id: 'myid',
+      mode: 'serving',
+      watermark: '06',
+      replicaVersion: REPLICA_VERSION,
+      initial: true,
+    });
+
     expect(await hasRetried).toBe(true);
   });
 
@@ -517,6 +546,15 @@ describe('change-streamer/service', () => {
     );
     void streamer.run();
 
+    // Kick off the initial stream with a serving request.
+    void streamer.subscribe({
+      id: 'myid',
+      mode: 'serving',
+      watermark: '06',
+      replicaVersion: REPLICA_VERSION,
+      initial: true,
+    });
+
     expect(await requests.dequeue()).toBe(REPLICA_VERSION);
 
     await changeDB`
@@ -532,6 +570,15 @@ describe('change-streamer/service', () => {
       true,
     );
     void streamer.run();
+
+    // Kick off the initial stream with a serving request.
+    void streamer.subscribe({
+      id: 'myid',
+      mode: 'serving',
+      watermark: '06',
+      replicaVersion: REPLICA_VERSION,
+      initial: true,
+    });
 
     expect(await requests.dequeue()).toBe('04');
   });
@@ -562,12 +609,30 @@ describe('change-streamer/service', () => {
     );
     void streamer.run();
 
+    // Kick off the initial stream with a serving request.
+    void streamer.subscribe({
+      id: 'myid',
+      mode: 'serving',
+      watermark: '06',
+      replicaVersion: REPLICA_VERSION,
+      initial: true,
+    });
+
     changes.fail(new Error('doh'));
 
     expect(await hasRetried).toBe(true);
   });
 
   test('reset required', async () => {
+    // Kick off the initial stream with a serving request.
+    void streamer.subscribe({
+      id: 'myid',
+      mode: 'serving',
+      watermark: '06',
+      replicaVersion: REPLICA_VERSION,
+      initial: true,
+    });
+
     changes.push(['control', {tag: 'reset-required'}]);
     await streamerDone;
     await expect(
@@ -576,13 +641,41 @@ describe('change-streamer/service', () => {
   });
 
   test('shutdown on AbortError', async () => {
+    // Kick off the initial stream with a serving request.
+    void streamer.subscribe({
+      id: 'myid',
+      mode: 'serving',
+      watermark: '06',
+      replicaVersion: REPLICA_VERSION,
+      initial: true,
+    });
+
     changes.fail(new AbortError());
     await streamerDone;
+  });
+
+  test('shutdown on unexpected invalid stream', async () => {
+    await streamer.subscribe({
+      id: 'myid',
+      mode: 'serving',
+      watermark: '01',
+      replicaVersion: REPLICA_VERSION,
+      initial: true,
+    });
+
+    changes.push(['data', messages.insert('foo', {id: 'hello'})]);
+
+    // Streamer should be shut down because of the error.
+    await streamerDone;
+
+    // Nothing should be committed
+    expect(await changeDB`SELECT watermark FROM cdc."changeLog"`).toEqual([]);
   });
 
   test('shutdown on unexpected storage error', async () => {
     await streamer.subscribe({
       id: 'myid',
+      mode: 'serving',
       watermark: '01',
       replicaVersion: REPLICA_VERSION,
       initial: true,
@@ -590,19 +683,19 @@ describe('change-streamer/service', () => {
 
     // Insert unexpected data simulating that the stream and store are not in the expected state.
     await changeDB`INSERT INTO cdc."changeLog" (watermark, pos, change)
-      VALUES ('03', 0, ${{intervening: 'entry'}})`;
+      VALUES ('05', 3, ${{conflicting: 'entry'}})`;
 
-    changes.push(['begin', messages.begin()]);
+    changes.push(['begin', messages.begin(), {commitWatermark: '05'}]);
     changes.push(['data', messages.insert('foo', {id: 'hello'})]);
     changes.push(['data', messages.insert('foo', {id: 'world'})]);
     changes.push(['commit', messages.commit(), {watermark: '05'}]);
 
-    // Commit should not have succeeded
-    expect(await changeDB`SELECT watermark FROM cdc."changeLog"`).toEqual([
-      {watermark: '03'},
-    ]);
-
     // Streamer should be shut down because of the error.
     await streamerDone;
+
+    // Commit should not have succeeded
+    expect(await changeDB`SELECT watermark, pos FROM cdc."changeLog"`).toEqual([
+      {watermark: '05', pos: 3n},
+    ]);
   });
 });

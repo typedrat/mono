@@ -15,12 +15,13 @@ import type {
 } from '../../../../zero-protocol/src/mod.js';
 import {primaryKeyValueRecordSchema} from '../../../../zero-protocol/src/primary-key.js';
 import type {JSONObject} from '../../types/bigint-json.js';
+import {getLogLevel} from '../../types/error-for-client.js';
 import {
   getErrorForClientIfSchemaVersionNotSupported,
   type SchemaVersions,
 } from '../../types/schema-versions.js';
 import type {Subscription} from '../../types/subscription.js';
-import {unescapedSchema as schema} from '../change-streamer/pg/schema/shard.js';
+import {unescapedSchema as schema} from '../change-source/pg/schema/shard.js';
 import {
   type ClientPatch,
   cmpVersions,
@@ -114,6 +115,10 @@ export class ClientHandler {
   }
 
   fail(e: unknown) {
+    this.#lc[getLogLevel(e)]?.(
+      `view-syncer closing connection with error: ${String(e)}`,
+      e,
+    );
     this.#pokes.fail(e instanceof Error ? e : new Error(String(e)));
   }
 

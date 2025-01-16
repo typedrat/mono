@@ -15,8 +15,8 @@ import {CustomKeyMap} from '../../../../shared/src/custom-key-map.js';
 import {must} from '../../../../shared/src/must.js';
 import {randInt} from '../../../../shared/src/rand.js';
 import type {AST} from '../../../../zero-protocol/src/ast.js';
+import * as ErrorKind from '../../../../zero-protocol/src/error-kind-enum.js';
 import {
-  ErrorKind,
   type ChangeDesiredQueriesBody,
   type ChangeDesiredQueriesMessage,
   type Downstream,
@@ -25,7 +25,7 @@ import {
 import type {PermissionsConfig} from '../../../../zero-schema/src/compiled-permissions.js';
 import {transformAndHashQuery} from '../../auth/read-authorizer.js';
 import {stringify} from '../../types/bigint-json.js';
-import {ErrorForClient} from '../../types/error-for-client.js';
+import {ErrorForClient, getLogLevel} from '../../types/error-for-client.js';
 import type {PostgresDB} from '../../types/pg.js';
 import {rowIDString, type RowKey} from '../../types/row-key.js';
 import type {Source} from '../../types/streams.js';
@@ -58,7 +58,7 @@ import {
   type NullableCVRVersion,
   type RowID,
 } from './schema/types.js';
-import {SchemaChangeError} from './snapshotter.js';
+import {ResetPipelinesSignal} from './snapshotter.js';
 
 export type TokenData = {
   readonly raw: string;
@@ -162,7 +162,7 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
         return; // view-syncer has been shutdown
       }
       // If all clients have disconnected, cancel all pending work.
-      if (this.#checkForShutdownConditionsInLock()) {
+      if (await this.#checkForShutdownConditionsInLock()) {
         this.#lc.info?.('shutting down');
         this.#stateChanges.cancel(); // Note: #stateChanges.active becomes false.
         return;
@@ -194,11 +194,11 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
         }
         await this.#runInLockWithCVR(async (lc, cvr) => {
           if (
-            (cvr.replicaVersion !== null ||
-              cvr.version.stateVersion !== '00') &&
-            cvr.replicaVersion !== this.#pipelines.replicaVersion
+            cvr.replicaVersion !== null &&
+            cvr.version.stateVersion !== '00' &&
+            this.#pipelines.replicaVersion < cvr.replicaVersion
           ) {
-            const message = `Replica Version mismatch: CVR=${
+            const message = `Cannot sync from older replica: CVR=${
               cvr.replicaVersion
             }, DB=${this.#pipelines.replicaVersion}`;
             lc.info?.(`resetting CVR: ${message}`);
@@ -210,7 +210,7 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
             if (result === 'success') {
               return;
             }
-            lc.info?.(`resetting for schema change: ${result.message}`);
+            lc.info?.(`resetting pipelines: ${result.message}`);
             this.#pipelines.reset();
           }
 
@@ -238,12 +238,14 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
       }
       this.#cleanup();
     } catch (e) {
-      this.#lc.error?.(`stopping view-syncer: ${String(e)}`, e);
+      this.#lc[getLogLevel(e)]?.(`stopping view-syncer: ${String(e)}`, e);
       this.#cleanup(e);
     } finally {
       // Always wait for the cvrStore to flush, regardless of how the service
       // was stopped.
-      await this.#cvrStore.flushed(this.#lc).catch(e => this.#lc.error?.(e));
+      await this.#cvrStore
+        .flushed(this.#lc)
+        .catch(e => this.#lc[getLogLevel(e)]?.(e));
       this.#lc.info?.('view-syncer stopped');
       this.#stopped.resolve();
     }
@@ -275,34 +277,37 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
   #shutdownTimer: NodeJS.Timeout | null = null;
 
   #scheduleShutdown(delayMs = 0) {
-    this.#shutdownTimer ??= setTimeout(async () => {
+    this.#shutdownTimer ??= setTimeout(() => {
       this.#shutdownTimer = null;
-
-      // Keep the view-syncer alive if there are pending rows being flushed.
-      // It's better to do this before shutting down since it may take a
-      // while, during which new connections may come in.
-      await this.#cvrStore.flushed(this.#lc).catch(e => this.#lc.error?.(e));
 
       // All lock tasks check for shutdown so that queued work is immediately
       // canceled when clients disconnect. Queue an empty task to ensure that
       // this check happens.
-      await this.#runInLockWithCVR(() => {});
+      void this.#runInLockWithCVR(() => {}).catch(e =>
+        // If an error occurs (e.g. ownership change), propagate the error
+        // to the main run() loop via the #stateChanges Subscription.
+        this.#stateChanges.fail(e),
+      );
     }, delayMs);
   }
 
-  #checkForShutdownConditionsInLock(): boolean {
+  async #checkForShutdownConditionsInLock(): Promise<boolean> {
     if (this.#clients.size > 0) {
       return false; // common case.
     }
+
+    // Keep the view-syncer alive if there are pending rows being flushed.
+    // It's better to do this before shutting down since it may take a
+    // while, during which new connections may come in.
+    await this.#cvrStore.flushed(this.#lc);
+
     if (Date.now() <= this.#keepAliveUntil) {
       this.#scheduleShutdown(this.#keepaliveMs); // check again later
       return false;
     }
-    if (this.#cvrStore.hasPendingUpdates()) {
-      this.#scheduleShutdown(0); // check again after #cvrStore.flushed()
-      return false;
-    }
-    return true;
+
+    // If no clients have connected while waiting for the row flush, shutdown.
+    return this.#clients.size === 0;
   }
 
   #deleteClient(clientID: string, client: ClientHandler) {
@@ -337,7 +342,7 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
       const downstream = Subscription.create<Downstream>({
         cleanup: (_, err) => {
           err
-            ? lc.error?.(`client closed with error`, err)
+            ? lc[getLogLevel(err)]?.(`client closed with error`, err)
             : lc.info?.('client closed');
           this.#deleteClient(clientID, newClient);
         },
@@ -425,11 +430,11 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
             return fn(lc, clientID, body, cvr);
           });
         } catch (e) {
-          this.#lc
+          const lc = this.#lc
             .withContext('clientID', clientID)
             .withContext('wsID', wsID)
-            .withContext('cmd', cmd)
-            .error?.(`closing connection with error`, e);
+            .withContext('cmd', cmd);
+          lc[getLogLevel(e)]?.(`closing connection with error`, e);
           if (client) {
             // Ideally, propagate the exception to the client's downstream subscription ...
             client.fail(e);
@@ -952,7 +957,7 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
   #advancePipelines(
     lc: LogContext,
     cvr: CVRSnapshot,
-  ): Promise<'success' | SchemaChangeError> {
+  ): Promise<'success' | ResetPipelinesSignal> {
     return startAsyncSpan(tracer, 'vs.#advancePipelines', async () => {
       assert(this.#pipelines.initialized());
       const start = Date.now();
@@ -995,7 +1000,7 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
           transformationHashToHash,
         );
       } catch (e) {
-        if (e instanceof SchemaChangeError) {
+        if (e instanceof ResetPipelinesSignal) {
           pokers.forEach(poker => poker.cancel());
           return e;
         }

@@ -1,6 +1,11 @@
 import {LogContext} from '@rocicorp/logger';
 import {describe, expect, test} from 'vitest';
-import {assertObject, assertString} from '../../../shared/src/asserts.js';
+import {
+  assert,
+  assertObject,
+  assertString,
+} from '../../../shared/src/asserts.js';
+import type {Enum} from '../../../shared/src/enum.js';
 import type {ReadonlyJSONValue} from '../../../shared/src/json.js';
 import {stringCompare} from '../../../shared/src/string-compare.js';
 import {asyncIterableToArray} from '../async-iterable-to-array.js';
@@ -10,7 +15,6 @@ import {TestStore} from '../dag/test-store.js';
 import {
   DEFAULT_HEAD_NAME,
   assertSnapshotCommitDD31,
-  assertSnapshotCommitSDD,
   commitFromHash,
   commitFromHead,
   commitIsLocal,
@@ -19,32 +23,22 @@ import {
 import {encodeIndexKey} from '../db/index.js';
 import {readFromDefaultHead, readFromHead} from '../db/read.js';
 import {ChainBuilder} from '../db/test-helpers.js';
-import {
-  newWriteLocal,
-  newWriteSnapshotDD31,
-  newWriteSnapshotSDD,
-  readIndexesForWrite,
-} from '../db/write.js';
+import {newWriteLocal, newWriteSnapshotDD31} from '../db/write.js';
 import {
   isClientStateNotFoundResponse,
   isVersionNotSupportedResponse,
 } from '../error-responses.js';
 import * as FormatVersion from '../format-version-enum.js';
 import {type FrozenJSONValue, deepFreeze} from '../frozen-json.js';
-import {
-  assertPullResponseV0,
-  assertPullResponseV1,
-} from '../get-default-puller.js';
+import {assertPullResponseV1} from '../get-default-puller.js';
 import {assertHash, emptyHash, fakeHash} from '../hash.js';
 import type {HTTPRequestInfo} from '../http-request-info.js';
 import type {IndexDefinitions} from '../index-defs.js';
 import type {PatchOperation} from '../patch-operation.js';
 import type {
   PullResponseOKV1,
-  PullResponseV0,
   PullResponseV1,
   Puller,
-  PullerResultV0,
   PullerResultV1,
 } from '../puller.js';
 import {testSubscriptionsManagerOptions} from '../test-util.js';
@@ -56,14 +50,9 @@ import {
 import type {DiffsMap} from './diff.js';
 import * as HandlePullResponseResultEnum from './handle-pull-response-result-type-enum.js';
 import {
-  type BeginPullResponseV0,
   type BeginPullResponseV1,
-  type MaybeEndPullResultV0,
   PULL_VERSION_DD31,
-  PULL_VERSION_SDD,
-  type PullRequestV0,
   type PullRequestV1,
-  beginPullV0,
   beginPullV1,
   handlePullResponseV1,
   isPullRequestV1,
@@ -71,484 +60,8 @@ import {
 } from './pull.js';
 import {SYNC_HEAD_NAME} from './sync-head-name.js';
 
-test('begin try pull SDD', async () => {
-  const formatVersion = FormatVersion.SDD;
-  const clientID = 'test_client_id';
-  const store = new TestStore();
-  const b = new ChainBuilder(store, undefined, FormatVersion.SDD);
-  await b.addGenesis(clientID);
-  const baseSnapshot = await b.addSnapshot([['foo', '"bar"']], clientID);
-  await b.addIndexChange(clientID);
-  const startingNumCommits = b.chain.length;
-  const parts = snapshotMetaParts(baseSnapshot, clientID);
-
-  const baseLastMutationID = parts[0];
-  const baseCookie = deepFreeze(parts[1]);
-  const baseValueMap = new Map([['foo', '"bar"']]);
-
-  const requestID = 'requestID';
-  const profileID = 'test_profile_id';
-  const schemaVersion = 'schema_version';
-
-  const goodHttpRequestInfo = {
-    httpStatusCode: 200,
-    errorMessage: '',
-  };
-  // The goodPullResp has a patch, a new cookie, and a new
-  // lastMutationID. Tests can clone it and override those
-  // fields they wish to change. This minimizes test changes required
-  // when PullResponse changes.
-  const newCookie = 'newCookie';
-  const goodPullResp: PullResponseV0 = {
-    cookie: newCookie,
-    lastMutationID: 10,
-    patch: [
-      {op: 'clear'},
-      {
-        op: 'put',
-        key: 'new',
-        value: 'value',
-      },
-    ],
-  };
-  const goodPullRespValueMap = new Map([['new', 'value']]);
-
-  type ExpCommit = {
-    cookie: ReadonlyJSONValue;
-    lastMutationID: number;
-    valueMap: ReadonlyMap<string, ReadonlyJSONValue>;
-    indexes: string[];
-  };
-
-  type Case = {
-    name: string;
-    createSyncBranch?: boolean;
-    numPendingMutations: number;
-    pullResult: PullResponseV0 | string;
-    // BeginPull expectations.
-    expNewSyncHead: ExpCommit | undefined;
-    expBeginPullResult: BeginPullResponseV0 | string;
-  };
-
-  const expPullReq: PullRequestV0 = {
-    profileID,
-    clientID,
-    cookie: baseCookie,
-    lastMutationID: baseLastMutationID,
-    pullVersion: PULL_VERSION_SDD,
-    schemaVersion,
-  };
-
-  const cases: Case[] = [
-    {
-      name: '0 pending, pulls new state -> beginPull succeeds w/syncHead set',
-      numPendingMutations: 0,
-      pullResult: goodPullResp,
-      expNewSyncHead: {
-        cookie: newCookie,
-        lastMutationID: goodPullResp.lastMutationID,
-        valueMap: goodPullRespValueMap,
-        indexes: ['2'],
-      },
-      expBeginPullResult: {
-        httpRequestInfo: goodHttpRequestInfo,
-        syncHead: emptyHash,
-      },
-    },
-    {
-      name: '0 pending, createSyncBranch false, pulls new state -> beginPull succeeds w/no syncHead',
-      createSyncBranch: false,
-      numPendingMutations: 0,
-      pullResult: goodPullResp,
-      expNewSyncHead: undefined,
-      expBeginPullResult: {
-        httpRequestInfo: goodHttpRequestInfo,
-        syncHead: emptyHash,
-      },
-    },
-    {
-      name: '1 pending, 0 mutations to replay, pulls new state -> beginPull succeeds w/syncHead set',
-      numPendingMutations: 1,
-      pullResult: {
-        ...goodPullResp,
-        lastMutationID: 2,
-      },
-      expNewSyncHead: {
-        cookie: newCookie,
-        lastMutationID: 2,
-        valueMap: goodPullRespValueMap,
-        indexes: ['2', '4'],
-      },
-      expBeginPullResult: {
-        httpRequestInfo: goodHttpRequestInfo,
-        syncHead: emptyHash,
-      },
-    },
-    {
-      name: '1 pending, 1 mutations to replay, pulls new state -> beginPull succeeds w/syncHead set',
-      numPendingMutations: 1,
-      pullResult: {
-        ...goodPullResp,
-        lastMutationID: 1,
-      },
-      expNewSyncHead: {
-        cookie: newCookie,
-        lastMutationID: 1,
-        valueMap: goodPullRespValueMap,
-        indexes: ['2'],
-      },
-      expBeginPullResult: {
-        httpRequestInfo: goodHttpRequestInfo,
-        syncHead: emptyHash,
-      },
-    },
-    {
-      name: '2 pending, 0 to replay, pulls new state -> beginPull succeeds w/syncHead set',
-      numPendingMutations: 2,
-      pullResult: goodPullResp,
-      expNewSyncHead: {
-        cookie: newCookie,
-        lastMutationID: goodPullResp.lastMutationID,
-        valueMap: goodPullRespValueMap,
-        indexes: ['2', '4', '6'],
-      },
-      expBeginPullResult: {
-        httpRequestInfo: goodHttpRequestInfo,
-        syncHead: emptyHash,
-      },
-    },
-    {
-      name: '2 pending, 1 to replay, pulls new state -> beginPull succeeds w/syncHead set',
-      numPendingMutations: 2,
-      pullResult: {
-        ...goodPullResp,
-        lastMutationID: 2,
-      },
-      expNewSyncHead: {
-        cookie: newCookie,
-        lastMutationID: 2,
-        valueMap: goodPullRespValueMap,
-        indexes: ['2', '4'],
-      },
-      expBeginPullResult: {
-        httpRequestInfo: goodHttpRequestInfo,
-        syncHead: emptyHash,
-      },
-    },
-    // The patch, lastMutationID, and cookie determine whether we write a new
-    // Commit. Here we run through the different combinations.
-    {
-      name: 'no patch, same lmid, same cookie -> beginPull succeeds w/no syncHead',
-      numPendingMutations: 0,
-      pullResult: {
-        ...goodPullResp,
-        lastMutationID: baseLastMutationID,
-        cookie: baseCookie,
-        patch: [],
-      },
-      expNewSyncHead: undefined,
-      expBeginPullResult: {
-        httpRequestInfo: goodHttpRequestInfo,
-        syncHead: emptyHash,
-      },
-    },
-    {
-      name: 'new patch, same lmid, same cookie -> beginPull succeeds w/no syncHead set',
-      numPendingMutations: 0,
-      pullResult: {
-        ...goodPullResp,
-        lastMutationID: baseLastMutationID,
-        cookie: baseCookie,
-      },
-      expNewSyncHead: undefined,
-      expBeginPullResult: {
-        httpRequestInfo: goodHttpRequestInfo,
-        syncHead: emptyHash,
-      },
-    },
-    {
-      name: 'no patch, new lmid, same cookie -> beginPull succeeds w/no syncHead set',
-      numPendingMutations: 0,
-      pullResult: {
-        ...goodPullResp,
-        lastMutationID: baseLastMutationID + 1,
-        cookie: baseCookie,
-        patch: [],
-      },
-      expNewSyncHead: undefined,
-      expBeginPullResult: {
-        httpRequestInfo: goodHttpRequestInfo,
-        syncHead: emptyHash,
-      },
-    },
-    {
-      name: 'no patch, same lmid, new cookie -> beginPull succeeds w/syncHead set',
-      numPendingMutations: 0,
-      pullResult: {
-        ...goodPullResp,
-        lastMutationID: baseLastMutationID,
-        cookie: 'newCookie',
-        patch: [],
-      },
-      expNewSyncHead: {
-        cookie: 'newCookie',
-        lastMutationID: baseLastMutationID,
-        valueMap: baseValueMap,
-        indexes: ['2'],
-      },
-      expBeginPullResult: {
-        httpRequestInfo: goodHttpRequestInfo,
-        syncHead: emptyHash,
-      },
-    },
-    {
-      name: 'new patch, new lmid, same cookie -> beginPull succeeds w/no syncHead set',
-      numPendingMutations: 0,
-      pullResult: {
-        ...goodPullResp,
-        cookie: baseCookie,
-      },
-      expNewSyncHead: undefined,
-      expBeginPullResult: {
-        httpRequestInfo: goodHttpRequestInfo,
-        syncHead: emptyHash,
-      },
-    },
-
-    {
-      name: 'new patch, same lmid, new cookie -> beginPull succeeds w/syncHead set',
-      numPendingMutations: 0,
-      pullResult: {
-        ...goodPullResp,
-        lastMutationID: baseLastMutationID,
-      },
-      expNewSyncHead: {
-        cookie: goodPullResp.cookie ?? null,
-        lastMutationID: baseLastMutationID,
-        valueMap: goodPullRespValueMap,
-        indexes: ['2'],
-      },
-      expBeginPullResult: {
-        httpRequestInfo: goodHttpRequestInfo,
-        syncHead: emptyHash,
-      },
-    },
-    {
-      name: 'no patch, new lmid, new cookie -> beginPull succeeds w/syncHead set',
-      numPendingMutations: 0,
-      pullResult: {
-        ...goodPullResp,
-        patch: [],
-      },
-      expNewSyncHead: {
-        cookie: goodPullResp.cookie ?? null,
-        lastMutationID: goodPullResp.lastMutationID,
-        valueMap: baseValueMap,
-        indexes: ['2'],
-      },
-      expBeginPullResult: {
-        httpRequestInfo: goodHttpRequestInfo,
-        syncHead: emptyHash,
-      },
-    },
-    {
-      name: 'new patch, new lmid, new cookie -> beginPull succeeds w/syncHead set',
-      numPendingMutations: 0,
-      pullResult: {
-        ...goodPullResp,
-      },
-      expNewSyncHead: {
-        cookie: goodPullResp.cookie ?? null,
-        lastMutationID: goodPullResp.lastMutationID,
-        valueMap: goodPullRespValueMap,
-        indexes: ['2'],
-      },
-      expBeginPullResult: {
-        httpRequestInfo: goodHttpRequestInfo,
-        syncHead: emptyHash,
-      },
-    },
-    {
-      name: 'pulls new state w/lesser mutation id -> beginPull errors',
-      numPendingMutations: 0,
-      pullResult: {
-        ...goodPullResp,
-        lastMutationID: 0,
-      },
-      expNewSyncHead: undefined,
-      expBeginPullResult:
-        'Received lastMutationID 0 is < than last snapshot lastMutationID 1; ignoring client view',
-    },
-    {
-      name: 'pull 500s -> beginPull errors',
-      numPendingMutations: 0,
-      pullResult: 'FetchNotOk(500)',
-      expNewSyncHead: undefined,
-      expBeginPullResult: {
-        httpRequestInfo: {
-          errorMessage: 'Fetch not OK',
-          httpStatusCode: 500,
-        },
-        syncHead: emptyHash,
-      },
-    },
-  ];
-
-  for (const c of cases) {
-    // Reset state of the store.
-    b.chain.length = startingNumCommits;
-    await withWrite(store, async w => {
-      await w.setHead(
-        DEFAULT_HEAD_NAME,
-        b.chain[b.chain.length - 1].chunk.hash,
-      );
-      await w.removeHead(SYNC_HEAD_NAME);
-    });
-    for (let i = 0; i < c.numPendingMutations; i++) {
-      await b.addLocal(clientID);
-      await b.addIndexChange(clientID);
-    }
-
-    // There was an index added after the snapshot, and one for each local commit.
-    // Here we scan to ensure that we get values when scanning using one of the
-    // indexes created. We do this because after calling beginPull we check that
-    // the index no longer returns values, demonstrating that it was rebuilt.
-    if (c.numPendingMutations > 0) {
-      await withRead(store, async dagRead => {
-        const read = await readFromDefaultHead(dagRead, formatVersion);
-        let got = false;
-
-        const indexMap = read.getMapForIndex('2');
-        for await (const _ of indexMap.scan('')) {
-          got = true;
-          break;
-        }
-
-        expect(got, c.name).to.be.true;
-      });
-    }
-
-    // See explanation in FakePuller for why we do this dance with the pull_result.
-    let pullResp;
-    let pullErr;
-    if (typeof c.pullResult === 'string') {
-      pullResp = undefined;
-      pullErr = c.pullResult;
-    } else {
-      pullResp = c.pullResult;
-      pullErr = undefined;
-    }
-    const fakePuller = makeFakePuller({
-      expPullReq,
-      expRequestID: requestID,
-      resp: pullResp,
-      err: pullErr,
-    });
-
-    let result: BeginPullResponseV0 | string;
-    try {
-      result = await beginPullV0(
-        profileID,
-        clientID,
-        schemaVersion,
-        fakePuller,
-        requestID,
-        store,
-        formatVersion,
-        new LogContext(),
-        c.createSyncBranch,
-      );
-    } catch (e) {
-      result = (e as Error).message;
-      assertString(result);
-    }
-
-    await withRead(store, async read => {
-      if (c.expNewSyncHead !== undefined) {
-        const expSyncHead = c.expNewSyncHead;
-        const syncHeadCommit = await commitFromHead(SYNC_HEAD_NAME, read);
-        assertSnapshotCommitSDD(syncHeadCommit);
-        const [gotLastMutationID, gotCookie] = snapshotMetaParts(
-          syncHeadCommit,
-          clientID,
-        );
-        expect(expSyncHead.lastMutationID).to.equal(gotLastMutationID);
-        expect(expSyncHead.cookie).to.deep.equal(gotCookie);
-        // Check the value is what's expected.
-        const bTreeRead = new BTreeRead(
-          read,
-          formatVersion,
-          syncHeadCommit.valueHash,
-        );
-        const gotValueMap = await asyncIterableToArray(bTreeRead.entries());
-        gotValueMap.sort((a, b) => stringCompare(a[0], b[0]));
-        const expValueMap = Array.from(expSyncHead.valueMap);
-        expValueMap.sort((a, b) => stringCompare(a[0], b[0]));
-        expect(expValueMap.length).to.equal(gotValueMap.length);
-
-        // Check we have the expected index definitions.
-        const indexes: string[] = syncHeadCommit.indexes.map(
-          i => i.definition.name,
-        );
-        expect(expSyncHead.indexes.length).to.equal(
-          indexes.length,
-          `${c.name}: expected indexes ${expSyncHead.indexes}, got ${indexes}`,
-        );
-        expSyncHead.indexes.forEach(
-          i => expect(indexes.includes(i)).to.be.true,
-        );
-
-        // Check that we *don't* have old indexed values. The indexes should
-        // have been rebuilt with a client view returned by the server that
-        // does not include local= values. The check for len > 1 is because
-        // the snapshot's index is not what we want; we want the first index
-        // change's index ("2").
-        if (expSyncHead.indexes.length > 1) {
-          await withRead(store, async dagRead => {
-            const read = await readFromHead(
-              SYNC_HEAD_NAME,
-              dagRead,
-              formatVersion,
-            );
-            const indexMap = read.getMapForIndex('2');
-            for await (const _ of indexMap.scan('')) {
-              expect(false).to.be.true;
-            }
-          });
-
-          assertObject(result);
-          expect(syncHeadCommit.chunk.hash).to.equal(result.syncHead);
-        }
-      } else {
-        const gotHead = await read.getHead(SYNC_HEAD_NAME);
-        expect(gotHead).to.be.undefined;
-        // When createSyncBranch is false or sync is a noop (empty patch,
-        // same last mutation id, same cookie) we except BeginPull to succeed
-        // but sync_head will be empty.
-        if (typeof c.expBeginPullResult !== 'string') {
-          assertObject(result);
-          expect(result.syncHead).to.be.equal(emptyHash);
-        }
-      }
-
-      expect(typeof result).to.equal(typeof c.expBeginPullResult);
-      if (typeof result === 'object') {
-        assertObject(c.expBeginPullResult);
-        expect(result.httpRequestInfo).to.deep.equal(
-          c.expBeginPullResult.httpRequestInfo,
-        );
-        if (typeof c.pullResult === 'object') {
-          expect(result.pullResponse).to.deep.equal(c.pullResult);
-        } else {
-          expect(result.pullResponse).to.be.undefined;
-        }
-      } else {
-        // use to_debug since some errors cannot be made PartialEq
-        expect(result).to.equal(c.expBeginPullResult);
-      }
-    });
-  }
-});
+type FormatVersion = Enum<typeof FormatVersion>;
+type HandlePullResponseResultEnum = Enum<typeof HandlePullResponseResultEnum>;
 
 test('begin try pull DD31', async () => {
   const formatVersion = FormatVersion.Latest;
@@ -1088,7 +601,7 @@ test('begin try pull DD31', async () => {
 });
 
 describe('maybe end try pull', () => {
-  const t = async (formatVersion: FormatVersion.Type) => {
+  const t = async (formatVersion: FormatVersion) => {
     const clientID = 'client-id';
     type Case = {
       name: string;
@@ -1164,25 +677,16 @@ describe('maybe end try pull', () => {
         );
 
         // Add snapshot and replayed commits to the sync chain.
-        const w =
-          formatVersion >= FormatVersion.DD31
-            ? await newWriteSnapshotDD31(
-                b.chain[0].chunk.hash,
-                {[clientID]: 0},
-                'sync_cookie',
-                dagWrite,
-                clientID,
-                formatVersion,
-              )
-            : await newWriteSnapshotSDD(
-                b.chain[0].chunk.hash,
-                0,
-                'sync_cookie',
-                dagWrite,
-                readIndexesForWrite(b.chain[0], dagWrite, formatVersion),
-                clientID,
-                formatVersion,
-              );
+        assert(formatVersion >= FormatVersion.DD31);
+        const w = await newWriteSnapshotDD31(
+          b.chain[0].chunk.hash,
+          {[clientID]: 0},
+          'sync_cookie',
+          dagWrite,
+          clientID,
+          formatVersion,
+        );
+
         await w.put(lc, `key/${i}`, `${i}`);
         return w.commit(SYNC_HEAD_NAME);
       });
@@ -1219,7 +723,7 @@ describe('maybe end try pull', () => {
       }
       const syncHead = basisHash;
 
-      let result: MaybeEndPullResultV0 | string;
+      let result;
       try {
         result = await maybeEndPull(
           store,
@@ -1276,22 +780,21 @@ describe('maybe end try pull', () => {
   };
 
   test('dd31', () => t(FormatVersion.Latest));
-  test('sdd', () => t(FormatVersion.SDD));
 });
 
 type FakePullerArgs = {
-  expPullReq: PullRequestV1 | PullRequestV0;
+  expPullReq: PullRequestV1;
   expRequestID: string;
-  resp?: PullResponseV1 | PullResponseV0 | undefined;
+  resp?: PullResponseV1 | undefined;
   err?: string | undefined;
 };
 
 function makeFakePuller(options: FakePullerArgs): Puller {
   return async (
-    pullReq: PullRequestV1 | PullRequestV0,
+    pullReq: PullRequestV1,
     requestID: string,
     // eslint-disable-next-line require-await
-  ): Promise<PullerResultV1 | PullerResultV0> => {
+  ): Promise<PullerResultV1> => {
     expect(options.expPullReq).to.deep.equal(pullReq);
     expect(options.expRequestID).to.equal(requestID);
 
@@ -1328,15 +831,8 @@ function makeFakePuller(options: FakePullerArgs): Puller {
       };
     }
 
-    if (isPullRequestV1(options.expPullReq)) {
-      assertPullResponseV1(resp);
-      return {
-        response: resp,
-        httpRequestInfo,
-      };
-    }
-
-    assertPullResponseV0(resp);
+    assert(isPullRequestV1(options.expPullReq));
+    assertPullResponseV1(resp);
     return {
       response: resp,
       httpRequestInfo,
@@ -1345,7 +841,7 @@ function makeFakePuller(options: FakePullerArgs): Puller {
 }
 
 describe('changed keys', () => {
-  const t = async (formatVersion: FormatVersion.Type) => {
+  const t = async (formatVersion: FormatVersion) => {
     type IndexDef = {
       name: string;
       prefix: string;
@@ -1373,17 +869,9 @@ describe('changed keys', () => {
           },
         };
 
-        if (formatVersion >= FormatVersion.DD31) {
-          await b.addGenesis(clientID, indexDefinitions);
-          await b.addSnapshot([], clientID, undefined, undefined);
-        } else {
-          await b.addGenesis(clientID);
-          await b.addIndexChange(clientID, name, {
-            prefix,
-            jsonPointer,
-            allowEmpty: false,
-          });
-        }
+        assert(formatVersion >= FormatVersion.DD31);
+        await b.addGenesis(clientID, indexDefinitions);
+        await b.addSnapshot([], clientID, undefined, undefined);
       } else {
         await b.addGenesis(clientID);
       }
@@ -1400,36 +888,19 @@ describe('changed keys', () => {
 
       const newCookie = 'new_cookie';
 
-      const expPullReq: PullRequestV0 | PullRequestV1 =
-        formatVersion >= FormatVersion.DD31
-          ? {
-              profileID,
-              clientGroupID,
-              cookie: baseCookie as FrozenCookie,
-              pullVersion: PULL_VERSION_DD31,
-              schemaVersion,
-            }
-          : {
-              profileID,
-              clientID,
-              cookie: baseCookie,
-              lastMutationID: baseLastMutationID,
-              pullVersion: PULL_VERSION_SDD,
-              schemaVersion,
-            };
-
-      const pullResp: PullResponseV1 | PullResponseV0 =
-        formatVersion >= FormatVersion.DD31
-          ? {
-              cookie: newCookie,
-              lastMutationIDChanges: {[clientID]: baseLastMutationID},
-              patch,
-            }
-          : {
-              cookie: newCookie,
-              lastMutationID: baseLastMutationID,
-              patch,
-            };
+      assert(formatVersion >= FormatVersion.DD31);
+      const expPullReq: PullRequestV1 = {
+        profileID,
+        clientGroupID,
+        cookie: baseCookie as FrozenCookie,
+        pullVersion: PULL_VERSION_DD31,
+        schemaVersion,
+      };
+      const pullResp: PullResponseV1 = {
+        cookie: newCookie,
+        lastMutationIDChanges: {[clientID]: baseLastMutationID},
+        patch,
+      };
 
       const puller = makeFakePuller({
         expPullReq,
@@ -1438,29 +909,18 @@ describe('changed keys', () => {
         err: undefined,
       });
 
-      const pullResult =
-        formatVersion >= FormatVersion.DD31
-          ? await beginPullV1(
-              profileID,
-              clientID,
-              clientGroupID,
-              schemaVersion,
-              puller,
-              requestID,
-              store,
-              formatVersion,
-              new LogContext(),
-            )
-          : await beginPullV0(
-              profileID,
-              clientID,
-              schemaVersion,
-              puller,
-              requestID,
-              store,
-              formatVersion,
-              new LogContext(),
-            );
+      assert(formatVersion >= FormatVersion.DD31);
+      const pullResult = await beginPullV1(
+        profileID,
+        clientID,
+        clientGroupID,
+        schemaVersion,
+        puller,
+        requestID,
+        store,
+        formatVersion,
+        new LogContext(),
+      );
 
       const result = await maybeEndPull(
         store,
@@ -1686,7 +1146,6 @@ describe('changed keys', () => {
   };
 
   test('dd31', () => t(FormatVersion.Latest));
-  test('sdd', () => t(FormatVersion.SDD));
 });
 
 test('pull for client group with multiple client local changes', async () => {
@@ -1825,7 +1284,7 @@ describe('handlePullResponseDD31', () => {
   }: {
     expectedBaseCookieJSON: ReadonlyJSONValue;
     responseCookie: Cookie;
-    expectedResultType: HandlePullResponseResultEnum.Type;
+    expectedResultType: HandlePullResponseResultEnum;
     setupChain?: (b: ChainBuilder) => Promise<unknown>;
     responseLastMutationIDChanges?: {[clientID: string]: number};
     responsePatch?: PatchOperation[];

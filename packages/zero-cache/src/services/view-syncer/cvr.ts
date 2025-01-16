@@ -11,7 +11,7 @@ import type {AST} from '../../../../zero-protocol/src/ast.js';
 import type {JSONObject} from '../../types/bigint-json.js';
 import type {LexiVersion} from '../../types/lexi-version.js';
 import {rowIDString} from '../../types/row-key.js';
-import {unescapedSchema as schema} from '../change-streamer/pg/schema/shard.js';
+import {unescapedSchema as schema} from '../change-source/pg/schema/shard.js';
 import type {Patch, PatchToVersion} from './client-handler.js';
 import type {CVRFlushStats, CVRStore} from './cvr-store.js';
 import {
@@ -326,9 +326,10 @@ export class CVRQueryDrivenUpdater extends CVRUpdater {
 
     assert(
       // We should either be setting the cvr.replicaVersion for the first time, or it should
-      // be the same as the cvr.replicaVersion.
-      (cvr.replicaVersion ?? replicaVersion) === replicaVersion,
-      `CVR replicaVersion: ${cvr.replicaVersion}, DB replicaVersion: ${replicaVersion}`,
+      // be something newer than the current cvr.replicaVersion. Otherwise, the CVR should
+      // have been rejected by the ViewSyncer.
+      (cvr.replicaVersion ?? replicaVersion) <= replicaVersion,
+      `Cannot sync from an older replicaVersion: CVR=${cvr.replicaVersion}, DB=${replicaVersion}`,
     );
     assert(stateVersion >= cvr.version.stateVersion);
     if (stateVersion > cvr.version.stateVersion) {

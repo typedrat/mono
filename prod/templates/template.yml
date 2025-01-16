@@ -53,8 +53,9 @@ Resources:
         - FARGATE
       ClusterSettings:
         - Name: containerInsights
-          Value: enabled
-
+          Value: enhanced
+      ServiceConnectDefaults:
+        Namespace: "zero-cache-prod"
   # Security Group for internal service communication
   InternalServicesSG:
     Type: AWS::EC2::SecurityGroup
@@ -89,7 +90,7 @@ Resources:
         NamespaceId: !Ref ServiceDiscoveryNamespace
         DnsRecords:
           - Type: A
-            TTL: 300
+            TTL: 5
 
   ServiceViewSyncer:
     Type: AWS::ECS::Service
@@ -98,7 +99,7 @@ Resources:
       Cluster: !Ref Cluster
       LaunchType: FARGATE
       EnableExecuteCommand: true
-      HealthCheckGracePeriodSeconds: 5
+      HealthCheckGracePeriodSeconds: 300
       NetworkConfiguration:
         AwsvpcConfiguration:
           AssignPublicIp: ENABLED
@@ -111,15 +112,22 @@ Resources:
             - !GetAtt VPC.Outputs.SG
             - !Ref InternalServicesSG
       DeploymentConfiguration:
-        MaximumPercent: 200
+        # Run up to 12 tasks, capping updates to 2 tasks at a time
+        # (Connection counts are currently safe for up to 12 tasks at a time)
+        MaximumPercent: 120
         MinimumHealthyPercent: 50
-      DesiredCount: 8
+        DeploymentCircuitBreaker:
+          Enable: true
+          Rollback: true
+      DesiredCount: 10
       TaskDefinition: !Ref "TaskDefinitionViewSyncer"
       LoadBalancers:
         - ContainerName: "view-syncer-container"
           ContainerPort: 4848
           TargetGroupArn: !GetAtt VPC.Outputs.PublicLBTargetGroup
-
+      ServiceConnectConfiguration:
+        Enabled: true
+        Namespace: "zero-cache-prod"
   # First, create the secure parameters
   ViewSyncerSecrets:
     Type: AWS::SecretsManager::Secret
@@ -174,8 +182,8 @@ Resources:
     Type: AWS::ECS::TaskDefinition
     Properties:
       Family: view-syncer-task-definition
-      Cpu: 4096
-      Memory: 8192
+      Cpu: 8192
+      Memory: 16384
       NetworkMode: awsvpc
       RequiresCompatibilities:
         - FARGATE
@@ -186,8 +194,8 @@ Resources:
         OperatingSystemFamily: LINUX
       ContainerDefinitions:
         - Name: view-syncer-container
-          Cpu: 4096
-          Memory: 8192
+          Cpu: 8192
+          Memory: 16384
           Image: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/zero-zbugs
           PortMappings:
             - Name: "4848"
@@ -198,21 +206,21 @@ Resources:
           Essential: true
           Environment:
             - Name: ZERO_CHANGE_STREAMER_URI
-              Value: ws://replication-manager.internal.local:4849
+              Value: ws://change-streamer.zero-cache-prod:4849
             - Name: ZERO_LOG_FORMAT
               Value: json
             - Name: ZERO_REPLICA_FILE
               Value: /data/db/sync-replica.db
-            - Name: REPLICA_URL
-              Value: !Sub "s3://${ApplicationBucket}/1208b"
+            - Name: ZERO_LITESTREAM_BACKUP_URL
+              Value: !Sub "s3://${ApplicationBucket}/0113"
             - Name: ZERO_LOG_LEVEL
               Value: debug
             - Name: ZERO_UPSTREAM_MAX_CONNS
-              # limit: 190 max_connections / 8 tasks
-              Value: 20
+              # limit: 190 max_connections / (10 tasks * 1.2 maximum-percent)
+              Value: 15
             - Name: ZERO_CVR_MAX_CONNS
-              # limit: 1708 max_connections / 8 tasks * 2 (total tasks)
-              Value: 100
+              # limit: 5000 max_connections / (10 tasks * 1.2 maximum-percent)
+              Value: 400
             - Name: ZERO_SCHEMA_FILE
               Value: /opt/app/packages/zero-cache/zero-schema.json
             - Name: ZERO_PER_USER_MUTATION_LIMIT_MAX
@@ -247,10 +255,10 @@ Resources:
             Command:
               - CMD-SHELL
               - curl -f http://localhost:4848/ || exit 1
-            Interval: 10
-            Timeout: 60
-            Retries: 10
-            StartPeriod: 10
+            Interval: 5
+            Retries: 3
+            # allow for slow `litestream restore` operations
+            StartPeriod: 300
 
   LogGroupViewSyncer:
     Type: AWS::Logs::LogGroup
@@ -288,8 +296,6 @@ Resources:
 
   ServiceReplicationManager:
     Type: AWS::ECS::Service
-    DependsOn:
-      - ServiceDiscoveryNamespace
     Properties:
       ServiceName: "replication-manager"
       Cluster: !Ref Cluster
@@ -309,10 +315,23 @@ Resources:
       DeploymentConfiguration:
         MaximumPercent: 200
         MinimumHealthyPercent: 50
+        DeploymentCircuitBreaker:
+          Enable: true
+          Rollback: true
       DesiredCount: 1
       TaskDefinition: !Ref "TaskDefinitionReplicationManager"
-      ServiceRegistries:
-        - RegistryArn: !GetAtt ReplicationManagerRegistry.Arn
+      ServiceConnectConfiguration:
+        Enabled: true
+        Namespace: "zero-cache-prod"
+        Services:
+          - PortName: "change-streamer"
+            DiscoveryName: change-streamer
+            ClientAliases:
+              - Port: 4849
+                DnsName: "change-streamer.zero-cache-prod"
+            Timeout:
+              IdleTimeoutSeconds: 0
+              PerRequestTimeoutSeconds: 0
 
   ReplicationManagerSecrets:
     Type: AWS::SecretsManager::Secret
@@ -348,7 +367,7 @@ Resources:
           Memory: 8192
           Image: !Sub ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/zero-zbugs
           PortMappings:
-            - Name: "4849"
+            - Name: "change-streamer"
               ContainerPort: 4849
               HostPort: 4849
               Protocol: tcp
@@ -357,10 +376,8 @@ Resources:
           Environment:
             - Name: ZERO_NUM_SYNC_WORKERS
               Value: "0"
-            - Name: ZERO_LITESTREAM
-              Value: "1"
-            - Name: REPLICA_URL
-              Value: !Sub "s3://${ApplicationBucket}/1208b"
+            - Name: ZERO_LITESTREAM_BACKUP_URL
+              Value: !Sub "s3://${ApplicationBucket}/0113"
             - Name: ZERO_LOG_FORMAT
               Value: json
             - Name: ZERO_REPLICA_FILE
@@ -396,10 +413,23 @@ Resources:
             Command:
               - CMD-SHELL
               - curl -f http://localhost:4849/ || exit 1
-            Interval: 300
-            Timeout: 60
-            Retries: 5
+            Interval: 5
+            Retries: 3
+            # allow for slow `litestream restore` operations
             StartPeriod: 300
+        # Dummy container with a dependency on replication-manager-container
+        # to delay the ECS transition to a RUNNING state until the replication-manager-container
+        # is healthy (as an ECS Task is only transitions to RUNNING once all containers have started).
+        # This, in turn, delays ServiceConnect requests from view-syncers until the
+        # replication-manager-container is HEALTHY. This workaround is described in:
+        # https://github.com/aws/containers-roadmap/issues/2334#issuecomment-2299912626
+        - Name: service-connect-hold
+          Image: public.ecr.aws/docker/library/alpine:edge
+          Cpu: 0
+          Essential: false
+          DependsOn:
+            - ContainerName: replication-manager-container
+              Condition: HEALTHY
 
   LogGroupReplicationManager:
     Type: AWS::Logs::LogGroup

@@ -1,20 +1,21 @@
 import type {LogContext} from '@rocicorp/logger';
 import {SqliteError} from '@rocicorp/zero-sqlite3';
-import {LogicalReplicationService} from 'pg-logical-replication';
 import {AbortError} from '../../../../shared/src/abort-error.js';
 import {assert, unreachable} from '../../../../shared/src/asserts.js';
+import {must} from '../../../../shared/src/must.js';
 import {Database} from '../../../../zqlite/src/db.js';
 import {
   columnDef,
   createIndexStatement,
   createTableStatement,
 } from '../../db/create.js';
-import {listIndexes} from '../../db/lite-tables.js';
+import {listIndexes, listTables} from '../../db/lite-tables.js';
 import {
   mapPostgresToLite,
   mapPostgresToLiteColumn,
   mapPostgresToLiteIndex,
 } from '../../db/pg-to-lite.js';
+import type {LiteTableSpec} from '../../db/specs.js';
 import {StatementRunner} from '../../db/statements.js';
 import {stringify} from '../../types/bigint-json.js';
 import type {LexiVersion} from '../../types/lexi-version.js';
@@ -22,11 +23,6 @@ import {liteRow} from '../../types/lite.js';
 import {liteTableName} from '../../types/names.js';
 import {id} from '../../types/sql.js';
 import type {Source} from '../../types/streams.js';
-import type {
-  ChangeStreamer,
-  Downstream,
-  DownstreamChange,
-} from '../change-streamer/change-streamer.js';
 import type {
   Change,
   ColumnAdd,
@@ -42,10 +38,15 @@ import type {
   TableCreate,
   TableDrop,
   TableRename,
-} from '../change-streamer/schema/change.js';
+} from '../change-source/protocol/current/data.js';
+import type {ChangeStreamData} from '../change-source/protocol/current/downstream.js';
+import type {
+  ChangeStreamer,
+  Downstream,
+} from '../change-streamer/change-streamer.js';
 import {RunningState} from '../running-state.js';
 import {Notifier} from './notifier.js';
-import type {ReplicaState} from './replicator.js';
+import type {ReplicaState, ReplicatorMode} from './replicator.js';
 import {
   logDeleteOp,
   logResetOp,
@@ -54,7 +55,6 @@ import {
 } from './schema/change-log.js';
 import {
   ZERO_VERSION_COLUMN_NAME,
-  getReplicationVersions,
   getSubscriptionState,
   updateReplicationWatermark,
 } from './schema/replication-state.js';
@@ -71,22 +71,23 @@ export class IncrementalSyncer {
   readonly #id: string;
   readonly #changeStreamer: ChangeStreamer;
   readonly #replica: StatementRunner;
+  readonly #mode: ReplicatorMode;
   readonly #txMode: TransactionMode;
   readonly #notifier: Notifier;
 
   readonly #state = new RunningState('IncrementalSyncer');
-  #service: LogicalReplicationService | undefined;
 
   constructor(
     id: string,
     changeStreamer: ChangeStreamer,
     replica: Database,
-    txMode: TransactionMode,
+    mode: ReplicatorMode,
   ) {
     this.#id = id;
     this.#changeStreamer = changeStreamer;
     this.#replica = new StatementRunner(replica);
-    this.#txMode = txMode;
+    this.#mode = mode;
+    this.#txMode = mode === 'serving' ? 'CONCURRENT' : 'IMMEDIATE';
     this.#notifier = new Notifier();
   }
 
@@ -112,6 +113,7 @@ export class IncrementalSyncer {
       try {
         downstream = await this.#changeStreamer.subscribe({
           id: this.#id,
+          mode: this.#mode,
           watermark,
           replicaVersion,
           initial: watermark === initialWatermark,
@@ -146,9 +148,8 @@ export class IncrementalSyncer {
     return this.#notifier.subscribe();
   }
 
-  async stop(lc: LogContext, err?: unknown) {
+  stop(lc: LogContext, err?: unknown) {
     this.#state.stop(lc, err);
-    await this.#service?.stop();
   }
 }
 
@@ -159,15 +160,6 @@ function ensureError(err: unknown): Error {
   const error = new Error();
   error.cause = err;
   return error;
-}
-
-class ReplayedTransactionError extends Error {
-  readonly watermark: string;
-
-  constructor(watermark: string, commit: MessageCommit) {
-    super(`${watermark} has already been processed: ${stringify(commit)}`);
-    this.watermark = watermark;
-  }
 }
 
 /**
@@ -186,6 +178,11 @@ export class MessageProcessor {
   readonly #db: StatementRunner;
   readonly #txMode: TransactionMode;
   readonly #failService: (lc: LogContext, err: unknown) => void;
+
+  // The TransactionProcessor lazily loads table specs into this Map,
+  // and reloads them after a schema change. It is cached here to avoid
+  // reading them from the DB on every transaction.
+  readonly #tableSpecs = new Map<string, LiteTableSpec>();
 
   #currentTx: TransactionProcessor | null = null;
 
@@ -220,30 +217,40 @@ export class MessageProcessor {
   }
 
   /** @return If a transaction was committed. */
-  processMessage(lc: LogContext, downstream: DownstreamChange): boolean {
+  processMessage(lc: LogContext, downstream: ChangeStreamData): boolean {
     const [type, message] = downstream;
     if (this.#failure) {
       lc.debug?.(`Dropping ${message.tag}`);
       return false;
     }
     try {
-      const watermark = type === 'commit' ? downstream[2].watermark : undefined;
+      const watermark =
+        type === 'begin'
+          ? downstream[2].commitWatermark
+          : type === 'commit'
+          ? downstream[2].watermark
+          : undefined;
       return this.#processMessage(lc, message, watermark);
     } catch (e) {
-      if (e instanceof ReplayedTransactionError) {
-        lc.info?.(e);
-      } else {
-        this.#fail(lc, e);
-      }
+      this.#fail(lc, e);
     }
     return false;
   }
 
-  #beginTransaction(lc: LogContext): TransactionProcessor {
+  #beginTransaction(
+    lc: LogContext,
+    commitVersion: string,
+  ): TransactionProcessor {
     let start = Date.now();
     for (let i = 0; ; i++) {
       try {
-        return new TransactionProcessor(lc, this.#db, this.#txMode);
+        return new TransactionProcessor(
+          lc,
+          this.#db,
+          this.#txMode,
+          this.#tableSpecs,
+          commitVersion,
+        );
       } catch (e) {
         // The db occasionally errors with a 'database is locked' error when
         // being concurrently processed by `litestream replicate`, even with
@@ -276,7 +283,7 @@ export class MessageProcessor {
       if (this.#currentTx) {
         throw new Error(`Already in a transaction ${stringify(msg)}`);
       }
-      this.#currentTx = this.#beginTransaction(lc);
+      this.#currentTx = this.#beginTransaction(lc, must(watermark));
       return false;
     }
 
@@ -374,8 +381,15 @@ class TransactionProcessor {
   readonly #startMs: number;
   readonly #db: StatementRunner;
   readonly #version: LexiVersion;
+  readonly #tableSpecs: Map<string, LiteTableSpec>;
 
-  constructor(lc: LogContext, db: StatementRunner, txMode: TransactionMode) {
+  constructor(
+    lc: LogContext,
+    db: StatementRunner,
+    txMode: TransactionMode,
+    tableSpecs: Map<string, LiteTableSpec>,
+    commitVersion: LexiVersion,
+  ) {
     this.#startMs = Date.now();
 
     if (txMode === 'CONCURRENT') {
@@ -394,31 +408,30 @@ class TransactionProcessor {
       // so it is important to use vanilla transactions in this configuration.
       db.beginImmediate();
     }
-    const {nextStateVersion} = getReplicationVersions(db);
     this.#db = db;
-    this.#version = nextStateVersion;
-    this.#lc = lc.withContext('version', nextStateVersion);
+    this.#version = commitVersion;
+    this.#lc = lc.withContext('version', commitVersion);
+    this.#tableSpecs = tableSpecs;
+
+    if (this.#tableSpecs.size === 0) {
+      this.#reloadTableSpecs();
+    }
   }
 
-  /**
-   * Note: All INSERTs are processed a UPSERTs in order to properly handle
-   * replayed transactions (e.g. if an acknowledgement was lost). In the case
-   * of a replayed transaction, the final commit results in an rollback if the
-   * watermark is earlier than what has already been processed.
-   * See {@link processCommit}.
-   *
-   * Note that a transaction replay could theoretically be detected at the BEGIN message
-   * since it contains the commitEndLsn (from which a watermark can be derived), but
-   * that would not generalize to streaming transactions for which the commitEndLsn
-   * is not known until STREAM COMMIT.
-   *
-   * This UPSERT strategy instead handles both protocols by accepting all messages and
-   * making the COMMIT/ROLLBACK decision when the commit watermark is guaranteed to be
-   * available.
-   */
+  #reloadTableSpecs() {
+    this.#tableSpecs.clear();
+    for (const spec of listTables(this.#db.db)) {
+      this.#tableSpecs.set(spec.name, spec);
+    }
+  }
+
+  #tableSpec(name: string) {
+    return must(this.#tableSpecs.get(name), `Unknown table ${name}`);
+  }
+
   processInsert(insert: MessageInsert) {
     const table = liteTableName(insert.relation);
-    const newRow = liteRow(insert.new);
+    const newRow = liteRow(insert.new, this.#tableSpec(table));
     const row = {
       ...newRow,
       [ZERO_VERSION_COLUMN_NAME]: this.#version,
@@ -426,16 +439,11 @@ class TransactionProcessor {
     const key = Object.fromEntries(
       insert.relation.keyColumns.map(col => [col, newRow[col]]),
     );
-    const rawColumns = Object.keys(row);
-    const keyColumns = insert.relation.keyColumns.map(c => id(c));
-    const columns = rawColumns.map(c => id(c));
-    const upsert = rawColumns.map(c => `${id(c)}=EXCLUDED.${id(c)}`);
+    const columns = Object.keys(row).map(c => id(c));
     this.#db.run(
       `
       INSERT INTO ${id(table)} (${columns.join(',')})
         VALUES (${new Array(columns.length).fill('?').join(',')})
-        ON CONFLICT (${keyColumns.join(',')})
-        DO UPDATE SET ${upsert.join(',')}
       `,
       Object.values(row),
     );
@@ -445,13 +453,15 @@ class TransactionProcessor {
 
   processUpdate(update: MessageUpdate) {
     const table = liteTableName(update.relation);
-    const newRow = liteRow(update.new);
+    const newRow = liteRow(update.new, this.#tableSpec(table));
     const row = {
       ...newRow,
       [ZERO_VERSION_COLUMN_NAME]: this.#version,
     };
     // update.key is set with the old values if the key has changed.
-    const oldKey = update.key ? liteRow(update.key) : null;
+    const oldKey = update.key
+      ? liteRow(update.key, this.#tableSpec(table))
+      : null;
     const newKey = Object.fromEntries(
       update.relation.keyColumns.map(col => [col, newRow[col]]),
     );
@@ -478,8 +488,8 @@ class TransactionProcessor {
     // REPLICA IDENTITY DEFAULT means the `key` must be set.
     // https://www.postgresql.org/docs/current/protocol-logicalrep-message-formats.html
     assert(del.relation.replicaIdentity === 'default');
-    const rowKey = liteRow(del.key);
     const table = liteTableName(del.relation);
+    const rowKey = liteRow(del.key, this.#tableSpec(table));
 
     const conds = Object.keys(rowKey).map(col => `${id(col)}=?`);
     this.#db.run(
@@ -504,7 +514,7 @@ class TransactionProcessor {
     const table = mapPostgresToLite(create.spec);
     this.#db.db.exec(createTableStatement(table));
 
-    logResetOp(this.#db, this.#version, table.name);
+    this.#logResetOp(table.name);
     this.#lc.info?.(create.tag, table.name);
   }
 
@@ -514,7 +524,7 @@ class TransactionProcessor {
     this.#db.db.exec(`ALTER TABLE ${id(oldName)} RENAME TO ${id(newName)}`);
 
     this.#bumpVersions(newName);
-    logResetOp(this.#db, this.#version, oldName);
+    this.#logResetOp(oldName);
     this.#lc.info?.(rename.tag, oldName, newName);
   }
 
@@ -588,7 +598,7 @@ class TransactionProcessor {
     const name = liteTableName(drop.id);
     this.#db.db.exec(`DROP TABLE IF EXISTS ${id(name)}`);
 
-    logResetOp(this.#db, this.#version, name);
+    this.#logResetOp(name);
     this.#lc.info?.(drop.tag, name);
   }
 
@@ -609,16 +619,23 @@ class TransactionProcessor {
       `UPDATE ${id(table)} SET ${id(ZERO_VERSION_COLUMN_NAME)} = ?`,
       this.#version,
     );
+    this.#logResetOp(table);
+  }
+
+  #logResetOp(table: string) {
     logResetOp(this.#db, this.#version, table);
+    this.#reloadTableSpecs();
   }
 
   processCommit(commit: MessageCommit, watermark: string) {
-    const nextVersion = watermark;
-    if (nextVersion <= this.#version) {
-      this.#db.rollback();
-      throw new ReplayedTransactionError(watermark, commit);
+    if (watermark !== this.#version) {
+      throw new Error(
+        `'commit' version ${watermark} does not match 'begin' version ${
+          this.#version
+        }: ${stringify(commit)}`,
+      );
     }
-    updateReplicationWatermark(this.#db, nextVersion);
+    updateReplicationWatermark(this.#db, watermark);
     this.#db.commit();
 
     const elapsedMs = Date.now() - this.#startMs;

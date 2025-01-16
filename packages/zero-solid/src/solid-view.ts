@@ -1,4 +1,9 @@
-import {createStore, produce, type SetStoreFunction} from 'solid-js/store';
+import {
+  createStore,
+  produce,
+  type SetStoreFunction,
+  type Store,
+} from 'solid-js/store';
 import {
   applyChange,
   type Change,
@@ -11,36 +16,47 @@ import {
   type Smash,
   type TableSchema,
   type View,
+  type ViewFactory,
 } from '../../zero-advanced/src/mod.js';
+import type {ResultType} from '../../zql/src/query/typed-view.js';
+
+export type QueryResultDetails = {
+  readonly type: ResultType;
+};
+
+type State = [Entry, QueryResultDetails];
+
+const complete = {type: 'complete'} as const;
+const unknown = {type: 'unknown'} as const;
 
 export class SolidView<V extends View> implements Output {
   readonly #input: Input;
   readonly #format: Format;
   readonly #onDestroy: () => void;
 
-  // Synthetic "root" entry that has a single "" relationship, so that we can
-  // treat all changes, including the root change, generically.
-  readonly #root: Entry;
-  readonly #setRoot: SetStoreFunction<Entry>;
+  #state: Store<State>;
+  #setState: SetStoreFunction<State>;
 
   constructor(
     input: Input,
     format: Format = {singular: false, relationships: {}},
     onDestroy: () => void = () => {},
+    queryComplete: true | Promise<true> = true,
   ) {
     this.#input = input;
     this.#format = format;
     this.#onDestroy = onDestroy;
-    [this.#root, this.#setRoot] = createStore({
-      '': format.singular ? undefined : [],
-    });
+    [this.#state, this.#setState] = createStore<State>([
+      {'': format.singular ? undefined : []},
+      queryComplete === true ? complete : unknown,
+    ]);
     input.setOutput(this);
 
-    this.#setRoot(
-      produce(draftRoot => {
+    this.#setState(
+      produce(draftState => {
         for (const node of input.fetch({})) {
           applyChange(
-            draftRoot,
+            draftState[0],
             {type: 'add', node},
             input.getSchema(),
             '',
@@ -49,21 +65,30 @@ export class SolidView<V extends View> implements Output {
         }
       }),
     );
+    if (queryComplete !== true) {
+      void queryComplete.then(() => {
+        this.#setState(oldState => [oldState[0], complete]);
+      });
+    }
   }
 
-  get data() {
-    return this.#root[''] as V;
+  get data(): V {
+    return this.#state[0][''] as V;
   }
 
-  destroy() {
+  get resultDetails(): QueryResultDetails {
+    return this.#state[1];
+  }
+
+  destroy(): void {
     this.#onDestroy();
   }
 
   push(change: Change): void {
-    this.#setRoot(
-      produce(draftRoot => {
+    this.#setState(
+      produce((draftState: State) => {
         applyChange(
-          draftRoot,
+          draftState[0],
           change,
           this.#input.getSchema(),
           '',
@@ -82,8 +107,10 @@ export function solidViewFactory<
   input: Input,
   format: Format,
   onDestroy: () => void,
+  _onTransactionCommit: (cb: () => void) => void,
+  queryComplete: true | Promise<true>,
 ): SolidView<Smash<TReturn>> {
-  const v = new SolidView<Smash<TReturn>>(input, format, onDestroy);
-
-  return v;
+  return new SolidView<Smash<TReturn>>(input, format, onDestroy, queryComplete);
 }
+
+solidViewFactory satisfies ViewFactory<TableSchema, QueryType, unknown>;

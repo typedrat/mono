@@ -1,5 +1,6 @@
 import type {LogContext} from '@rocicorp/logger';
 import {assert} from '../../../shared/src/asserts.js';
+import type {Enum} from '../../../shared/src/enum.js';
 import {diff} from '../btree/diff.js';
 import type {InternalDiff} from '../btree/node.js';
 import {BTreeRead, allEntriesAsDiff} from '../btree/read.js';
@@ -20,17 +21,16 @@ import {
   type Meta,
   baseSnapshotHashFromHash,
   commitFromHash,
-  newIndexChange as commitNewIndexChange,
   newLocalDD31 as commitNewLocalDD31,
-  newLocalSDD as commitNewLocalSDD,
   newSnapshotDD31 as commitNewSnapshotDD31,
-  newSnapshotSDD as commitNewSnapshotSDD,
   getMutationID,
 } from './commit.js';
 import * as IndexOperation from './index-operation-enum.js';
 import {IndexRead, IndexWrite, indexValue} from './index.js';
 import * as MetaType from './meta-type-enum.js';
 import {Read, readIndexesForRead} from './read.js';
+
+type FormatVersion = Enum<typeof FormatVersion>;
 
 export class Write extends Read {
   readonly #dagWrite: DagWrite;
@@ -41,7 +41,7 @@ export class Write extends Read {
 
   declare readonly indexes: Map<string, IndexWrite>;
   readonly #clientID: ClientID;
-  readonly #formatVersion: FormatVersion.Type;
+  readonly #formatVersion: FormatVersion;
 
   constructor(
     dagWrite: DagWrite,
@@ -50,7 +50,7 @@ export class Write extends Read {
     meta: CommitMeta,
     indexes: Map<string, IndexWrite>,
     clientID: ClientID,
-    formatVersion: FormatVersion.Type,
+    formatVersion: FormatVersion,
   ) {
     // TypeScript has trouble
     super(dagWrite, map, indexes);
@@ -77,9 +77,6 @@ export class Write extends Read {
     key: string,
     value: FrozenJSONValue,
   ): Promise<void> {
-    if (this.#meta.type === MetaType.IndexChangeSDD) {
-      throw new Error('Not allowed');
-    }
     const oldVal = lazy(() => this.map.get(key));
     await updateIndexes(lc, this.indexes, key, oldVal, value);
 
@@ -91,10 +88,6 @@ export class Write extends Read {
   }
 
   async del(lc: LogContext, key: string): Promise<boolean> {
-    if (this.#meta.type === MetaType.IndexChangeSDD) {
-      throw new Error('Not allowed');
-    }
-
     // TODO(arv): This does the binary search twice. We can do better.
     const oldVal = lazy(() => this.map.get(key));
     if (oldVal !== undefined) {
@@ -104,10 +97,6 @@ export class Write extends Read {
   }
 
   async clear(): Promise<void> {
-    if (this.#meta.type === MetaType.IndexChangeSDD) {
-      throw new Error('Not allowed');
-    }
-
     await this.map.clear();
     const ps = [];
     for (const idx of this.indexes.values()) {
@@ -132,29 +121,6 @@ export class Write extends Read {
     let commit: Commit<Meta>;
     const meta = this.#meta;
     switch (meta.type) {
-      case MetaType.LocalSDD: {
-        const {
-          basisHash,
-          mutationID,
-          mutatorName,
-          mutatorArgsJSON,
-          originalHash,
-          timestamp,
-        } = meta;
-        commit = commitNewLocalSDD(
-          this.#dagWrite.createChunk,
-          basisHash,
-          mutationID,
-          mutatorName,
-          mutatorArgsJSON,
-          originalHash,
-          valueHash,
-          indexRecords,
-          timestamp,
-        );
-        break;
-      }
-
       case MetaType.LocalDD31: {
         assert(this.#formatVersion >= FormatVersion.DD31);
         const {
@@ -181,20 +147,6 @@ export class Write extends Read {
         break;
       }
 
-      case MetaType.SnapshotSDD: {
-        assert(this.#formatVersion <= FormatVersion.SDD);
-        const {basisHash, lastMutationID, cookieJSON} = meta;
-        commit = commitNewSnapshotSDD(
-          this.#dagWrite.createChunk,
-          basisHash,
-          lastMutationID,
-          cookieJSON,
-          valueHash,
-          indexRecords,
-        );
-        break;
-      }
-
       case MetaType.SnapshotDD31: {
         assert(this.#formatVersion > FormatVersion.DD31);
         const {basisHash, lastMutationIDs, cookieJSON} = meta;
@@ -203,31 +155,6 @@ export class Write extends Read {
           basisHash,
           lastMutationIDs,
           cookieJSON,
-          valueHash,
-          indexRecords,
-        );
-        break;
-      }
-
-      case MetaType.IndexChangeSDD: {
-        const {basisHash, lastMutationID} = meta;
-        if (this.#basis !== undefined) {
-          if (
-            (await this.#basis.getMutationID(
-              this.#clientID,
-              this.#dagWrite,
-            )) !== lastMutationID
-          ) {
-            throw new Error('Index change must not change mutationID');
-          }
-          if (this.#basis.valueHash !== valueHash) {
-            throw new Error('Index change must not change valueHash');
-          }
-        }
-        commit = commitNewIndexChange(
-          this.#dagWrite.createChunk,
-          basisHash,
-          lastMutationID,
           valueHash,
           indexRecords,
         );
@@ -327,60 +254,29 @@ export async function newWriteLocal(
   dagWrite: DagWrite,
   timestamp: number,
   clientID: ClientID,
-  formatVersion: FormatVersion.Type,
+  formatVersion: FormatVersion,
 ): Promise<Write> {
   const basis = await commitFromHash(basisHash, dagWrite);
   const bTreeWrite = new BTreeWrite(dagWrite, formatVersion, basis.valueHash);
   const mutationID = await basis.getNextMutationID(clientID, dagWrite);
   const indexes = readIndexesForWrite(basis, dagWrite, formatVersion);
+  assert(formatVersion >= FormatVersion.DD31);
   return new Write(
     dagWrite,
     bTreeWrite,
     basis,
-    formatVersion >= FormatVersion.DD31
-      ? {
-          type: MetaType.LocalDD31,
-          basisHash,
-          baseSnapshotHash: await baseSnapshotHashFromHash(basisHash, dagWrite),
-          mutatorName,
-          mutatorArgsJSON,
-          mutationID,
-          originalHash,
-          timestamp,
-          clientID,
-        }
-      : {
-          type: MetaType.LocalSDD,
-          basisHash,
-          mutatorName,
-          mutatorArgsJSON,
-          mutationID,
-          originalHash,
-          timestamp,
-        },
-    indexes,
-    clientID,
-    formatVersion,
-  );
-}
 
-export async function newWriteSnapshotSDD(
-  basisHash: Hash,
-  lastMutationID: number,
-  cookieJSON: FrozenJSONValue,
-  dagWrite: DagWrite,
-  indexes: Map<string, IndexWrite>,
-  clientID: ClientID,
-  formatVersion: FormatVersion.Type,
-): Promise<Write> {
-  assert(formatVersion <= FormatVersion.SDD);
-  const basis = await commitFromHash(basisHash, dagWrite);
-  const bTreeWrite = new BTreeWrite(dagWrite, formatVersion, basis.valueHash);
-  return new Write(
-    dagWrite,
-    bTreeWrite,
-    basis,
-    {basisHash, type: MetaType.SnapshotSDD, lastMutationID, cookieJSON},
+    {
+      type: MetaType.LocalDD31,
+      basisHash,
+      baseSnapshotHash: await baseSnapshotHashFromHash(basisHash, dagWrite),
+      mutatorName,
+      mutatorArgsJSON,
+      mutationID,
+      originalHash,
+      timestamp,
+      clientID,
+    },
     indexes,
     clientID,
     formatVersion,
@@ -393,7 +289,7 @@ export async function newWriteSnapshotDD31(
   cookieJSON: FrozenCookie,
   dagWrite: DagWrite,
   clientID: ClientID,
-  formatVersion: FormatVersion.Type,
+  formatVersion: FormatVersion,
 ): Promise<Write> {
   const basis = await commitFromHash(basisHash, dagWrite);
   const bTreeWrite = new BTreeWrite(dagWrite, formatVersion, basis.valueHash);
@@ -454,7 +350,7 @@ export async function updateIndexes(
 export function readIndexesForWrite(
   commit: Commit<CommitMeta>,
   dagWrite: DagWrite,
-  formatVersion: FormatVersion.Type,
+  formatVersion: FormatVersion,
 ): Map<string, IndexWrite> {
   const m = new Map();
   for (const index of commit.indexes) {
@@ -476,7 +372,7 @@ export async function createIndexBTree(
   prefix: string,
   jsonPointer: string,
   allowEmpty: boolean,
-  formatVersion: FormatVersion.Type,
+  formatVersion: FormatVersion,
 ): Promise<BTreeWrite> {
   const indexMap = new BTreeWrite(dagWrite, formatVersion);
   for await (const entry of valueMap.scan(prefix)) {

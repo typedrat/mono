@@ -2,14 +2,14 @@ import {
   createSchema,
   createTableSchema,
   definePermissions,
-  type ExpressionBuilder,
-  type TableSchema,
-  type Row,
   NOBODY_CAN,
+  type ExpressionBuilder,
+  type Row,
+  type TableSchema,
 } from '@rocicorp/zero';
 import type {Condition} from 'zero-protocol/src/ast.js';
 
-const userSchema = createTableSchema({
+const userSchema = {
   tableName: 'user',
   columns: {
     id: 'string',
@@ -19,7 +19,14 @@ const userSchema = createTableSchema({
     role: 'string',
   },
   primaryKey: 'id',
-});
+  relationships: {
+    createdIssues: {
+      sourceField: 'id',
+      destField: 'creatorID',
+      destSchema: () => issueSchema,
+    },
+  },
+} as const;
 
 const issueSchema = {
   tableName: 'issue',
@@ -183,6 +190,7 @@ const userPrefSchema = createTableSchema({
 
 export type IssueRow = Row<typeof issueSchema>;
 export type CommentRow = Row<typeof commentSchema>;
+export type UserRow = Row<typeof userSchema>;
 export type Schema = typeof schema;
 
 /** The contents of the zbugs JWT */

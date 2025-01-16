@@ -12,6 +12,7 @@ import {
   type Sender,
   type Worker,
 } from '../../types/processes.js';
+import {closeWithProtocolError} from '../../types/ws.js';
 
 export type WebSocketHandoff<P> = (message: IncomingMessageSubset) => {
   payload: P;
@@ -51,12 +52,11 @@ export function installWebSocketHandoff<P>(
       // https://nodejs.org/api/http.html#event-upgrade
       receiver.send(data, socket as Socket);
     } catch (error) {
-      lc.warn?.(`dispatch error: ${String(error)}`, error);
       // Returning an error on the HTTP handshake looks like a hanging connection
       // (at least from Chrome) and doesn't report any meaningful error in the browser.
       // Instead, finish the upgrade to a websocket and then close it with an error.
       wss.handleUpgrade(message as IncomingMessage, socket, head, ws =>
-        ws.close(1002 /* "protocol error" */, String(error)),
+        closeWithProtocolError(lc, ws, error),
       );
     }
   };

@@ -5,7 +5,7 @@ import labelIcon from '../assets/icons/label.svg';
 import {useZero} from '../hooks/use-zero.js';
 import {Button} from './button.js';
 import {Combobox} from './combobox.js';
-import UserPicker from './user-picker.js';
+import {UserPicker} from './user-picker.js';
 
 export type Selection =
   | {creator: string}
@@ -65,6 +65,7 @@ export const Filter = memo(function Filter({onSelect}: Props) {
                 onSelect={u => u && handleSelect({creator: u.login})}
                 placeholder="Select"
                 allowNone={false}
+                filter="creators"
               />
             </div>
             <div className="filter-modal-item">
@@ -73,6 +74,7 @@ export const Filter = memo(function Filter({onSelect}: Props) {
                 onSelect={u => u && handleSelect({assignee: u.login})}
                 placeholder="Select"
                 allowNone={false}
+                filter="crew"
               />
             </div>
             <div className="filter-modal-item">

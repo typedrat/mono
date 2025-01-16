@@ -12,12 +12,13 @@ import {
 } from './change.js';
 import type {Constraint} from './constraint.js';
 import {compareValues, type Comparator, type Node} from './data.js';
-import type {
-  FetchRequest,
-  Input,
-  Operator,
-  Output,
-  Storage,
+import {
+  throwOutput,
+  type FetchRequest,
+  type Input,
+  type Operator,
+  type Output,
+  type Storage,
 } from './operator.js';
 import type {SourceSchema} from './schema.js';
 import {first, take, type Stream} from './stream.js';
@@ -54,7 +55,7 @@ export class Take implements Operator {
   readonly #partitionKey: PartitionKey | undefined;
   readonly #partitionKeyComparator: Comparator | undefined;
 
-  #output: Output | null = null;
+  #output: Output = throwOutput;
 
   constructor(
     input: Input,
@@ -147,6 +148,7 @@ export class Take implements Operator {
     let size = 0;
     let bound: Row | undefined;
     let downstreamEarlyReturn = true;
+    let exceptionThrown = false;
     try {
       for (const inputNode of this.#input.fetch(req)) {
         yield inputNode;
@@ -157,21 +159,26 @@ export class Take implements Operator {
         }
       }
       downstreamEarlyReturn = false;
+    } catch (e) {
+      exceptionThrown = true;
+      throw e;
     } finally {
-      this.#setTakeState(
-        takeStateKey,
-        size,
-        bound,
-        this.#storage.get(MAX_BOUND_KEY),
-      );
-      // If it becomes necessary to support downstream early return, this
-      // assert should be removed, and replaced with code that consumes
-      // the input stream until limit is reached or the input stream is
-      // exhausted so that takeState is properly hydrated.
-      assert(
-        !downstreamEarlyReturn,
-        'Unexpected early return prevented full hydration',
-      );
+      if (!exceptionThrown) {
+        this.#setTakeState(
+          takeStateKey,
+          size,
+          bound,
+          this.#storage.get(MAX_BOUND_KEY),
+        );
+        // If it becomes necessary to support downstream early return, this
+        // assert should be removed, and replaced with code that consumes
+        // the input stream until limit is reached or the input stream is
+        // exhausted so that takeState is properly hydrated.
+        assert(
+          !downstreamEarlyReturn,
+          'Unexpected early return prevented full hydration',
+        );
+      }
     }
   }
 
@@ -224,8 +231,6 @@ export class Take implements Operator {
       this.#pushEditChange(change);
       return;
     }
-
-    assert(this.#output, 'Output not set');
 
     const {takeState, takeStateKey, maxBound, constraint} =
       this.#getStateAndConstraint(rowForChange(change));
@@ -379,8 +384,6 @@ export class Take implements Operator {
   }
 
   #pushEditChange(change: EditChange): void {
-    assert(this.#output, 'Output not set');
-
     if (
       this.#partitionKeyComparator &&
       this.#partitionKeyComparator(change.oldNode.row, change.node.row) !== 0
@@ -424,7 +427,7 @@ export class Take implements Operator {
         change.node.row,
         maxBound,
       );
-      this.#output!.push(change);
+      this.#output.push(change);
     };
 
     // The bounds row was changed.

@@ -4,8 +4,9 @@ import {Button} from '../../components/button.js';
 import {useLogin} from '../../hooks/use-login.js';
 import {useZero} from '../../hooks/use-zero.js';
 import {isCtrlEnter} from './is-ctrl-enter.js';
+import {maxCommentLength} from '../../limits.js';
 
-export default function CommentComposer({
+export function CommentComposer({
   id,
   body,
   issueID,
@@ -83,6 +84,8 @@ export default function CommentComposer({
         onChange={handleChange}
         onKeyDown={handleKeyDown}
         className="comment-input autoResize"
+        /* The launch post has a speical maxLength because trolls */
+        maxLength={maxCommentLength(issueID)}
       />
       <Button
         className="secondary-button"

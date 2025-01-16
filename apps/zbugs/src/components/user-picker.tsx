@@ -3,6 +3,7 @@ import {useQuery} from '@rocicorp/zero/react';
 import {useEffect, useMemo, useState} from 'react';
 import {type Schema} from '../../schema.js';
 import avatarIcon from '../assets/icons/avatar-default.svg';
+import {avatarURLWithSize} from '../avatar-url-with-size.js';
 import {useZero} from '../hooks/use-zero.js';
 import {Combobox} from './combobox.js';
 
@@ -13,21 +14,38 @@ type Props = {
   unselectedLabel?: string | undefined;
   placeholder?: string | undefined;
   allowNone?: boolean | undefined;
+  filter?: 'crew' | 'creators' | undefined;
 };
 
 type User = Row<Schema['tables']['user']>;
 
-export default function UserPicker({
+export function UserPicker({
   onSelect,
   selected,
   disabled,
   unselectedLabel,
   placeholder,
   allowNone = true,
+  filter = undefined,
 }: Props) {
   const z = useZero();
 
-  const [unsortedUsers] = useQuery(z.query.user);
+  let q = z.query.user;
+  if (disabled && selected?.login) {
+    q = q.where('login', selected.login);
+  } else if (filter) {
+    if (filter === 'crew') {
+      q = q.where(({cmp, not, and}) =>
+        and(cmp('role', 'crew'), not(cmp('login', 'LIKE', 'rocibot%'))),
+      );
+    } else if (filter === 'creators') {
+      q = q.whereExists('createdIssues');
+    } else {
+      throw new Error(`Unknown filter: ${filter}`);
+    }
+  }
+
+  const [unsortedUsers] = useQuery(q);
   // TODO: Support case-insensitive sorting in ZQL.
   const users = useMemo(
     () => unsortedUsers.toSorted((a, b) => a.login.localeCompare(b.login)),
@@ -97,7 +115,7 @@ export default function UserPicker({
 
 function preloadAvatar(user: User) {
   return new Promise<[string, string]>((res, rej) => {
-    fetch(user.avatar)
+    fetch(avatarURLWithSize(user.avatar))
       .then(response => response.blob())
       .then(blob => {
         const reader = new FileReader();

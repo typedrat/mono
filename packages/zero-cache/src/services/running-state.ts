@@ -110,11 +110,8 @@ export class RunningState {
    */
   stop(lc: LogContext, err?: unknown): void {
     if (this.shouldRun()) {
-      if (!err || err instanceof AbortError) {
-        lc.info?.(`stopping ${this.#serviceName}`);
-      } else {
-        lc.error?.(`stopping ${this.#serviceName} with error`, err);
-      }
+      const log = !err || err instanceof AbortError ? 'info' : 'error';
+      lc[log]?.(`stopping ${this.#serviceName}`, err ?? '');
       this.#controller.abort();
     }
   }
@@ -140,7 +137,7 @@ export class RunningState {
     const delay = this.#retryDelay;
     this.#retryDelay = Math.min(delay * 2, this.#maxRetryDelay);
 
-    if (err instanceof AbortError) {
+    if (err instanceof AbortError || err instanceof UnrecoverableError) {
       this.stop(lc, err);
     } else if (this.shouldRun()) {
       if (err) {
@@ -160,4 +157,12 @@ export class RunningState {
   resetBackoff() {
     this.#retryDelay = this.#initialRetryDelay;
   }
+}
+
+/**
+ * Superclass for Errors that should bypass exponential backoff
+ * and immediately shut down the server.
+ */
+export class UnrecoverableError extends Error {
+  readonly name = 'UnrecoverableError';
 }

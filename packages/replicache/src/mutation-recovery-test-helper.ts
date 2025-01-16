@@ -1,32 +1,30 @@
 import {LogContext} from '@rocicorp/logger';
 import {assert} from '../../shared/src/asserts.js';
+import type {Enum} from '../../shared/src/enum.js';
 import type {ReadonlyJSONObject} from '../../shared/src/json.js';
 import {LazyStore} from './dag/lazy-store.js';
 import {StoreImpl} from './dag/store-impl.js';
 import type {Store} from './dag/store.js';
-import {
-  type LocalMetaDD31,
-  type LocalMetaSDD,
-  assertLocalMetaDD31,
-} from './db/commit.js';
+import {type LocalMetaDD31, assertLocalMetaDD31} from './db/commit.js';
 import {ChainBuilder} from './db/test-helpers.js';
 import * as FormatVersion from './format-version-enum.js';
 import {assertHash, newRandomHash} from './hash.js';
 import {IDBStore} from './kv/idb-store.js';
 import {initClientWithClientID} from './persist/clients-test-helpers.js';
 import {IDBDatabasesStore} from './persist/idb-databases-store.js';
-import {persistSDD} from './persist/persist-test-helpers.js';
 import {persistDD31} from './persist/persist.js';
 import {makeIDBNameForTesting} from './replicache.js';
 import type {ClientGroupID, ClientID} from './sync/ids.js';
-import {PUSH_VERSION_DD31, PUSH_VERSION_SDD} from './sync/push.js';
+import {PUSH_VERSION_DD31} from './sync/push.js';
 import {closeablesToClose, dbsToDrop} from './test-util.js';
 import type {MutatorDefs} from './types.js';
+
+type FormatVersion = Enum<typeof FormatVersion>;
 
 export async function createPerdag(args: {
   replicacheName: string;
   schemaVersion: string;
-  formatVersion: FormatVersion.Type;
+  formatVersion: FormatVersion;
 }): Promise<Store> {
   const {replicacheName, schemaVersion, formatVersion: formatVersion} = args;
   const idbName = makeIDBNameForTesting(
@@ -54,34 +52,6 @@ export async function createPerdag(args: {
   return perdag;
 }
 
-export async function createAndPersistClientWithPendingLocalSDD(
-  clientID: ClientID,
-  perdag: Store,
-  numLocal: number,
-): Promise<LocalMetaSDD[]> {
-  const formatVersion = FormatVersion.SDD;
-  const testMemdag = new LazyStore(
-    perdag,
-    100 * 2 ** 20,
-    newRandomHash,
-    assertHash,
-  );
-  const b = new ChainBuilder(testMemdag, undefined, formatVersion);
-  await b.addGenesis(clientID);
-  await b.addSnapshot([['unique', Math.random()]], clientID);
-
-  await initClientWithClientID(clientID, perdag, [], {}, formatVersion);
-
-  const localMetas: LocalMetaSDD[] = [];
-  for (let i = 0; i < numLocal; i++) {
-    await b.addLocal(clientID);
-    localMetas.push(b.chain[b.chain.length - 1].meta as LocalMetaSDD);
-  }
-
-  await persistSDD(clientID, testMemdag, perdag, () => false);
-  return localMetas;
-}
-
 export async function createAndPersistClientWithPendingLocalDD31({
   clientID,
   perdag,
@@ -96,7 +66,7 @@ export async function createAndPersistClientWithPendingLocalDD31({
   numLocal: number;
   mutatorNames: string[];
   cookie: string | number;
-  formatVersion: FormatVersion.Type;
+  formatVersion: FormatVersion;
   snapshotLastMutationIDs?: Record<ClientID, number> | undefined;
 }): Promise<LocalMetaDD31[]> {
   assert(formatVersion >= FormatVersion.DD31);
@@ -156,7 +126,7 @@ export async function persistSnapshotDD31(
   cookie: string | number,
   mutatorNames: string[],
   snapshotLastMutationIDs: Record<ClientID, number>,
-  formatVersion: FormatVersion.Type,
+  formatVersion: FormatVersion,
 ): Promise<void> {
   const testMemdag = new LazyStore(
     perdag,
@@ -208,26 +178,6 @@ export function createPushRequestBodyDD31(
       timestamp: localMeta.timestamp,
     })),
     pushVersion: PUSH_VERSION_DD31,
-    schemaVersion,
-  };
-}
-
-export function createPushBodySDD(
-  profileID: string,
-  clientID: ClientID,
-  localMetas: LocalMetaSDD[],
-  schemaVersion: string,
-): ReadonlyJSONObject {
-  return {
-    profileID,
-    clientID,
-    mutations: localMetas.map(localMeta => ({
-      id: localMeta.mutationID,
-      name: localMeta.mutatorName,
-      args: localMeta.mutatorArgsJSON,
-      timestamp: localMeta.timestamp,
-    })),
-    pushVersion: PUSH_VERSION_SDD,
     schemaVersion,
   };
 }

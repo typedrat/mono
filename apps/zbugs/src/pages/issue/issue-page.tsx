@@ -1,12 +1,13 @@
 import type {Zero} from '@rocicorp/zero';
 import {escapeLike, type Row} from '@rocicorp/zero';
 import {useQuery} from '@rocicorp/zero/react';
-import {useWindowVirtualizer, type Virtualizer} from '@tanstack/react-virtual';
+import {useWindowVirtualizer, Virtualizer} from '@tanstack/react-virtual';
 import {nanoid} from 'nanoid';
 import {
   memo,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -20,42 +21,49 @@ import {assert} from 'shared/src/asserts.js';
 import {useParams} from 'wouter';
 import {navigate, useHistoryState} from 'wouter/use-browser-location';
 import {must} from '../../../../../packages/shared/src/must.js';
-import type {CommentRow, IssueRow, Schema} from '../../../schema.js';
+import {difference} from '../../../../../packages/shared/src/set-utils.js';
+import type {CommentRow, IssueRow, Schema, UserRow} from '../../../schema.js';
 import statusClosed from '../../assets/icons/issue-closed.svg';
 import statusOpen from '../../assets/icons/issue-open.svg';
-import {parsePermalink} from '../../comment-permalink.js';
+import {commentQuery} from '../../comment-query.js';
+import {AvatarImage} from '../../components/avatar-image.js';
 import {Button} from '../../components/button.js';
 import {CanEdit} from '../../components/can-edit.js';
 import {Combobox} from '../../components/combobox.js';
 import {Confirm} from '../../components/confirm.js';
 import {EmojiPanel} from '../../components/emoji-panel.js';
-import {useEmojiDataSourcePreload} from '../../components/emoji-picker.js';
-import LabelPicker from '../../components/label-picker.js';
+import {LabelPicker} from '../../components/label-picker.js';
 import {Link} from '../../components/link.js';
-import Markdown from '../../components/markdown.js';
-import RelativeTime from '../../components/relative-time.js';
-import UserPicker from '../../components/user-picker.js';
+import {Markdown} from '../../components/markdown.js';
+import {RelativeTime} from '../../components/relative-time.js';
+import {UserPicker} from '../../components/user-picker.js';
 import {type Emoji} from '../../emoji-utils.js';
 import {useCanEdit} from '../../hooks/use-can-edit.js';
 import {useDocumentHasFocus} from '../../hooks/use-document-has-focus.js';
-import {useHash} from '../../hooks/use-hash.js';
+import {useEmojiDataSourcePreload} from '../../hooks/use-emoji-data-source-preload.js';
+import {useIsScrolling} from '../../hooks/use-is-scrolling.js';
 import {useKeypress} from '../../hooks/use-keypress.js';
 import {useLogin} from '../../hooks/use-login.js';
 import {useZero} from '../../hooks/use-zero.js';
+import {
+  MAX_ISSUE_DESCRIPTION_LENGTH,
+  MAX_ISSUE_TITLE_LENGTH,
+} from '../../limits.js';
 import {LRUCache} from '../../lru-cache.js';
+import {recordPageLoad} from '../../page-load-stats.js';
 import {links, type ListContext, type ZbugsHistoryState} from '../../routes.js';
 import {preload} from '../../zero-setup.js';
-import CommentComposer from './comment-composer.js';
-import Comment from './comment.js';
+import {CommentComposer} from './comment-composer.js';
+import {Comment} from './comment.js';
 import {isCtrlEnter} from './is-ctrl-enter.js';
 
 const emojiToastShowDuration = 3_000;
 
 // One more than we display so we can detect if there are more
-// to laod.
+// to load.
 export const INITIAL_COMMENT_LIMIT = 101;
 
-export function IssuePage() {
+export function IssuePage({onReady}: {onReady: () => void}) {
   const z = useZero();
   const params = useParams();
 
@@ -83,14 +91,61 @@ export function IssuePage() {
           emoji.related('creator', creator => creator.one()),
         )
         .limit(INITIAL_COMMENT_LIMIT)
-        .orderBy('created', 'desc'),
+        .orderBy('created', 'desc')
+        .orderBy('id', 'desc'),
     )
     .one();
   const [issue, issueResult] = useQuery(q);
+  if (issue) {
+    onReady();
+  }
+
   const login = useLogin();
+
+  const isScrolling = useIsScrolling();
+  const [displayed, setDisplayed] = useState(issue);
+  useLayoutEffect(() => {
+    if (!isScrolling) {
+      setDisplayed(issue);
+    }
+  }, [issue, isScrolling, displayed]);
+
+  if (import.meta.env.DEV) {
+    // exposes a function to dev console to create comments.
+    // useful for testing displayed above, and other things.
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    useEffect(() => {
+      (window as unknown as Record<string, unknown>).autocomment = (
+        count = 1,
+        repeat = true,
+      ) => {
+        const mut = () => {
+          z.mutateBatch(m => {
+            for (let i = 0; i < count; i++) {
+              const id = nanoid();
+              m.comment.insert({
+                id,
+                issueID: displayed?.id ?? '',
+                body: `autocomment ${id}`,
+                created: Date.now(),
+                creatorID: z.userID,
+              });
+            }
+          });
+        };
+
+        if (repeat) {
+          setInterval(mut, 5_000);
+        } else {
+          mut();
+        }
+      };
+    });
+  }
 
   useEffect(() => {
     if (issueResult.type === 'complete') {
+      recordPageLoad('issue-page');
       preload(z);
     }
   }, [issueResult.type, z]);
@@ -99,13 +154,13 @@ export function IssuePage() {
     // only push viewed forward if the issue has been modified since the last viewing
     if (
       z.userID !== 'anon' &&
-      issue &&
-      issue.modified > (issue?.viewState?.viewed ?? 0)
+      displayed &&
+      displayed.modified > (displayed?.viewState?.viewed ?? 0)
     ) {
       // only set to viewed if the user has looked at it for > 1 second
       const handle = setTimeout(() => {
         z.mutate.viewState.upsert({
-          issueID: issue.id,
+          issueID: displayed.id,
           userID: z.userID,
           viewed: Date.now(),
         });
@@ -113,18 +168,18 @@ export function IssuePage() {
       return () => clearTimeout(handle);
     }
     return;
-  }, [issue, z]);
+  }, [displayed, z]);
 
-  const [editing, setEditing] = useState<typeof issue | null>(null);
-  const [edits, setEdits] = useState<Partial<typeof issue>>({});
+  const [editing, setEditing] = useState<typeof displayed | null>(null);
+  const [edits, setEdits] = useState<Partial<typeof displayed>>({});
   useEffect(() => {
-    if (issue?.shortID !== undefined && idField !== 'shortID') {
-      navigate(links.issue(issue), {
+    if (displayed?.shortID !== undefined && idField !== 'shortID') {
+      navigate(links.issue(displayed), {
         replace: true,
         state: zbugsHistoryState,
       });
     }
-  }, [issue, idField, zbugsHistoryState]);
+  }, [displayed, idField, zbugsHistoryState]);
 
   const save = () => {
     if (!editing) {
@@ -144,15 +199,15 @@ export function IssuePage() {
   // used for finding the next/prev items so that a user can open an item
   // modify it and then navigate to the next/prev item in the list as it was
   // when they were viewing it.
-  const [issueSnapshot, setIssueSnapshot] = useState(issue);
+  const [issueSnapshot, setIssueSnapshot] = useState(displayed);
   if (
-    issue !== undefined &&
-    (issueSnapshot === undefined || issueSnapshot.id !== issue.id)
+    displayed !== undefined &&
+    (issueSnapshot === undefined || issueSnapshot.id !== displayed.id)
   ) {
-    setIssueSnapshot(issue);
+    setIssueSnapshot(displayed);
   }
   const [next] = useQuery(
-    buildListQuery(z, listContext, issue, 'next'),
+    buildListQuery(z, listContext, displayed, 'next'),
     listContext !== undefined && issueSnapshot !== undefined,
   );
   useKeypress('j', () => {
@@ -162,7 +217,7 @@ export function IssuePage() {
   });
 
   const [prev] = useQuery(
-    buildListQuery(z, listContext, issue, 'prev'),
+    buildListQuery(z, listContext, displayed, 'prev'),
     listContext !== undefined && issueSnapshot !== undefined,
   );
   useKeypress('k', () => {
@@ -172,84 +227,76 @@ export function IssuePage() {
   });
 
   const labelSet = useMemo(
-    () => new Set(issue?.labels?.map(l => l.id)),
-    [issue?.labels],
+    () => new Set(displayed?.labels?.map(l => l.id)),
+    [displayed?.labels],
   );
 
   const [displayAllComments, setDisplayAllComments] = useState(false);
 
   const [allComments, allCommentsResult] = useQuery(
-    z.query.comment
-      .where('issueID', issue?.id ?? '')
-      .related('creator', creator => creator.one())
-      .related('emoji', emoji =>
-        emoji.related('creator', creator => creator.one()),
-      )
-      .orderBy('created', 'asc'),
-    displayAllComments && issue !== undefined,
+    commentQuery(z, displayed),
+    displayAllComments && displayed !== undefined,
   );
 
   const [comments, hasOlderComments] = useMemo(() => {
-    if (issue?.comments === undefined) {
+    if (displayed?.comments === undefined) {
       return [undefined, false];
     }
     if (allCommentsResult.type === 'complete') {
       return [allComments, false];
     }
     return [
-      issue.comments.slice(0, 100).reverse(),
-      issue.comments.length > 100,
+      displayed.comments.slice(0, 100).reverse(),
+      displayed.comments.length > 100,
     ];
-  }, [issue?.comments, allCommentsResult.type, allComments]);
+  }, [displayed?.comments, allCommentsResult.type, allComments]);
 
+  const issueDescriptionRef = useRef<HTMLDivElement | null>(null);
+  const restoreScrollRef = useRef<() => void>();
   const {listRef, virtualizer} = useVirtualComments(comments ?? []);
 
-  const hash = useHash();
+  // Restore scroll on changes to comments.
+  useEffect(() => {
+    restoreScrollRef.current?.();
+  }, [comments]);
+
+  useEffect(() => {
+    if (comments === undefined || comments.length === 0) {
+      restoreScrollRef.current = undefined;
+      return;
+    }
+
+    restoreScrollRef.current = getScrollRestore(
+      issueDescriptionRef.current,
+      virtualizer,
+      comments,
+    );
+  }, [virtualizer.scrollOffset, comments, virtualizer]);
 
   // Permalink scrolling behavior
-  const [lastPermalinkScroll, setLastPermalinkScroll] = useState('');
-  useEffect(() => {
-    if (issue === undefined || comments === undefined) {
-      return;
-    }
-    const commentID = parsePermalink(hash);
-    if (!commentID) {
-      return;
-    }
-    if (lastPermalinkScroll === commentID) {
+  const [highlightedCommentID, setHighlightedCommentID] = useState<
+    string | null
+  >(null);
+
+  const highlightComment = (commentID: string) => {
+    if (comments === undefined) {
       return;
     }
     const commentIndex = comments.findIndex(c => c.id === commentID);
     if (commentIndex !== -1) {
-      setLastPermalinkScroll(commentID);
+      setHighlightedCommentID(commentID);
       virtualizer.scrollToIndex(commentIndex, {
         // auto for minimal amount of scrolling.
         align: 'auto',
         // The `smooth` scroll behavior is not fully supported with dynamic size.
         // behavior: 'smooth',
       });
-    } else {
-      if (!displayAllComments) {
-        setDisplayAllComments(true);
-      }
     }
-    // Issue changes any time there is a change in the issue. For example when
-    // the `modified` or `assignee` changes.
-    //
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    hash,
-    issue?.id,
-    virtualizer,
-    displayAllComments,
-    allCommentsResult.type,
-  ]);
+  };
 
   const [deleteConfirmationShown, setDeleteConfirmationShown] = useState(false);
 
-  const canEdit = useCanEdit(issue?.creatorID);
-
-  useEmojiDataSourcePreload();
+  const canEdit = useCanEdit(displayed?.creatorID);
 
   const issueEmojiRef = useRef<HTMLDivElement>(null);
 
@@ -257,14 +304,13 @@ export function IssuePage() {
 
   const handleEmojiChange = useCallback(
     (added: readonly Emoji[], removed: readonly Emoji[]) => {
-      assert(issue);
       const newRecentEmojis = new Map(recentEmojis.map(e => [e.id, e]));
 
       for (const emoji of added) {
-        if (emoji.creatorID !== z.userID) {
+        if (displayed && emoji.creatorID !== z.userID) {
           maybeShowToastForEmoji(
             emoji,
-            issue,
+            displayed,
             virtualizer,
             issueEmojiRef.current,
             setRecentEmojis,
@@ -280,7 +326,7 @@ export function IssuePage() {
 
       setRecentEmojis([...newRecentEmojis.values()]);
     },
-    [issue, recentEmojis, virtualizer, z.userID],
+    [displayed, recentEmojis, virtualizer, z.userID],
   );
 
   const removeRecentEmoji = useCallback((id: string) => {
@@ -288,92 +334,102 @@ export function IssuePage() {
     setRecentEmojis(recentEmojis => recentEmojis.filter(e => e.id !== id));
   }, []);
 
-  useEmojiChangeListener(issue, handleEmojiChange);
+  useEmojiChangeListener(displayed, handleEmojiChange);
+  useEmojiDataSourcePreload();
+  useShowToastForNewComment(comments, virtualizer, highlightComment);
 
-  // TODO: We need the notion of the 'partial' result type to correctly render
-  // a 404 here. We can't put the 404 here now because it would flash until we
-  // get data.
-  if (!issue || !comments) {
+  if (!displayed && issueResult.type === 'complete') {
+    return (
+      <div>
+        <div>
+          <b>Error 404</b>
+        </div>
+        <div>zarro boogs found</div>
+      </div>
+    );
+  }
+
+  if (!displayed || !comments) {
     return null;
   }
 
   const remove = () => {
     // TODO: Implement undo - https://github.com/rocicorp/undo
-    z.mutate.issue.delete({id: issue.id});
+    z.mutate.issue.delete({id: displayed.id});
     navigate(listContext?.href ?? links.home());
   };
 
   // TODO: This check goes away once Zero's consistency model is implemented.
   // The query above should not be able to return an incomplete result.
-  if (!issue.creator) {
+  if (!displayed.creator) {
     return null;
   }
 
-  const rendering = editing ? {...editing, ...edits} : issue;
+  const rendering = editing ? {...editing, ...edits} : displayed;
 
   return (
-    <>
-      <div className="issue-detail-container">
-        <MyToastContainer position="bottom" />
-        <MyToastContainer position="top" />
-        {/* Center column of info */}
-        <div className="issue-detail">
-          <div className="issue-topbar">
-            <div className="issue-breadcrumb">
-              {listContext ? (
-                <>
-                  <Link className="breadcrumb-item" href={listContext.href}>
-                    {listContext.title}
-                  </Link>
-                  <span className="breadcrumb-item">&rarr;</span>
-                </>
-              ) : null}
-              <span className="breadcrumb-item">Issue {issue.shortID}</span>
-            </div>
-            <CanEdit ownerID={issue.creatorID}>
-              <div className="edit-buttons">
-                {!editing ? (
-                  <>
-                    <Button
-                      className="edit-button"
-                      eventName="Edit issue"
-                      onAction={() => setEditing(issue)}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      className="delete-button"
-                      eventName="Delete issue"
-                      onAction={() => setDeleteConfirmationShown(true)}
-                    >
-                      Delete
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button
-                      className="save-button"
-                      eventName="Save issue edits"
-                      onAction={save}
-                      disabled={
-                        !edits || edits.title === '' || edits.description === ''
-                      }
-                    >
-                      Save
-                    </Button>
-                    <Button
-                      className="cancel-button"
-                      eventName="Cancel issue edits"
-                      onAction={cancel}
-                    >
-                      Cancel
-                    </Button>
-                  </>
-                )}
-              </div>
-            </CanEdit>
+    <div className="issue-detail-container">
+      <MyToastContainer position="bottom" />
+      <MyToastContainer position="top" />
+      {/* Center column of info */}
+      <div className="issue-detail">
+        <div className="issue-topbar">
+          <div className="issue-breadcrumb">
+            {listContext ? (
+              <>
+                <Link className="breadcrumb-item" href={listContext.href}>
+                  {listContext.title}
+                </Link>
+                <span className="breadcrumb-item">&rarr;</span>
+              </>
+            ) : null}
+            <span className="breadcrumb-item">Issue {displayed.shortID}</span>
           </div>
+          <CanEdit ownerID={displayed.creatorID}>
+            <div className="edit-buttons">
+              {!editing ? (
+                <>
+                  <Button
+                    className="edit-button"
+                    eventName="Edit issue"
+                    onAction={() => setEditing(displayed)}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    className="delete-button"
+                    eventName="Delete issue"
+                    onAction={() => setDeleteConfirmationShown(true)}
+                  >
+                    Delete
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    className="save-button"
+                    eventName="Save issue edits"
+                    onAction={save}
+                    disabled={
+                      !edits || edits.title === '' || edits.description === ''
+                    }
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    className="cancel-button"
+                    eventName="Cancel issue edits"
+                    onAction={cancel}
+                  >
+                    Cancel
+                  </Button>
+                </>
+              )}
+            </div>
+          </CanEdit>
+        </div>
 
+        <div ref={issueDescriptionRef}>
           {!editing ? (
             <h1 className="issue-detail-title">{rendering.title}</h1>
           ) : (
@@ -385,21 +441,22 @@ export function IssuePage() {
                 autoFocus
                 onChange={e => setEdits({...edits, title: e.target.value})}
                 onKeyDown={e => isCtrlEnter(e) && save()}
+                maxLength={MAX_ISSUE_TITLE_LENGTH}
               />
             </div>
           )}
           {/* These comments are actually github markdown which unfortunately has
-         HTML mixed in. We need to find some way to render them, or convert to
-         standard markdown? break-spaces makes it render a little better */}
+           HTML mixed in. We need to find some way to render them, or convert to
+           standard markdown? break-spaces makes it render a little better */}
           {!editing ? (
             <>
               <div className="description-container markdown-container">
                 <Markdown>{rendering.description}</Markdown>
               </div>
               <EmojiPanel
-                issueID={issue.id}
+                issueID={displayed.id}
                 ref={issueEmojiRef}
-                emojis={issue.emoji}
+                emojis={displayed.emoji}
                 recentEmojis={recentEmojis}
                 removeRecentEmoji={removeRecentEmoji}
               />
@@ -414,189 +471,198 @@ export function IssuePage() {
                   setEdits({...edits, description: e.target.value})
                 }
                 onKeyDown={e => isCtrlEnter(e) && save()}
+                maxLength={MAX_ISSUE_DESCRIPTION_LENGTH}
               />
             </div>
           )}
+        </div>
 
-          {/* Right sidebar */}
-          <div className="issue-sidebar">
+        {/* Right sidebar */}
+        <div className="issue-sidebar">
+          <div className="sidebar-item">
+            <p className="issue-detail-label">Status</p>
+            <Combobox
+              editable={false}
+              disabled={!canEdit}
+              items={[
+                {
+                  text: 'Open',
+                  value: true,
+                  icon: statusOpen,
+                },
+                {
+                  text: 'Closed',
+                  value: false,
+                  icon: statusClosed,
+                },
+              ]}
+              selectedValue={displayed.open}
+              onChange={value =>
+                z.mutate.issue.update({id: displayed.id, open: value})
+              }
+            />
+          </div>
+
+          <div className="sidebar-item">
+            <p className="issue-detail-label">Assignee</p>
+            <UserPicker
+              disabled={!canEdit}
+              selected={{login: displayed.assignee?.login}}
+              placeholder="Assign to..."
+              unselectedLabel="Nobody"
+              filter="crew"
+              onSelect={user => {
+                z.mutate.issue.update({
+                  id: displayed.id,
+                  assigneeID: user?.id ?? null,
+                });
+              }}
+            />
+          </div>
+
+          {login.loginState?.decoded.role === 'crew' ? (
             <div className="sidebar-item">
-              <p className="issue-detail-label">Status</p>
+              <p className="issue-detail-label">Visibility</p>
               <Combobox
                 editable={false}
                 disabled={!canEdit}
                 items={[
                   {
-                    text: 'Open',
-                    value: true,
+                    text: 'Public',
+                    value: 'public',
                     icon: statusOpen,
                   },
                   {
-                    text: 'Closed',
-                    value: false,
+                    text: 'Internal',
+                    value: 'internal',
                     icon: statusClosed,
                   },
                 ]}
-                selectedValue={issue.open}
+                selectedValue={displayed.visibility}
                 onChange={value =>
-                  z.mutate.issue.update({id: issue.id, open: value})
+                  z.mutate.issue.update({
+                    id: displayed.id,
+                    visibility: value,
+                  })
                 }
               />
             </div>
+          ) : null}
 
-            <div className="sidebar-item">
-              <p className="issue-detail-label">Assignee</p>
-              <UserPicker
-                disabled={!canEdit}
-                selected={{login: issue.assignee?.login}}
-                placeholder="Assign to..."
-                unselectedLabel="Nobody"
-                onSelect={user => {
-                  z.mutate.issue.update({
-                    id: issue.id,
-                    assigneeID: user?.id ?? null,
+          <div className="sidebar-item">
+            <p className="issue-detail-label">Creator</p>
+            <div className="issue-creator">
+              <AvatarImage
+                user={displayed.creator}
+                className="issue-creator-avatar"
+              />
+              {displayed.creator.login}
+            </div>
+          </div>
+
+          <div className="sidebar-item">
+            <p className="issue-detail-label">Labels</p>
+            <div className="issue-detail-label-container">
+              {displayed.labels.map(label => (
+                <span className="pill label" key={label.id}>
+                  {label.name}
+                </span>
+              ))}
+            </div>
+            <CanEdit ownerID={displayed.creatorID}>
+              <LabelPicker
+                selected={labelSet}
+                onAssociateLabel={labelID =>
+                  z.mutate.issueLabel.insert({
+                    issueID: displayed.id,
+                    labelID,
+                  })
+                }
+                onDisassociateLabel={labelID =>
+                  z.mutate.issueLabel.delete({
+                    issueID: displayed.id,
+                    labelID,
+                  })
+                }
+                onCreateNewLabel={labelName => {
+                  const labelID = nanoid();
+                  z.mutateBatch(tx => {
+                    tx.label.insert({id: labelID, name: labelName});
+                    tx.issueLabel.insert({issueID: displayed.id, labelID});
                   });
                 }}
               />
-            </div>
-
-            {login.loginState?.decoded.role === 'crew' ? (
-              <div className="sidebar-item">
-                <p className="issue-detail-label">Visibility</p>
-                <Combobox
-                  editable={false}
-                  disabled={!canEdit}
-                  items={[
-                    {
-                      text: 'Public',
-                      value: 'public',
-                      icon: statusOpen,
-                    },
-                    {
-                      text: 'Internal',
-                      value: 'internal',
-                      icon: statusClosed,
-                    },
-                  ]}
-                  selectedValue={issue.visibility}
-                  onChange={value =>
-                    z.mutate.issue.update({id: issue.id, visibility: value})
-                  }
-                />
-              </div>
-            ) : null}
-
-            <div className="sidebar-item">
-              <p className="issue-detail-label">Creator</p>
-              <div className="issue-creator">
-                <img
-                  src={issue.creator?.avatar}
-                  className="issue-creator-avatar"
-                  alt={issue.creator?.name ?? undefined}
-                />
-                {issue.creator.login}
-              </div>
-            </div>
-
-            <div className="sidebar-item">
-              <p className="issue-detail-label">Labels</p>
-              <div className="issue-detail-label-container">
-                {issue.labels.map(label => (
-                  <span className="pill label" key={label.id}>
-                    {label.name}
-                  </span>
-                ))}
-              </div>
-              <CanEdit ownerID={issue.creatorID}>
-                <LabelPicker
-                  selected={labelSet}
-                  onAssociateLabel={labelID =>
-                    z.mutate.issueLabel.insert({
-                      issueID: issue.id,
-                      labelID,
-                    })
-                  }
-                  onDisassociateLabel={labelID =>
-                    z.mutate.issueLabel.delete({issueID: issue.id, labelID})
-                  }
-                  onCreateNewLabel={labelName => {
-                    const labelID = nanoid();
-                    z.mutateBatch(tx => {
-                      tx.label.insert({id: labelID, name: labelName});
-                      tx.issueLabel.insert({issueID: issue.id, labelID});
-                    });
-                  }}
-                />
-              </CanEdit>
-            </div>
-
-            <div className="sidebar-item">
-              <p className="issue-detail-label">Last updated</p>
-              <div className="timestamp-container">
-                <RelativeTime timestamp={issue.modified} />
-              </div>
-            </div>
+            </CanEdit>
           </div>
 
-          <h2 className="issue-detail-label">Comments</h2>
-          <Button
-            style={{
-              visibility: hasOlderComments ? 'visible' : 'hidden',
-            }}
-            onAction={() => setDisplayAllComments(true)}
-          >
-            Show Older
-          </Button>
-
-          <div className="comments-container" ref={listRef}>
-            <div
-              className="virtual-list"
-              style={{height: virtualizer.getTotalSize()}}
-            >
-              {virtualizer.getVirtualItems().map(item => (
-                <div
-                  key={item.key as string}
-                  ref={virtualizer.measureElement}
-                  data-index={item.index}
-                  style={{
-                    transform: `translateY(${
-                      item.start - virtualizer.options.scrollMargin
-                    }px)`,
-                  }}
-                >
-                  <Comment
-                    id={comments[item.index].id}
-                    issueID={issue.id}
-                    comment={comments[item.index]}
-                    height={item.size}
-                  />
-                </div>
-              ))}
+          <div className="sidebar-item">
+            <p className="issue-detail-label">Last updated</p>
+            <div className="timestamp-container">
+              <RelativeTime timestamp={displayed.modified} />
             </div>
           </div>
-
-          {z.userID === 'anon' ? (
-            <a href="/api/login/github" className="login-to-comment">
-              Login to comment
-            </a>
-          ) : (
-            <CommentComposer issueID={issue.id} />
-          )}
         </div>
-        <Confirm
-          isOpen={deleteConfirmationShown}
-          title="Delete Issue"
-          text="Really delete?"
-          okButtonLabel="Delete"
-          onClose={b => {
-            if (b) {
-              remove();
-            }
-            setDeleteConfirmationShown(false);
+
+        <h2 className="issue-detail-label">Comments</h2>
+        <Button
+          className="show-older-comments"
+          style={{
+            visibility: hasOlderComments ? 'visible' : 'hidden',
           }}
-        />
+          onAction={() => setDisplayAllComments(true)}
+        >
+          Show Older
+        </Button>
+
+        <div className="comments-container" ref={listRef}>
+          <div
+            className="virtual-list"
+            style={{height: virtualizer.getTotalSize()}}
+          >
+            {virtualizer.getVirtualItems().map(item => (
+              <div
+                key={item.key as string}
+                ref={virtualizer.measureElement}
+                data-index={item.index}
+                style={{
+                  transform: `translateY(${
+                    item.start - virtualizer.options.scrollMargin
+                  }px)`,
+                }}
+              >
+                <Comment
+                  id={comments[item.index].id}
+                  issueID={displayed.id}
+                  comment={comments[item.index]}
+                  height={item.size}
+                  highlight={highlightedCommentID === comments[item.index].id}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {z.userID === 'anon' ? (
+          <a href="/api/login/github" className="login-to-comment">
+            Login to comment
+          </a>
+        ) : (
+          <CommentComposer issueID={displayed.id} />
+        )}
       </div>
-    </>
+      <Confirm
+        isOpen={deleteConfirmationShown}
+        title="Delete Issue"
+        text="Really delete?"
+        okButtonLabel="Delete"
+        onClose={b => {
+          if (b) {
+            remove();
+          }
+          setDeleteConfirmationShown(false);
+        }}
+      />
+    </div>
   );
 }
 
@@ -618,7 +684,7 @@ const MyToastContainer = memo(({position}: {position: 'top' | 'bottom'}) => {
 });
 
 // This cache is stored outside the state so that it can be used between renders.
-const commentSizeCache = new LRUCache<string, number>(1000);
+const commentSizeCache = new LRUCache<string, number>(2000);
 
 function maybeShowToastForEmoji(
   emoji: Emoji,
@@ -657,7 +723,7 @@ function maybeShowToastForEmoji(
 
   toast(
     <ToastContent toastID={toastID}>
-      <img className="toast-emoji-icon" src={creator.avatar} />
+      <AvatarImage className="toast-avatar-icon" user={creator} />
       {creator.login + ' reacted on this issue: ' + emoji.value}
     </ToastContent>,
     {
@@ -711,38 +777,123 @@ function ToastContent({
   );
 }
 
+const sampleSize = 100;
+function average(numbers: number[]) {
+  return numbers.reduce((a, b) => a + b, 0) / numbers.length;
+}
+function sample(bucket: number[], sample: number, size: number) {
+  if (bucket.length < size) {
+    bucket.push(sample);
+    return;
+  }
+
+  bucket.shift();
+  bucket.push(sample);
+}
+
 function useVirtualComments<T extends {id: string}>(comments: readonly T[]) {
-  const defaultHeight = 500;
   const listRef = useRef<HTMLDivElement | null>(null);
-  const estimateAverage = useRef(defaultHeight);
+
+  const measurements = useRef<number[]>([200]);
+
   const virtualizer = useWindowVirtualizer({
     count: comments.length,
     estimateSize: index => {
       const {id} = comments[index];
-      return commentSizeCache.get(id) || estimateAverage.current;
+      const cached = commentSizeCache.get(id);
+      if (cached) {
+        return cached;
+      }
+      return average(measurements.current);
     },
-    overscan: 2,
+    overscan: 3,
     scrollMargin: listRef.current?.offsetTop ?? 0,
     measureElement: (el: HTMLElement) => {
       const height = el.offsetHeight;
       const {index} = el.dataset;
       if (index && height) {
         const {id} = comments[parseInt(index)];
-        const oldSize = commentSizeCache.get(id) ?? defaultHeight;
         commentSizeCache.set(id, height);
-
-        // Update estimateAverage
-        const count = comments.length;
-        const oldTotal = estimateAverage.current * count;
-        const newTotal = oldTotal - oldSize + height;
-        estimateAverage.current = newTotal / count;
       }
+      sample(measurements.current, height, sampleSize);
       return height;
     },
     getItemKey: index => comments[index].id,
     gap: 16,
   });
   return {listRef, virtualizer};
+}
+
+function getScrollRestore(
+  issueDescriptionElement: HTMLDivElement | null,
+  virtualizer: Virtualizer<Window, HTMLElement>,
+  comments: readonly {id: string}[],
+): () => void {
+  const getScrollHeight = () =>
+    virtualizer.options.scrollMargin + virtualizer.getTotalSize();
+  const getClientHeight = () => virtualizer.scrollRect?.height ?? 0;
+  const getScrollTop = () => virtualizer.scrollOffset ?? 0;
+
+  // If the issue description is visible we keep scroll as is.
+  if (issueDescriptionElement && issueDescriptionElement.isConnected) {
+    const rect = issueDescriptionElement.getBoundingClientRect();
+    const inView = rect.bottom > 0 && rect.top < getClientHeight();
+    if (inView) {
+      return noop;
+    }
+  }
+
+  // If almost at the bottom of the page, maintain the scrollBottom.
+  const bottomMargin = 175;
+  const scrollBottom = getScrollHeight() - getScrollTop() - getClientHeight();
+
+  if (scrollBottom <= bottomMargin) {
+    return () => {
+      virtualizer.scrollToOffset(
+        getScrollHeight() - getClientHeight() - scrollBottom,
+      );
+    };
+  }
+
+  // Npw we use the first comment that is visible in the viewport as the anchor.
+  const scrollTop = getScrollTop();
+  const topVirtualItem = virtualizer.getVirtualItemForOffset(scrollTop);
+  if (topVirtualItem) {
+    const top = topVirtualItem.start - scrollTop;
+    const {key, index} = topVirtualItem;
+    return () => {
+      let newIndex = -1;
+      // First search the virtual items for the comment.
+      const newVirtualItem = virtualizer
+        .getVirtualItems()
+        .find(vi => vi.key === key);
+      if (newVirtualItem) {
+        newIndex = newVirtualItem.index;
+      } else {
+        // The comment is not in the virtual items. Let's try to find it in the
+        // comments list
+        newIndex = comments.findIndex(c => c.id === key);
+        if (newIndex === -1) {
+          // The comment was removed. Use the old index instead.
+          newIndex = index;
+        }
+      }
+
+      const offsetForIndex = virtualizer.getOffsetForIndex(newIndex, 'start');
+      if (offsetForIndex === undefined) {
+        return;
+      }
+      virtualizer.scrollToOffset(offsetForIndex[0] - top, {
+        align: 'start',
+      });
+    };
+  }
+
+  return noop;
+}
+
+function noop() {
+  // no op
 }
 
 function buildListQuery(
@@ -812,22 +963,9 @@ function useEmojiChangeListener(
     enable,
   );
 
-  const lastIssueID = useRef<string | undefined>();
   const lastEmojis = useRef<Map<string, Emoji> | undefined>();
 
-  // When the issue.id changes we reset lastEmojis to undefined.
-  // First time we get the complete emojis for issue.id we update the lastEmojis.current.
-  // After that as long as issue.id does not change we update lastEmojis.current with the new emojis.
-
   useEffect(() => {
-    if (lastIssueID.current !== issueID) {
-      lastIssueID.current = issueID;
-      if (result.type === 'unknown') {
-        lastEmojis.current = undefined;
-        return;
-      }
-    }
-
     const newEmojis = new Map(emojis.map(emoji => [emoji.id, emoji]));
 
     // First time we see the complete emojis for this issue.
@@ -860,4 +998,84 @@ function useEmojiChangeListener(
       lastEmojis.current = newEmojis;
     }
   }, [cb, emojis, issueID, result.type]);
+}
+
+function useShowToastForNewComment(
+  comments:
+    | ReadonlyArray<CommentRow & {readonly creator: UserRow | undefined}>
+    | undefined,
+  virtualizer: Virtualizer<Window, HTMLElement>,
+  highlightComment: (id: string) => void,
+) {
+  // Keep track of the last comment IDs so we can compare them to the current
+  // comment IDs and show a toast for new comments.
+  const lastCommentIDs = useRef<Set<string> | undefined>();
+  const {userID} = useZero();
+
+  useEffect(() => {
+    if (comments === undefined || comments.length === 0) {
+      return;
+    }
+    if (lastCommentIDs.current === undefined) {
+      lastCommentIDs.current = new Set(comments.map(c => c.id));
+      return;
+    }
+
+    const currentCommentIDs = new Set(comments.map(c => c.id));
+
+    const lCommentIDs = lastCommentIDs.current;
+    const removedCommentIDs = difference(lCommentIDs, currentCommentIDs);
+
+    const newCommentIDs = [];
+    for (let i = comments.length - 1; i >= 0; i--) {
+      const commentID = comments[i].id;
+      if (lCommentIDs.has(commentID)) {
+        break;
+      }
+      newCommentIDs.push(commentID);
+    }
+
+    for (const commentID of newCommentIDs) {
+      const index = comments.findLastIndex(c => c.id === commentID);
+      if (index === -1) {
+        continue;
+      }
+
+      // Don't show a toast if the user is the one who posted the comment.
+      const comment = comments[index];
+      if (comment.creatorID === userID) {
+        continue;
+      }
+
+      const scrollTop = virtualizer.scrollOffset ?? 0;
+      const clientHeight = virtualizer.scrollRect?.height ?? 0;
+      const isCommentBelowViewport =
+        virtualizer.measurementsCache[index].start > scrollTop + clientHeight;
+
+      if (!isCommentBelowViewport || !comment.creator) {
+        continue;
+      }
+
+      toast(
+        <ToastContent toastID={commentID}>
+          <AvatarImage className="toast-avatar-icon" user={comment.creator} />
+          {comment.creator?.login + ' posted a new comment'}
+        </ToastContent>,
+
+        {
+          toastId: commentID,
+          containerId: 'bottom',
+          onClick: () => {
+            highlightComment(comment.id);
+          },
+        },
+      );
+    }
+
+    for (const commentID of removedCommentIDs) {
+      toast.dismiss(commentID);
+    }
+
+    lastCommentIDs.current = currentCommentIDs;
+  }, [comments, virtualizer, userID, highlightComment]);
 }

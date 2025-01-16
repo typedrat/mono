@@ -75,6 +75,10 @@ export interface Receiver {
   kill(signal?: NodeJS.Signals): void;
 }
 
+export interface Subprocess extends Receiver, EventEmitter {
+  pid?: number | undefined;
+}
+
 export interface Sender extends EventEmitter {
   /**
    * The receiving side of {@link Receiver.send()} that is a wrapper around
@@ -97,9 +101,7 @@ export interface Sender extends EventEmitter {
   ): this;
 }
 
-export interface Worker extends Sender, Receiver {
-  pid?: number | undefined;
-}
+export interface Worker extends Subprocess, Sender {}
 
 /**
  * Adds the {@link Sender.onMessageType()} and {@link Sender.onceMessageType()}
@@ -159,29 +161,36 @@ export function childWorker(
   const ext = path.extname(import.meta.url);
   // modulePath is .ts. If we have been compiled, it should be changed to .js
   modulePath = modulePath.replace(/\.ts$/, ext);
-  const absModulePath = new URL(`../${modulePath}`, import.meta.url).pathname;
+  const moduleUrl = new URL(`../${modulePath}`, import.meta.url);
 
   args.push(...process.argv.slice(2));
 
   if (singleProcessMode()) {
     const [parent, child] = inProcChannel();
-    import(absModulePath)
-      .then(({default: runWorker}) =>
-        runWorker(parent, env ?? process.env, ...args).then(
-          () => child.emit('close', 0),
-          (err: unknown) => child.emit('error', err),
-        ),
-      )
+    import(moduleUrl.href)
+      .then(async ({default: runWorker}) => {
+        try {
+          await runWorker(parent, env ?? process.env, ...args);
+          child.emit('close', 0);
+          return;
+        } catch (err) {
+          child.emit('error', err);
+          child.emit('close', -1);
+        }
+      })
       .catch(err => child.emit('error', err));
     return child;
   }
-  return wrap(
-    fork(absModulePath, args, {
-      detached: true, // do not automatically propagate SIGINT
-      serialization: 'advanced', // use structured clone for IPC
-      env,
-    }),
-  );
+  const child = fork(moduleUrl, args, {
+    detached: true, // do not automatically propagate SIGINT
+    serialization: 'advanced', // use structured clone for IPC
+    env,
+    // silent: true,
+    stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
+  });
+  child.stdout?.pipe(process.stdout);
+  child.stderr?.pipe(process.stderr);
+  return wrap(child);
 }
 
 /**

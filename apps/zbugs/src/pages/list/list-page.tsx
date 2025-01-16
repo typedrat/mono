@@ -16,14 +16,15 @@ import {useSearch} from 'wouter';
 import {navigate} from 'wouter/use-browser-location';
 import {Button} from '../../components/button.js';
 import {Filter, type Selection} from '../../components/filter.js';
-import IssueLink from '../../components/issue-link.js';
+import {IssueLink} from '../../components/issue-link.js';
 import {Link} from '../../components/link.js';
-import RelativeTime from '../../components/relative-time.js';
+import {RelativeTime} from '../../components/relative-time.js';
 import {useClickOutside} from '../../hooks/use-click-outside.js';
 import {useElementSize} from '../../hooks/use-element-size.js';
 import {useKeypress} from '../../hooks/use-keypress.js';
 import {useLogin} from '../../hooks/use-login.js';
 import {useZero} from '../../hooks/use-zero.js';
+import {recordPageLoad} from '../../page-load-stats.js';
 import {mark} from '../../perf-log.js';
 import type {ListContext} from '../../routes.js';
 import {preload} from '../../zero-setup.js';
@@ -31,7 +32,7 @@ import {preload} from '../../zero-setup.js';
 let firstRowRendered = false;
 const itemSize = 56;
 
-export function ListPage() {
+export function ListPage({onReady}: {onReady: () => void}) {
   const z = useZero();
   const login = useLogin();
   const search = useSearch();
@@ -93,9 +94,13 @@ export function ListPage() {
   }
 
   const [issues, issuesResult] = useQuery(q);
+  if (issues.length > 0 || issuesResult.type === 'complete') {
+    onReady();
+  }
 
   useEffect(() => {
     if (issuesResult.type === 'complete') {
+      recordPageLoad('list-page');
       preload(z);
     }
   }, [issuesResult.type, z]);
@@ -300,7 +305,9 @@ export function ListPage() {
           ) : (
             <span>{title}</span>
           )}
-          <span className="issue-count">{issues.length}</span>
+          {issuesResult.type === 'complete' || issues.length > 0 ? (
+            <span className="issue-count">{issues.length}</span>
+          ) : null}
         </h1>
         <Button
           ref={startSearchButton}

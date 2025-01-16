@@ -1,25 +1,32 @@
 import {LogContext} from '@rocicorp/logger';
+import {resolver} from '@rocicorp/resolver';
 import {unreachable} from '../../../../shared/src/asserts.js';
-import * as v from '../../../../shared/src/valita.js';
 import {
   min,
-  oneAfter,
   type AtLeastOne,
   type LexiVersion,
 } from '../../types/lexi-version.js';
 import type {PostgresDB} from '../../types/pg.js';
 import type {Sink, Source} from '../../types/streams.js';
 import {Subscription} from '../../types/subscription.js';
-import {DEFAULT_MAX_RETRY_DELAY_MS, RunningState} from '../running-state.js';
+import {orTimeout} from '../../types/timeout.js';
 import {
-  downstreamChange,
-  ErrorType,
+  type ChangeStreamControl,
+  type ChangeStreamData,
+  type ChangeStreamMessage,
+} from '../change-source/protocol/current/downstream.js';
+import type {ChangeSourceUpstream} from '../change-source/protocol/current/upstream.js';
+import {
+  DEFAULT_MAX_RETRY_DELAY_MS,
+  RunningState,
+  UnrecoverableError,
+} from '../running-state.js';
+import {
   type ChangeStreamerService,
-  type Commit,
   type Downstream,
-  type DownstreamChange,
   type SubscriberContext,
 } from './change-streamer.js';
+import * as ErrorType from './error-type-enum.js';
 import {Forwarder} from './forwarder.js';
 import {initChangeStreamerSchema} from './schema/init.js';
 import {
@@ -57,22 +64,6 @@ export async function initializeStreamer(
   );
 }
 
-// ControlMessages can be sent from the ChangeSource to the ChangeStreamer
-// for non-content signals that initiate action in the ChangeStreamer
-// but otherwise do not constitute a Downstream message.
-//
-// Currently, only one type of message is defined: `reset-required`.
-const controlMessage = v.tuple([
-  v.literal('control'),
-  v.object({tag: v.literal('reset-required')}),
-]);
-
-type ControlMessage = v.Infer<typeof controlMessage>;
-
-const changeStreamMessage = v.union(downstreamChange, controlMessage);
-
-export type ChangeStreamMessage = v.Infer<typeof changeStreamMessage>;
-
 /**
  * Internally all Downstream messages (not just commits) are given a watermark.
  * These are used for internal ordering for:
@@ -83,19 +74,17 @@ export type ChangeStreamMessage = v.Infer<typeof changeStreamMessage>;
  * subscribers, as that is the only semantically correct watermark to
  * use for tracking a position in a replication stream.
  */
-export type WatermarkedChange = [watermark: string, DownstreamChange];
+export type WatermarkedChange = [watermark: string, ChangeStreamData];
 
 export type ChangeStream = {
-  /** The watermark at which the ChangeStream begins (i.e. inclusive). */
-  initialWatermark: string;
-
   changes: Source<ChangeStreamMessage>;
 
   /**
-   * A Sink to push the {@link Commit} messages that have been successfully
-   * stored by the {@link Storer}.
+   * A Sink to push the {@link StatusMessage}s that reflect Commits
+   * that have been successfully stored by the {@link Storer}, or
+   * downstream {@link StatusMessage}s henceforth.
    */
-  acks: Sink<Commit>;
+  acks: Sink<ChangeSourceUpstream>;
 };
 
 /** Encapsulates an upstream-specific implementation of a stream of Changes. */
@@ -108,7 +97,13 @@ export interface ChangeSource {
 }
 
 /**
- * Upstream-agnostic dispatch of messages in a {@link ChangeStream} to a
+ * The maximum time to wait for a serving request before taking
+ * over the change stream from the previous change-streamer.
+ */
+const MAX_SERVING_DELAY = 30_000;
+
+/**
+ * Upstream-agnostic dispatch of messages in a {@link ChangeStreamMessage} to a
  * {@link Forwarder} and {@link Storer} to execute the forward-store-ack
  * procedure described in {@link ChangeStreamer}.
  *
@@ -257,6 +252,17 @@ class ChangeStreamerImpl implements ChangeStreamerService {
   readonly #autoReset: boolean;
   readonly #state: RunningState;
   readonly #initialWatermarks = new Set<string>();
+
+  // Starting the (Postgres) ChangeStream results in killing the previous
+  // Postgres subscriber, potentially creating a gap in which the old
+  // change-streamer has shut down and the new change-streamer has not yet
+  // been recognized as "healthy" (and thus does not get any requests).
+  //
+  // To minimize this gap, delay starting the ChangeStream until the first
+  // request from a `serving` replicator, indicating that higher level
+  // load-balancing / routing logic has begun routing requests to this task.
+  readonly #serving = resolver();
+
   #stream: ChangeStream | undefined;
 
   constructor(
@@ -276,7 +282,7 @@ class ChangeStreamerImpl implements ChangeStreamerService {
       lc,
       changeDB,
       replicaVersion,
-      commit => this.#stream?.acks.push(commit),
+      consumed => this.#stream?.acks.push(['status', consumed[1], consumed[2]]),
     );
     this.#forwarder = new Forwarder();
     this.#autoReset = autoReset;
@@ -284,7 +290,16 @@ class ChangeStreamerImpl implements ChangeStreamerService {
   }
 
   async run() {
-    this.#storer.run().catch(e => this.stop(e));
+    this.#lc.info?.('awaiting first serving subscriber');
+    if (
+      (await orTimeout(this.#serving.promise, MAX_SERVING_DELAY)) ===
+      'timed-out'
+    ) {
+      this.#lc.info?.('timed out waiting for first request');
+    }
+    this.#lc.info?.('starting change stream');
+
+    let storerRunning = false;
 
     while (this.#state.shouldRun()) {
       let err: unknown;
@@ -296,25 +311,50 @@ class ChangeStreamerImpl implements ChangeStreamerService {
         this.#stream = stream;
         this.#state.resetBackoff();
 
-        let preCommitWatermark = stream.initialWatermark;
+        let watermark: string | null = null;
+
+        // Once this change-streamer "owns" the replication stream,
+        // it is safe to start the storer, given the guarantee that this
+        // process is the single writer to the change DB.
+        if (!storerRunning) {
+          this.#storer.run().catch(e => this.stop(e));
+          storerRunning = true;
+        }
 
         for await (const change of stream.changes) {
-          let watermark: string;
-          switch (change[0]) {
+          const [type, msg] = change;
+          switch (type) {
+            case 'status':
+              this.#storer.status(change); // storer acks once it gets through its queue
+              continue;
             case 'control':
-              await this.#handleControlMessage(change[1]);
+              await this.#handleControlMessage(msg);
               continue; // control messages are not stored/forwarded
+            case 'begin':
+              watermark = change[2].commitWatermark;
+              break;
             case 'commit':
-              watermark = change[2].watermark;
-              preCommitWatermark = oneAfter(watermark); // For the next transaction.
+              if (watermark !== change[2].watermark) {
+                throw new UnrecoverableError(
+                  `commit watermark ${change[2].watermark} does not match 'begin' watermark ${watermark}`,
+                );
+              }
               break;
             default:
-              watermark = preCommitWatermark;
+              if (watermark === null) {
+                throw new UnrecoverableError(
+                  `${type} change (${msg.tag}) received before 'begin' message`,
+                );
+              }
               break;
           }
 
           this.#storer.store([watermark, change]);
           this.#forwarder.forward([watermark, change]);
+
+          if (type === 'commit') {
+            watermark = null;
+          }
         }
       } catch (e) {
         err = e;
@@ -328,7 +368,7 @@ class ChangeStreamerImpl implements ChangeStreamerService {
     this.#lc.info?.('ChangeStreamer stopped');
   }
 
-  async #handleControlMessage(msg: ControlMessage[1]) {
+  async #handleControlMessage(msg: ChangeStreamControl[1]) {
     this.#lc.info?.('received control message', msg);
     const {tag} = msg;
 
@@ -346,7 +386,10 @@ class ChangeStreamerImpl implements ChangeStreamerService {
   }
 
   subscribe(ctx: SubscriberContext): Promise<Source<Downstream>> {
-    const {id, replicaVersion, watermark, initial} = ctx;
+    const {id, mode, replicaVersion, watermark, initial} = ctx;
+    if (mode === 'serving') {
+      this.#serving.resolve();
+    }
     const downstream = Subscription.create<Downstream>({
       cleanup: () => this.#forwarder.remove(subscriber),
     });

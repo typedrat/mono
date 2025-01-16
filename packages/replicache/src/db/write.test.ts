@@ -1,6 +1,7 @@
 import {LogContext} from '@rocicorp/logger';
 import {describe, expect, test} from 'vitest';
 import {assertNotUndefined} from '../../../shared/src/asserts.js';
+import type {Enum} from '../../../shared/src/enum.js';
 import {asyncIterableToArray} from '../async-iterable-to-array.js';
 import {BTreeRead} from '../btree/read.js';
 import {mustGetHeadHash} from '../dag/store.js';
@@ -12,8 +13,10 @@ import {readIndexesForRead} from './read.js';
 import {initDB} from './test-helpers.js';
 import {newWriteLocal} from './write.js';
 
+type FormatVersion = Enum<typeof FormatVersion>;
+
 describe('basics w/ commit', () => {
-  const t = async (formatVersion: FormatVersion.Type) => {
+  const t = async (formatVersion: FormatVersion) => {
     const clientID = 'client-id';
     const ds = new TestStore();
     const lc = new LogContext();
@@ -98,11 +101,10 @@ describe('basics w/ commit', () => {
   };
 
   test('dd31', () => t(FormatVersion.Latest));
-  test('sdd', () => t(FormatVersion.SDD));
 });
 
 describe('basics w/ putCommit', () => {
-  const t = async (formatVersion: FormatVersion.Type) => {
+  const t = async (formatVersion: FormatVersion) => {
     const clientID = 'client-id';
     const ds = new TestStore();
     const lc = new LogContext();
@@ -191,7 +193,6 @@ describe('basics w/ putCommit', () => {
     });
   };
   test('dd31', () => t(FormatVersion.Latest));
-  test('sdd', () => t(FormatVersion.SDD));
 });
 
 test('clear', async () => {

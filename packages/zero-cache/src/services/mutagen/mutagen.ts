@@ -5,13 +5,13 @@ import type {JWTPayload} from 'jose';
 import postgres from 'postgres';
 import {assert, unreachable} from '../../../../shared/src/asserts.js';
 import * as v from '../../../../shared/src/valita.js';
-import {ErrorKind} from '../../../../zero-protocol/src/mod.js';
+import * as ErrorKind from '../../../../zero-protocol/src/error-kind-enum.js';
+import * as MutationType from '../../../../zero-protocol/src/mutation-type-enum.js';
 import {
   primaryKeyValueSchema,
   type PrimaryKeyValue,
 } from '../../../../zero-protocol/src/primary-key.js';
 import {
-  MutationType,
   type CRUDMutation,
   type DeleteOp,
   type InsertOp,
@@ -27,11 +27,11 @@ import {
   type WriteAuthorizer,
 } from '../../auth/write-authorizer.js';
 import {type ZeroConfig} from '../../config/zero-config.js';
-import {Mode} from '../../db/transaction-pool.js';
+import * as Mode from '../../db/mode-enum.js';
 import {ErrorForClient} from '../../types/error-for-client.js';
 import type {PostgresDB, PostgresTransaction} from '../../types/pg.js';
 import {throwErrorForClientIfSchemaVersionNotSupported} from '../../types/schema-versions.js';
-import {unescapedSchema as schema} from '../change-streamer/pg/schema/shard.js';
+import {unescapedSchema as schema} from '../change-source/pg/schema/shard.js';
 import {SlidingWindowLimiter} from '../limiter/sliding-window-limiter.js';
 import type {Service} from '../service.js';
 

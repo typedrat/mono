@@ -27,7 +27,14 @@ export const multiConfigSchema = {
       `   * matching is necessary.`,
       `   */`,
       `  tenants: \\{`,
-      `     id: string;     // value of the "tid" context key in debug logs`,
+      `     /**`,
+      `      * Unique per-tenant ID used internally for multi-node dispatch.`,
+      `      *`,
+      `      * The ID may only contain alphanumeric characters, underscores, and hyphens.`,
+      `      * Note that changing the ID may result in temporary disruption in multi-node`,
+      `      * mode, when the configs in the view-syncer and replication-manager differ.`,
+      `      */`,
+      `     id: string;`,
       `     host?: string;  // case-insensitive full Host: header match`,
       `     path?: string;  // first path component, with or without leading slash`,
       ``,
@@ -36,8 +43,10 @@ export const multiConfigSchema = {
       `      * and are overridden by values in the tenant's {bold env} object.`,
       `      */`,
       `     env: \\{`,
-      `       ZERO_REPLICA_DB_FILE: string`,
+      `       ZERO_REPLICA_FILE: string`,
       `       ZERO_UPSTREAM_DB: string`,
+      `       ZERO_CVR_DB: string`,
+      `       ZERO_CHANGE_DB: string`,
       `       ...`,
       `     \\};`,
       `  \\}[];`,
@@ -63,12 +72,36 @@ const tenantSchema = v.object({
       return v.ok(p[0] === '/' ? p : '/' + p);
     })
     .optional(),
-  env: zeroEnvSchema.partial(),
+  env: zeroEnvSchema.partial().extend({
+    // Keep these as required fields. Note that ZERO_UPSTREAM_DB is optional as
+    // it can be shared provided that each tenant has its own ZERO_SHARD_ID.
+    ['ZERO_REPLICA_FILE']: v.string(),
+    ['ZERO_CVR_DB']: v.string(),
+    ['ZERO_CHANGE_DB']: v.string(),
+  }),
 });
 
-const tenantsSchema = v.object({
-  tenants: v.array(tenantSchema),
-});
+const ID_REGEX = /^[A-Za-z0-9_-]+$/;
+
+const tenantsSchema = v
+  .object({
+    tenants: v.array(tenantSchema),
+  })
+  .chain(val => {
+    const ids = new Set();
+    for (const {id} of val.tenants) {
+      if (!ID_REGEX.test(id)) {
+        return v.err(
+          `Invalid tenant ID "${id}". Must be non-empty, and contain only alphanumeric characters, underscores, and hyphens`,
+        );
+      }
+      if (ids.has(id)) {
+        return v.err(`Multiple tenants with ID ${id}`);
+      }
+      ids.add(id);
+    }
+    return v.ok(val);
+  });
 
 export type MultiZeroConfig = v.Infer<typeof tenantsSchema> &
   Omit<Config<typeof multiConfigSchema>, 'tenantsJSON'>;

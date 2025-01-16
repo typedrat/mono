@@ -2,10 +2,10 @@ import {assert} from '../../../shared/src/asserts.js';
 import {must} from '../../../shared/src/must.js';
 import {getZeroConfig} from '../config/zero-config.js';
 import {deleteLiteDB} from '../db/delete-lite-db.js';
+import {initializeChangeSource} from '../services/change-source/pg/change-source.js';
 import {ChangeStreamerHttpServer} from '../services/change-streamer/change-streamer-http.js';
 import {initializeStreamer} from '../services/change-streamer/change-streamer-service.js';
 import type {ChangeStreamerService} from '../services/change-streamer/change-streamer.js';
-import {initializeChangeSource} from '../services/change-streamer/pg/change-source.js';
 import {AutoResetSignal} from '../services/change-streamer/schema/tables.js';
 import {pgClient} from '../types/pg.js';
 import {
@@ -35,26 +35,20 @@ export default async function runWorker(
     ),
   );
 
-  let {autoReset} = config;
-  if (autoReset && config.litestream) {
-    lc.warn?.(
-      '--auto-reset is incompatible with --litestream. Disabling --auto-reset.',
-    );
-    autoReset = false;
-  }
-
+  const {autoReset} = config;
   let changeStreamer: ChangeStreamerService | undefined;
 
   for (const first of [true, false]) {
-    // Note: This performs initial sync of the replica if necessary.
-    const {changeSource, replicationConfig} = await initializeChangeSource(
-      lc,
-      config.upstream.db,
-      config.shard,
-      config.replicaFile,
-    );
-
     try {
+      // Note: This performs initial sync of the replica if necessary.
+      const {changeSource, replicationConfig} = await initializeChangeSource(
+        lc,
+        config.upstream.db,
+        config.shard,
+        config.replicaFile,
+        config.initialSync,
+      );
+
       changeStreamer = await initializeStreamer(
         lc,
         changeDB,
@@ -65,7 +59,9 @@ export default async function runWorker(
       break;
     } catch (e) {
       if (first && e instanceof AutoResetSignal) {
-        lc.warn?.(`auto-reset: resetting replica ${config.replicaFile}`);
+        lc.warn?.(`resetting replica ${config.replicaFile}`, e);
+        // TODO: Make deleteLiteDB work with litestream. It will probably have to be
+        //       a semantic wipe instead of a file delete.
         deleteLiteDB(config.replicaFile);
         continue; // execute again with a fresh initial-sync
       }
@@ -79,6 +75,7 @@ export default async function runWorker(
     lc,
     changeStreamer,
     {port},
+    parent,
   );
 
   parent.send(['ready', {ready: true}]);

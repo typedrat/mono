@@ -8,15 +8,18 @@ import {startAsyncSpan, startSpan} from '../../../otel/src/span.js';
 import {version} from '../../../otel/src/version.js';
 import {unreachable} from '../../../shared/src/asserts.js';
 import * as valita from '../../../shared/src/valita.js';
+import * as ErrorKind from '../../../zero-protocol/src/error-kind-enum.js';
 import {type ErrorBody} from '../../../zero-protocol/src/error.js';
 import {
   type ConnectedMessage,
   type Downstream,
-  ErrorKind,
   type PongMessage,
   upstreamSchema,
 } from '../../../zero-protocol/src/mod.js';
-import {PROTOCOL_VERSION} from '../../../zero-protocol/src/protocol-version.js';
+import {
+  MIN_SERVER_SUPPORTED_PROTOCOL_VERSION,
+  PROTOCOL_VERSION,
+} from '../../../zero-protocol/src/protocol-version.js';
 import type {ConnectParams} from '../services/dispatcher/connect-params.js';
 import type {Mutagen} from '../services/mutagen/mutagen.js';
 import type {
@@ -24,7 +27,7 @@ import type {
   TokenData,
   ViewSyncer,
 } from '../services/view-syncer/view-syncer.js';
-import {findErrorForClient} from '../types/error-for-client.js';
+import {findErrorForClient, getLogLevel} from '../types/error-for-client.js';
 import type {Source} from '../types/streams.js';
 
 const tracer = trace.getTracer('syncer-ws-server', version);
@@ -102,14 +105,16 @@ export class Connection {
    */
   init() {
     if (
-      this.#protocolVersion !== PROTOCOL_VERSION &&
-      this.#protocolVersion !== PROTOCOL_VERSION - 1
+      this.#protocolVersion > PROTOCOL_VERSION ||
+      this.#protocolVersion < MIN_SERVER_SUPPORTED_PROTOCOL_VERSION
     ) {
       this.#closeWithError({
         kind: ErrorKind.VersionNotSupported,
-        message: `server supports v${
-          PROTOCOL_VERSION - 1
-        } and v${PROTOCOL_VERSION} protocols`,
+        message: `server is at sync protocol v${PROTOCOL_VERSION} and does not support v${
+          this.#protocolVersion
+        }. The ${
+          this.#protocolVersion > PROTOCOL_VERSION ? 'server' : 'client'
+        } must be updated to a newer release.`,
       });
     } else {
       const connectedMessage: ConnectedMessage = [
@@ -287,7 +292,7 @@ export function sendError(
   thrown?: unknown,
 ) {
   lc = lc.withContext('errorKind', errorBody.kind);
-  const logLevel = thrown ? 'error' : 'info';
+  const logLevel = thrown ? getLogLevel(thrown) : 'info';
   lc[logLevel]?.('Sending error on WebSocket', errorBody, thrown ?? '');
   send(ws, ['error', errorBody]);
 }
