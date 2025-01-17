@@ -12,7 +12,6 @@ const jwtSecret = config.require("jwtSecret");
 const awsAccessKeyId = config.require("awsAccessKeyId");
 const awsSecretAccessKey = config.require("awsSecretAccessKey");
 const schemaJson = config.require("schemaJson");
-// const certificateArn = config.get("certificateArn"); // Uncomment if needed for HTTPS
 
 const backupBucket = new aws.s3.Bucket(`${namespace}-data-bucket`, {
   forceDestroy: false,
@@ -155,39 +154,37 @@ const loadbalancer = new awsx.lb.ApplicationLoadBalancer("loadbalancer", {
   },
 });
 
-// Add HTTPS listener if you have a certificate
-// const httpsListener = new aws.lb.Listener("https", {
-//   loadBalancerArn: loadbalancer.loadBalancer.arn,
-//   port: 443,
-//   protocol: "HTTPS",
-//   certificateArn: process.env.CERTIFICATE_ARN,
-//   defaultActions: [{
-//     type: "forward",
-//     targetGroupArn: loadbalancer.defaultTargetGroup.arn,
-//   }],
-// });
-
 // Create CloudWatch Log Groups
-const viewSyncerLogGroup = new aws.cloudwatch.LogGroup(`${namespace}-view-syncer`, {
-  retentionInDays: 30,
-});
+const viewSyncerLogGroup = new aws.cloudwatch.LogGroup(
+  `${namespace}-view-syncer`,
+  {
+    retentionInDays: 30,
+  },
+);
 
-const replicationManagerLogGroup = new aws.cloudwatch.LogGroup(`${namespace}-replication-manager`, {
-  retentionInDays: 30,
-});
+const replicationManagerLogGroup = new aws.cloudwatch.LogGroup(
+  `${namespace}-replication-manager`,
+  {
+    retentionInDays: 30,
+  },
+);
 
 // View Syncer Service
 new awsx.ecs.FargateService("view-syncer", {
   cluster: cluster.arn,
   desiredCount: 1,
-  assignPublicIp: true,
   enableExecuteCommand: true,
-  healthCheckGracePeriodSeconds: 300,
+  healthCheckGracePeriodSeconds: 5,
   deploymentMaximumPercent: 120,
   deploymentMinimumHealthyPercent: 50,
   deploymentCircuitBreaker: {
     enable: true,
     rollback: true,
+  },
+  networkConfiguration: {
+    subnets: vpc.privateSubnetIds, 
+    assignPublicIp: false, 
+    securityGroups: [lbSecurityGroup.id, internalServicesSG.id],
   },
   taskDefinitionArgs: {
     container: {
@@ -196,6 +193,7 @@ new awsx.ecs.FargateService("view-syncer", {
       cpu: 8192,
       memory: 16384,
       essential: true,
+      stopTimeout: 120,
       portMappings: [
         {
           name: "view-syncer",
@@ -236,7 +234,6 @@ new awsx.ecs.FargateService("view-syncer", {
       linuxParameters: {
         initProcessEnabled: true,
       },
-      stopTimeout: 120,
       logConfiguration: {
         logDriver: "awslogs",
         options: {
@@ -264,14 +261,25 @@ new awsx.ecs.FargateService("view-syncer", {
       },
     ],
   },
+  loadBalancers: [
+    {
+      containerName: "view-syncer-container",
+      containerPort: 4848,
+      targetGroupArn: loadbalancer.defaultTargetGroup.arn,
+    },
+  ],
 });
 
 // Replication Manager Service
 new awsx.ecs.FargateService("replication-manager", {
   cluster: cluster.arn,
   desiredCount: 1,
-  assignPublicIp: true,
   enableExecuteCommand: true,
+  networkConfiguration: {
+    subnets: vpc.privateSubnetIds,
+    assignPublicIp: false,
+    securityGroups: [lbSecurityGroup.id, internalServicesSG.id],
+  },
   deploymentMaximumPercent: 200,
   deploymentMinimumHealthyPercent: 50,
   deploymentCircuitBreaker: {
@@ -315,6 +323,12 @@ new awsx.ecs.FargateService("replication-manager", {
       ],
       linuxParameters: {
         initProcessEnabled: true,
+      },
+      healthCheck: {
+        command: ["CMD-SHELL", "curl -f http://localhost:4849/ || exit 1"],
+        interval: 5,
+        retries: 3,
+        startPeriod: 300,
       },
       stopTimeout: 120,
       logConfiguration: {
