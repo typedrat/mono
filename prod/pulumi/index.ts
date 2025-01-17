@@ -128,7 +128,7 @@ const internalServicesSG = new aws.ec2.SecurityGroup(
 );
 
 const loadbalancer = new awsx.lb.ApplicationLoadBalancer("loadbalancer", {
-  securityGroups: [lbSecurityGroup.id, internalServicesSG.id],
+  securityGroups: [lbSecurityGroup.id],
   subnets: [vpc.subnets[0], vpc.subnets[2]],
   defaultTargetGroup: {
     port: 4848,
@@ -145,7 +145,7 @@ const loadbalancer = new awsx.lb.ApplicationLoadBalancer("loadbalancer", {
       matcher: "200",
     },
     targetType: "ip",
-    deregistrationDelay: 0,
+    deregistrationDelay: 300,
     stickiness: {
       enabled: true,
       type: "lb_cookie",
