@@ -1,8 +1,8 @@
-name: zero-cache
+name: test-zero-cache
 runtime:
   name: nodejs
   options:
     packagemanager: npm
 config:
   aws:region: us-west-2
-  zero-cache:namespace: zero-cache
+  

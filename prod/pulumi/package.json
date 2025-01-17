@@ -1,7 +1,6 @@
 {
   "name": "zero-cache",
   "main": "index.ts",
-  "type": "module",
   "devDependencies": {
     "@types/node": "^18",
     "typescript": "^5.0.0"
