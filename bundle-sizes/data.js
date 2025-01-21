@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1737457584688,
+  "lastUpdate": 1737479597686,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -50569,6 +50569,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 30945,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "greg@roci.dev",
+            "name": "Greg Baker",
+            "username": "grgbkr"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6204faaf4e15fe0bc231e2dc68ff29751891e0e9",
+          "message": "chore: update @rocicorp/eslint-config to 0.7.0 (#3571)\n\nIn particular this pull in \"no-console\".",
+          "timestamp": "2025-01-21T10:12:21-07:00",
+          "tree_id": "31410d5d7fd471432dac883a6272160b2df0059b",
+          "url": "https://github.com/rocicorp/mono/commit/6204faaf4e15fe0bc231e2dc68ff29751891e0e9"
+        },
+        "date": 1737479584754,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 295553,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53216,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 108641,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 30891,
             "unit": "bytes"
           }
         ]
