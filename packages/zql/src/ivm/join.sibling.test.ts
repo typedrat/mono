@@ -76,15 +76,6 @@ suite('sibling relationships tests with issues, comments, and owners', () => {
           },
         ],
         [
-          "2",
-          "fetch",
-          {
-            "constraint": {
-              "id": "o2",
-            },
-          },
-        ],
-        [
           "1",
           "fetchCount",
           {
@@ -93,6 +84,15 @@ suite('sibling relationships tests with issues, comments, and owners', () => {
             },
           },
           0,
+        ],
+        [
+          "2",
+          "fetch",
+          {
+            "constraint": {
+              "id": "o2",
+            },
+          },
         ],
         [
           "2",
@@ -182,15 +182,6 @@ suite('sibling relationships tests with issues, comments, and owners', () => {
           {
             "constraint": {
               "ownerId": "o2",
-            },
-          },
-        ],
-        [
-          "1",
-          "fetch",
-          {
-            "constraint": {
-              "issueId": "i2",
             },
           },
         ],
@@ -369,15 +360,6 @@ suite('sibling relationships tests with issues, comments, and owners', () => {
           {
             "constraint": {
               "ownerId": "o2",
-            },
-          },
-        ],
-        [
-          "1",
-          "fetch",
-          {
-            "constraint": {
-              "issueId": "i2",
             },
           },
         ],
@@ -589,42 +571,6 @@ suite('sibling relationships tests with issues, comments, and owners', () => {
               "type": "edit",
             },
           ],
-          [
-            "1",
-            "cleanup",
-            {
-              "constraint": {
-                "issueId": "i1",
-              },
-            },
-          ],
-          [
-            "1",
-            "fetch",
-            {
-              "constraint": {
-                "issueId": "i1",
-              },
-            },
-          ],
-          [
-            "2",
-            "cleanup",
-            {
-              "constraint": {
-                "id": "o1",
-              },
-            },
-          ],
-          [
-            "2",
-            "fetch",
-            {
-              "constraint": {
-                "id": "o1",
-              },
-            },
-          ],
         ]
       `);
       expect(storage).toMatchInlineSnapshot(`
@@ -791,15 +737,6 @@ suite('sibling relationships tests with issues, comments, and owners', () => {
             {
               "constraint": {
                 "ownerId": "o2",
-              },
-            },
-          ],
-          [
-            "1",
-            "fetch",
-            {
-              "constraint": {
-                "issueId": "i2",
               },
             },
           ],
