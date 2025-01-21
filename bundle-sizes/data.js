@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1736781920024,
+  "lastUpdate": 1737457584688,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -50525,6 +50525,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 30953,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cc36b3fc7a3c1a41a696c60f0c1ef127b3a9e731",
+          "message": "fix(replicache): Wrap persist in a lock. (#3577)\n\nThis was triggered in the zero perf benchmark which calls persist.\r\nSometimes this call got overlapped with the scheduled persist call which\r\nraised the assert.\r\n\r\nInstead of asserting in this condition we wait until the current persist\r\noperation is done.",
+          "timestamp": "2025-01-21T11:05:26Z",
+          "tree_id": "0dfa7df185ef3554c79ce10bcc871b62ea098238",
+          "url": "https://github.com/rocicorp/mono/commit/cc36b3fc7a3c1a41a696c60f0c1ef127b3a9e731"
+        },
+        "date": 1737457574881,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 295606,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53268,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 108680,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 30945,
             "unit": "bytes"
           }
         ]
