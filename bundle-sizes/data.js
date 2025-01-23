@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1737479597686,
+  "lastUpdate": 1737629488807,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -50613,6 +50613,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 30891,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0c405a86aa4bef072ea037a5f9e13a600568c5d6",
+          "message": "fix(replicache): newRequestID should return a new ID each time (#3597)\n\nThe old code was generating the same ID over and over.",
+          "timestamp": "2025-01-23T10:50:35Z",
+          "tree_id": "b8f0c32a73ec0ef943780d6e69b6f907653e24fe",
+          "url": "https://github.com/rocicorp/mono/commit/0c405a86aa4bef072ea037a5f9e13a600568c5d6"
+        },
+        "date": 1737629478442,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 295458,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53249,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 108620,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 30922,
             "unit": "bytes"
           }
         ]
