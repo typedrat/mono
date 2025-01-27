@@ -13,6 +13,11 @@ import {Snitch, type SnitchMessage} from './snitch.js';
 import type {SourceChange} from './source.js';
 import {createSource} from './test/source-factory.js';
 
+const logConfig = {
+  traceFetch: false,
+  tracePush: false,
+};
+
 suite('sibling relationships tests with issues, comments, and owners', () => {
   const base = {
     columns: [
@@ -865,7 +870,12 @@ function pushSiblingTest(t: PushTestSibling): PushTestSiblingResults {
 
   const sources = t.sources.map((rows, i) => {
     const ordering = t.sorts?.[i] ?? [['id', 'asc']];
-    const source = createSource('test', t.columns[i], t.primaryKeys[i]);
+    const source = createSource(
+      logConfig,
+      'test',
+      t.columns[i],
+      t.primaryKeys[i],
+    );
     for (const row of rows) {
       source.push({type: 'add', row});
     }
@@ -893,7 +903,7 @@ function pushSiblingTest(t: PushTestSibling): PushTestSiblingResults {
     const child = sources[i + 1].snitch;
     const storage = new MemoryStorage();
 
-    const join = new Join({
+    const join = new Join(logConfig, {
       parent,
       child,
       storage,

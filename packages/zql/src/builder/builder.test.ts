@@ -12,6 +12,7 @@ import {
 
 export function testSources() {
   const users = createSource(
+    logConfig,
     'table',
     {
       id: {type: 'number'},
@@ -28,7 +29,9 @@ export function testSources() {
   users.push({type: 'add', row: {id: 6, name: 'darick', recruiterID: 3}});
   users.push({type: 'add', row: {id: 7, name: 'alex', recruiterID: 1}});
 
-  const states = createSource('table', {code: {type: 'string'}}, ['code']);
+  const states = createSource(logConfig, 'table', {code: {type: 'string'}}, [
+    'code',
+  ]);
   states.push({type: 'add', row: {code: 'CA'}});
   states.push({type: 'add', row: {code: 'HI'}});
   states.push({type: 'add', row: {code: 'AZ'}});
@@ -36,6 +39,7 @@ export function testSources() {
   states.push({type: 'add', row: {code: 'GA'}});
 
   const userStates = createSource(
+    logConfig,
     'table',
     {userID: {type: 'number'}, stateCode: {type: 'string'}},
     ['userID', 'stateCode'],
@@ -57,10 +61,16 @@ export function testSources() {
   return {sources, getSource};
 }
 
+const logConfig = {
+  traceFetch: false,
+  tracePush: false,
+};
+
 test('source-only', () => {
   const {sources, getSource} = testSources();
   const sink = new Catch(
     buildPipeline(
+      logConfig,
       {
         table: 'users',
         orderBy: [
@@ -98,6 +108,7 @@ test('filter', () => {
   const {sources, getSource} = testSources();
   const sink = new Catch(
     buildPipeline(
+      logConfig,
       {
         table: 'users',
         orderBy: [['id', 'desc']],
@@ -148,6 +159,7 @@ test('self-join', () => {
   const {sources, getSource} = testSources();
   const sink = new Catch(
     buildPipeline(
+      logConfig,
       {
         table: 'users',
         orderBy: [['id', 'asc']],
@@ -309,6 +321,7 @@ test('self-join edit', () => {
   const {sources, getSource} = testSources();
   const sink = new Catch(
     buildPipeline(
+      logConfig,
       {
         table: 'users',
         orderBy: [['id', 'asc']],
@@ -454,6 +467,7 @@ test('multi-join', () => {
   const {sources, getSource} = testSources();
   const sink = new Catch(
     buildPipeline(
+      logConfig,
       {
         table: 'users',
         orderBy: [['id', 'asc']],
@@ -572,6 +586,7 @@ test('join with limit', () => {
   const {sources, getSource} = testSources();
   const sink = new Catch(
     buildPipeline(
+      logConfig,
       {
         table: 'users',
         orderBy: [['id', 'asc']],
@@ -674,6 +689,7 @@ test('skip', () => {
   const {sources, getSource} = testSources();
   const sink = new Catch(
     buildPipeline(
+      logConfig,
       {
         table: 'users',
         orderBy: [['id', 'asc']],
@@ -706,6 +722,7 @@ test('exists junction', () => {
   const {sources, getSource} = testSources();
   const sink = new Catch(
     buildPipeline(
+      logConfig,
       {
         table: 'users',
         orderBy: [['id', 'asc']],
@@ -914,6 +931,7 @@ test('exists junction with limit, remove row after limit, and last row', () => {
   const {sources, getSource} = testSources();
   const sink = new Catch(
     buildPipeline(
+      logConfig,
       {
         table: 'users',
         orderBy: [['id', 'asc']],
@@ -1052,6 +1070,7 @@ test('exists self join', () => {
   const {sources, getSource} = testSources();
   const sink = new Catch(
     buildPipeline(
+      logConfig,
       {
         table: 'users',
         orderBy: [['id', 'asc']],
@@ -1233,6 +1252,7 @@ test('not exists self join', () => {
   const {sources, getSource} = testSources();
   const sink = new Catch(
     buildPipeline(
+      logConfig,
       {
         table: 'users',
         orderBy: [['id', 'asc']],
@@ -1410,6 +1430,7 @@ test('empty or - nothing goes through', () => {
   const {sources, getSource} = testSources();
   const sink = new Catch(
     buildPipeline(
+      logConfig,
       {
         table: 'users',
         orderBy: [['id', 'asc']],
@@ -1435,6 +1456,7 @@ test('empty and - everything goes through', () => {
   const {sources, getSource} = testSources();
   const sink = new Catch(
     buildPipeline(
+      logConfig,
       {
         table: 'users',
         orderBy: [['id', 'asc']],
@@ -1471,6 +1493,7 @@ test('always false literal comparison - nothing goes through', () => {
   const {sources, getSource} = testSources();
   const sink = new Catch(
     buildPipeline(
+      logConfig,
       {
         table: 'users',
         orderBy: [['id', 'asc']],
@@ -1504,6 +1527,7 @@ test('always true literal comparison - everything goes through', () => {
   const {sources, getSource} = testSources();
   const sink = new Catch(
     buildPipeline(
+      logConfig,
       {
         table: 'users',
         orderBy: [['id', 'asc']],

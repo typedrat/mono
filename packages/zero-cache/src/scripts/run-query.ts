@@ -22,6 +22,10 @@ const schemaAndPermissions = await getSchema(config);
 runtimeDebugFlags.trackRowsVended = true;
 
 const ast = JSON.parse(must(config.debug.ast)) as AST;
+const logConfig = {
+  traceFetch: false,
+  tracePush: false,
+};
 
 const db = new Database(createSilentLogContext(), config.replicaFile);
 const sources = new Map<string, TableSource>();
@@ -32,6 +36,7 @@ const host: QueryDelegate = {
       return source;
     }
     source = new TableSource(
+      logConfig,
       '',
       db,
       name,
@@ -58,7 +63,7 @@ const host: QueryDelegate = {
   },
 };
 
-const pipeline = buildPipeline(ast, host);
+const pipeline = buildPipeline(logConfig, ast, host);
 const output = new Catch(pipeline);
 
 const start = performance.now();

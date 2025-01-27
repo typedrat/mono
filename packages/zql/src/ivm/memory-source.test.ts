@@ -12,9 +12,14 @@ import {
 } from './memory-source.js';
 import {createSource} from './test/source-factory.js';
 
+const logConfig = {
+  traceFetch: false,
+  tracePush: false,
+};
+
 test('schema', () => {
   compareRowsTest((order: Ordering) => {
-    const ms = createSource('table', {a: {type: 'string'}}, ['a']);
+    const ms = createSource(logConfig, 'table', {a: {type: 'string'}}, ['a']);
     return ms.connect(order).getSchema().compareRows;
   });
 });
@@ -97,6 +102,7 @@ test('indexes get cleaned up when not needed', () => {
 
 test('push edit change', () => {
   const ms = createSource(
+    logConfig,
     'table',
     {a: {type: 'string'}, b: {type: 'string'}, c: {type: 'string'}},
     ['a'],
@@ -134,6 +140,7 @@ test('push edit change', () => {
 
 test('fetch during push edit change', () => {
   const ms = createSource(
+    logConfig,
     'table',
     {a: {type: 'string'}, b: {type: 'string'}, c: {type: 'string'}},
     ['a'],

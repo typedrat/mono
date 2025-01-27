@@ -12,6 +12,11 @@ import type {SourceChange} from './source.js';
 import {Take, type PartitionKey} from './take.js';
 import {createSource} from './test/source-factory.js';
 
+const logConfig = {
+  traceFetch: false,
+  tracePush: false,
+};
+
 suite('take with no partition', () => {
   const base = {
     columns: {
@@ -3781,7 +3786,7 @@ suite('take with partition', () => {
 
 function takeTest(t: TakeTest): TakeTestReults {
   const log: SnitchMessage[] = [];
-  const source = createSource('table', t.columns, t.primaryKey);
+  const source = createSource(logConfig, 'table', t.columns, t.primaryKey);
   for (const row of t.sourceRows) {
     source.push({type: 'add', row});
   }
@@ -3793,7 +3798,13 @@ function takeTest(t: TakeTest): TakeTestReults {
   const memoryStorage = new MemoryStorage();
   const partitionKey = t.partition?.key;
 
-  const take = new Take(snitch, memoryStorage, t.limit, partitionKey);
+  const take = new Take(
+    logConfig,
+    snitch,
+    memoryStorage,
+    t.limit,
+    partitionKey,
+  );
   const c = new Catch(take);
   if (t.partition === undefined) {
     c.fetch();

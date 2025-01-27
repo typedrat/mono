@@ -14,6 +14,11 @@ import {createSource} from './test/source-factory.js';
 import type {FetchRequest} from './operator.js';
 import type {Stream} from './stream.js';
 
+const logConfig = {
+  traceFetch: false,
+  tracePush: false,
+};
+
 suite('take with no partition', () => {
   const base = {
     columns: {id: {type: 'string'}, created: {type: 'number'}},
@@ -427,7 +432,7 @@ test('exception during hydrate', () => {
   const columns = {id: {type: 'string'}, created: {type: 'number'}} as const;
   const primaryKey = ['id'] as const;
   const log: SnitchMessage[] = [];
-  const source = createSource('table', columns, primaryKey);
+  const source = createSource(logConfig, 'table', columns, primaryKey);
   const snitch = new ThrowingSnitch(
     source.connect([['id', 'asc']]),
     'takeSnitch',
@@ -436,7 +441,7 @@ test('exception during hydrate', () => {
   const storage = new MemoryStorage();
   const limit = 10;
 
-  const take = new Take(snitch, storage, limit);
+  const take = new Take(logConfig, snitch, storage, limit);
   expect(() => [...take.fetch({})]).toThrow('ThrowingSnitch error');
 });
 
@@ -444,7 +449,7 @@ test('early return during hydrate', () => {
   const columns = {id: {type: 'string'}, created: {type: 'number'}} as const;
   const primaryKey = ['id'] as const;
   const log: SnitchMessage[] = [];
-  const source = createSource('table', columns, primaryKey);
+  const source = createSource(logConfig, 'table', columns, primaryKey);
   const sourceRows = [
     {id: 'i1', created: 100},
     {id: 'i2', created: 200},
@@ -457,7 +462,7 @@ test('early return during hydrate', () => {
   const storage = new MemoryStorage();
   const limit = 10;
 
-  const take = new Take(snitch, storage, limit);
+  const take = new Take(logConfig, snitch, storage, limit);
   expect(() => {
     let count = 0;
     for (const _ of take.fetch({})) {
@@ -1755,7 +1760,7 @@ suite('take with partition', () => {
 
 function takeTest(t: TakeTest): TakeTestResults {
   const log: SnitchMessage[] = [];
-  const source = createSource('table', t.columns, t.primaryKey);
+  const source = createSource(logConfig, 'table', t.columns, t.primaryKey);
   for (const row of t.sourceRows) {
     source.push({type: 'add', row});
   }
@@ -1767,7 +1772,7 @@ function takeTest(t: TakeTest): TakeTestResults {
   const storage = new MemoryStorage();
 
   const {partitionKey} = t;
-  const take = new Take(snitch, storage, t.limit, partitionKey);
+  const take = new Take(logConfig, snitch, storage, t.limit, partitionKey);
   if (t.partitionKey === undefined) {
     assert(t.partitionValues.length === 1);
     assert(t.partitionValues[0] === undefined);

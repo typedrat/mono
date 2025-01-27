@@ -13,6 +13,11 @@ import {string, table} from '../../../zero-schema/src/builder/table-builder.js';
 const testBatchViewUpdates = (applyViewUpdates: () => void) =>
   applyViewUpdates();
 
+const logConfig = {
+  traceFetch: false,
+  tracePush: false,
+};
+
 test('getSource', () => {
   const schema = createSchema(1, {
     tables: [
@@ -223,7 +228,7 @@ test('transactions', () => {
   );
   const servers = context.getSource('server')!;
   const flair = context.getSource('flair')!;
-  const join = new Join({
+  const join = new Join(logConfig, {
     parent: servers.connect([['id', 'asc']]),
     child: flair.connect([['id', 'asc']]),
     storage: new MemoryStorage(),

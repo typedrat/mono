@@ -15,6 +15,11 @@ import type {Source, SourceChange} from '../source.js';
 import type {Format} from '../view.js';
 import {createSource} from './source-factory.js';
 
+const logConfig = {
+  traceFetch: false,
+  tracePush: false,
+};
+
 function makeSource(
   rows: readonly Row[],
   ordering: Ordering,
@@ -23,7 +28,7 @@ function makeSource(
   snitchName: string,
   log: SnitchMessage[],
 ): {source: Source; snitch: Snitch} {
-  const source = createSource('test', columns, primaryKeys);
+  const source = createSource(logConfig, 'test', columns, primaryKeys);
   for (const row of rows) {
     source.push({type: 'add', row});
   }
@@ -105,7 +110,7 @@ export function runJoinTest(t: NewPushTest) {
     let last;
     for (const [name, info] of Object.entries(t.joins)) {
       const joinStorage = new MemoryStorage();
-      const join = new Join({
+      const join = new Join(logConfig, {
         parent: (sources[info.parentSource] ?? joins[info.parentSource]).snitch,
         parentKey: info.parentKey,
         child: (sources[info.childSource] ?? joins[info.childSource]).snitch,

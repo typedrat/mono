@@ -21,6 +21,7 @@ import type {SchemaVersions} from '../../types/schema-versions.js';
 import {getSubscriptionState} from '../replicator/schema/replication-state.js';
 import type {ClientGroupStorage} from './database-storage.js';
 import {type SnapshotDiff, Snapshotter} from './snapshotter.js';
+import type {LogConfig} from '../../config/zero-config.ts';
 
 export type RowAdd = {
   readonly type: 'add';
@@ -64,16 +65,19 @@ export class PipelineDriver {
   readonly #snapshotter: Snapshotter;
   readonly #storage: ClientGroupStorage;
   readonly #clientGroupID: string;
+  readonly #logConfig: LogConfig;
   #tableSpecs: Map<string, LiteAndZqlSpec> | null = null;
   #streamer: Streamer | null = null;
   #replicaVersion: string | null = null;
 
   constructor(
+    logConfig: LogConfig,
     lc: LogContext,
     snapshotter: Snapshotter,
     storage: ClientGroupStorage,
     clientGroupID: string,
   ) {
+    this.#logConfig = logConfig;
     this.#lc = lc.withContext('clientGroupID', clientGroupID);
     this.#snapshotter = snapshotter;
     this.#storage = storage;
@@ -190,7 +194,7 @@ export class PipelineDriver {
   *addQuery(hash: string, query: AST): Iterable<RowChange> {
     assert(this.initialized());
     assert(!this.#pipelines.has(hash), `query ${hash} already added`);
-    const input = buildPipeline(query, {
+    const input = buildPipeline(this.#logConfig, query, {
       getSource: name => this.#getSource(name),
       createStorage: () => this.#createStorage(),
     });
@@ -339,6 +343,7 @@ export class PipelineDriver {
 
     const {db} = this.#snapshotter.current();
     source = new TableSource(
+      this.#logConfig,
       this.#clientGroupID,
       db.db,
       tableName,

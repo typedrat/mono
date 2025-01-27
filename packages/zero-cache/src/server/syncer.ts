@@ -119,6 +119,7 @@ export default async function runWorker(
       config.shard.id,
       cvrDB,
       new PipelineDriver(
+        config.log,
         logger,
         new Snapshotter(logger, replicaFile),
         operatorStorage.createClientGroupStorage(id),

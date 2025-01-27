@@ -42,6 +42,16 @@ import {
   createSchema,
   type Schema as ZeroSchema,
 } from '../../../zero-schema/src/builder/schema-builder.js';
+import type {ZeroConfig} from '../config/zero-config.ts';
+
+const logConfig = {
+  traceFetch: false,
+  tracePush: false,
+};
+
+const config: ZeroConfig = {
+  log: logConfig,
+} as unknown as ZeroConfig;
 
 const user = table('user')
   .columns({
@@ -488,6 +498,7 @@ beforeEach(() => {
       )`);
 
       source = new TableSource(
+        logConfig,
         'read-auth-test',
         replica,
         name,
@@ -520,7 +531,7 @@ beforeEach(() => {
 
   writeAuthorizer = new WriteAuthorizerImpl(
     lc,
-    {},
+    config,
     schema,
     permissions,
     replica,
@@ -904,7 +915,7 @@ function runReadQueryWithPermissions(
       preMutationRow: undefined,
     },
   );
-  const pipeline = buildPipeline(updatedAst, queryDelegate);
+  const pipeline = buildPipeline(logConfig, updatedAst, queryDelegate);
   const out = new Catch(pipeline);
   return out.fetch({});
 }

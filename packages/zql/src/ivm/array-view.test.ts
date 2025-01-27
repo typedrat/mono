@@ -11,10 +11,18 @@ import type {SourceSchema} from './schema.js';
 import {Take} from './take.js';
 import {createSource} from './test/source-factory.js';
 
+const logConfig = {
+  traceFetch: false,
+  tracePush: false,
+};
+
 test('basics', () => {
-  const ms = createSource('table', {a: {type: 'number'}, b: {type: 'string'}}, [
-    'a',
-  ]);
+  const ms = createSource(
+    logConfig,
+    'table',
+    {a: {type: 'number'}, b: {type: 'string'}},
+    ['a'],
+  );
   ms.push({row: {a: 1, b: 'a'}, type: 'add'});
   ms.push({row: {a: 2, b: 'b'}, type: 'add'});
 
@@ -74,9 +82,12 @@ test('basics', () => {
 });
 
 test('single-format', () => {
-  const ms = createSource('table', {a: {type: 'number'}, b: {type: 'string'}}, [
-    'a',
-  ]);
+  const ms = createSource(
+    logConfig,
+    'table',
+    {a: {type: 'number'}, b: {type: 'string'}},
+    ['a'],
+  );
   ms.push({row: {a: 1, b: 'a'}, type: 'add'});
 
   const view = new ArrayView(
@@ -117,9 +128,12 @@ test('single-format', () => {
 });
 
 test('hydrate-empty', () => {
-  const ms = createSource('table', {a: {type: 'number'}, b: {type: 'string'}}, [
-    'a',
-  ]);
+  const ms = createSource(
+    logConfig,
+    'table',
+    {a: {type: 'number'}, b: {type: 'string'}},
+    ['a'],
+  );
 
   const view = new ArrayView(
     ms.connect([
@@ -142,6 +156,7 @@ test('hydrate-empty', () => {
 
 test('tree', () => {
   const ms = createSource(
+    logConfig,
     'table',
     {id: {type: 'number'}, name: {type: 'string'}, childID: {type: 'number'}},
     ['id'],
@@ -163,7 +178,7 @@ test('tree', () => {
     row: {id: 4, name: 'monkey', childID: null},
   });
 
-  const join = new Join({
+  const join = new Join(logConfig, {
     parent: ms.connect([
       ['name', 'asc'],
       ['id', 'asc'],
@@ -414,6 +429,7 @@ test('tree', () => {
 
 test('tree-single', () => {
   const ms = createSource(
+    logConfig,
     'table',
     {id: {type: 'number'}, name: {type: 'string'}, childID: {type: 'number'}},
     ['id'],
@@ -428,6 +444,7 @@ test('tree-single', () => {
   });
 
   const take = new Take(
+    logConfig,
     ms.connect([
       ['name', 'asc'],
       ['id', 'asc'],
@@ -436,7 +453,7 @@ test('tree-single', () => {
     1,
   );
 
-  const join = new Join({
+  const join = new Join(logConfig, {
     parent: take,
     child: ms.connect([
       ['name', 'desc'],
@@ -908,9 +925,12 @@ test('collapse-single', () => {
 });
 
 test('basic with edit pushes', () => {
-  const ms = createSource('table', {a: {type: 'number'}, b: {type: 'string'}}, [
-    'a',
-  ]);
+  const ms = createSource(
+    logConfig,
+    'table',
+    {a: {type: 'number'}, b: {type: 'string'}},
+    ['a'],
+  );
   ms.push({row: {a: 1, b: 'a'}, type: 'add'});
   ms.push({row: {a: 2, b: 'b'}, type: 'add'});
 
@@ -957,6 +977,7 @@ test('basic with edit pushes', () => {
 
 test('tree edit', () => {
   const ms = createSource(
+    logConfig,
     'table',
     {
       id: {type: 'number'},
@@ -975,7 +996,7 @@ test('tree edit', () => {
     ms.push({type: 'add', row});
   }
 
-  const join = new Join({
+  const join = new Join(logConfig, {
     parent: ms.connect([
       ['name', 'asc'],
       ['id', 'asc'],
@@ -1101,9 +1122,12 @@ test('tree edit', () => {
 });
 
 test('edit to change the order', () => {
-  const ms = createSource('table', {a: {type: 'number'}, b: {type: 'string'}}, [
-    'a',
-  ]);
+  const ms = createSource(
+    logConfig,
+    'table',
+    {a: {type: 'number'}, b: {type: 'string'}},
+    ['a'],
+  );
   for (const row of [
     {a: 10, b: 'a'},
     {a: 20, b: 'b'},

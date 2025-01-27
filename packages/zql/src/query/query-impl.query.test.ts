@@ -28,6 +28,11 @@ import {createSource} from '../ivm/test/source-factory.js';
  * write by hand.
  */
 
+const logConfig = {
+  traceFetch: false,
+  tracePush: false,
+};
+
 function addData(queryDelegate: QueryDelegate) {
   const userSource = must(queryDelegate.getSource('user'));
   const issueSource = must(queryDelegate.getSource('issue'));
@@ -1013,8 +1018,18 @@ test('join with compound keys', () => {
   });
 
   const sources = {
-    a: createSource('a', schema.tables.a.columns, schema.tables.a.primaryKey),
-    b: createSource('b', schema.tables.b.columns, schema.tables.b.primaryKey),
+    a: createSource(
+      logConfig,
+      'a',
+      schema.tables.a.columns,
+      schema.tables.a.primaryKey,
+    ),
+    b: createSource(
+      logConfig,
+      'b',
+      schema.tables.b.columns,
+      schema.tables.b.primaryKey,
+    ),
   };
 
   const queryDelegate = new QueryDelegateImpl(sources);

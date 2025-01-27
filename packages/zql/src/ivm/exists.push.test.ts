@@ -10,6 +10,11 @@ import {
 import type {Format} from './view.js';
 import {Take} from './take.js';
 
+const logConfig = {
+  traceFetch: false,
+  tracePush: false,
+};
+
 const sources: Sources = {
   issue: {
     columns: {
@@ -167,11 +172,11 @@ suite('EXISTS 1 to many', () => {
       addPostJoinsOperator: [
         (i: Input, storage: Storage) => ({
           name: 'exists',
-          op: new Exists(i, storage, 'issue', ['issueID'], 'EXISTS'),
+          op: new Exists(logConfig, i, storage, 'issue', ['issueID'], 'EXISTS'),
         }),
         (i: Input, storage: Storage) => ({
           name: 'take',
-          op: new Take(i, storage, 2),
+          op: new Take(logConfig, i, storage, 2),
         }),
       ],
     });
@@ -522,7 +527,7 @@ suite('EXISTS', () => {
       format,
       addPostJoinsOperator: (i: Input, storage: Storage) => ({
         name: 'exists',
-        op: new Exists(i, storage, 'comments', ['id'], existsType),
+        op: new Exists(logConfig, i, storage, 'comments', ['id'], existsType),
       }),
     });
 
@@ -597,7 +602,7 @@ suite('EXISTS', () => {
       format,
       addPostJoinsOperator: (i: Input, storage: Storage) => ({
         name: 'exists',
-        op: new Exists(i, storage, 'comments', ['id'], existsType),
+        op: new Exists(logConfig, i, storage, 'comments', ['id'], existsType),
       }),
     });
 
@@ -714,7 +719,7 @@ suite('EXISTS', () => {
       format,
       addPostJoinsOperator: (i: Input, storage: Storage) => ({
         name: 'exists',
-        op: new Exists(i, storage, 'comments', ['id'], existsType),
+        op: new Exists(logConfig, i, storage, 'comments', ['id'], existsType),
       }),
     });
 
@@ -781,7 +786,7 @@ suite('EXISTS', () => {
       format,
       addPostJoinsOperator: (i: Input, storage: Storage) => ({
         name: 'exists',
-        op: new Exists(i, storage, 'comments', ['id'], existsType),
+        op: new Exists(logConfig, i, storage, 'comments', ['id'], existsType),
       }),
     });
 
@@ -876,7 +881,7 @@ suite('EXISTS', () => {
       format,
       addPostJoinsOperator: (i: Input, storage: Storage) => ({
         name: 'exists',
-        op: new Exists(i, storage, 'comments', ['id'], existsType),
+        op: new Exists(logConfig, i, storage, 'comments', ['id'], existsType),
       }),
     });
 
@@ -944,7 +949,7 @@ suite('EXISTS', () => {
       format,
       addPostJoinsOperator: (i: Input, storage: Storage) => ({
         name: 'exists',
-        op: new Exists(i, storage, 'comments', ['id'], existsType),
+        op: new Exists(logConfig, i, storage, 'comments', ['id'], existsType),
       }),
     });
 
@@ -1043,7 +1048,7 @@ suite('EXISTS', () => {
       format,
       addPostJoinsOperator: (i: Input, storage: Storage) => ({
         name: 'exists',
-        op: new Exists(i, storage, 'comments', ['id'], existsType),
+        op: new Exists(logConfig, i, storage, 'comments', ['id'], existsType),
       }),
     });
 
@@ -1159,7 +1164,7 @@ suite('EXISTS', () => {
       format,
       addPostJoinsOperator: (i: Input, storage: Storage) => ({
         name: 'exists',
-        op: new Exists(i, storage, 'comments', ['id'], existsType),
+        op: new Exists(logConfig, i, storage, 'comments', ['id'], existsType),
       }),
     });
 
@@ -1277,7 +1282,7 @@ suite('EXISTS', () => {
       format,
       addPostJoinsOperator: (i: Input, storage: Storage) => ({
         name: 'exists',
-        op: new Exists(i, storage, 'comments', ['id'], existsType),
+        op: new Exists(logConfig, i, storage, 'comments', ['id'], existsType),
       }),
     });
 
@@ -1402,7 +1407,7 @@ suite('EXISTS', () => {
       format,
       addPostJoinsOperator: (i: Input, storage: Storage) => ({
         name: 'exists',
-        op: new Exists(i, storage, 'comments', ['id'], existsType),
+        op: new Exists(logConfig, i, storage, 'comments', ['id'], existsType),
       }),
     });
 
@@ -1511,7 +1516,7 @@ suite('EXISTS', () => {
       format,
       addPostJoinsOperator: (i: Input, storage: Storage) => ({
         name: 'exists',
-        op: new Exists(i, storage, 'comments', ['id'], existsType),
+        op: new Exists(logConfig, i, storage, 'comments', ['id'], existsType),
       }),
     });
 
@@ -1632,7 +1637,7 @@ suite('EXISTS', () => {
       format,
       addPostJoinsOperator: (i: Input, storage: Storage) => ({
         name: 'exists',
-        op: new Exists(i, storage, 'comments', ['id'], existsType),
+        op: new Exists(logConfig, i, storage, 'comments', ['id'], existsType),
       }),
     });
 
@@ -1808,7 +1813,7 @@ suite('NOT EXISTS', () => {
       format,
       addPostJoinsOperator: (i: Input, storage: Storage) => ({
         name: 'exists',
-        op: new Exists(i, storage, 'comments', ['id'], existsType),
+        op: new Exists(logConfig, i, storage, 'comments', ['id'], existsType),
       }),
     });
 
@@ -1900,7 +1905,7 @@ suite('NOT EXISTS', () => {
       format,
       addPostJoinsOperator: (i: Input, storage: Storage) => ({
         name: 'exists',
-        op: new Exists(i, storage, 'comments', ['id'], existsType),
+        op: new Exists(logConfig, i, storage, 'comments', ['id'], existsType),
       }),
     });
 
@@ -1951,7 +1956,7 @@ suite('NOT EXISTS', () => {
       format,
       addPostJoinsOperator: (i: Input, storage: Storage) => ({
         name: 'exists',
-        op: new Exists(i, storage, 'comments', ['id'], existsType),
+        op: new Exists(logConfig, i, storage, 'comments', ['id'], existsType),
       }),
     });
 
@@ -2025,7 +2030,7 @@ suite('NOT EXISTS', () => {
       format,
       addPostJoinsOperator: (i: Input, storage: Storage) => ({
         name: 'exists',
-        op: new Exists(i, storage, 'comments', ['id'], existsType),
+        op: new Exists(logConfig, i, storage, 'comments', ['id'], existsType),
       }),
     });
 
@@ -2076,7 +2081,7 @@ suite('NOT EXISTS', () => {
       format,
       addPostJoinsOperator: (i: Input, storage: Storage) => ({
         name: 'exists',
-        op: new Exists(i, storage, 'comments', ['id'], existsType),
+        op: new Exists(logConfig, i, storage, 'comments', ['id'], existsType),
       }),
     });
 
@@ -2159,7 +2164,7 @@ suite('NOT EXISTS', () => {
       format,
       addPostJoinsOperator: (i: Input, storage: Storage) => ({
         name: 'exists',
-        op: new Exists(i, storage, 'comments', ['id'], existsType),
+        op: new Exists(logConfig, i, storage, 'comments', ['id'], existsType),
       }),
     });
 
@@ -2209,7 +2214,7 @@ suite('NOT EXISTS', () => {
       format,
       addPostJoinsOperator: (i: Input, storage: Storage) => ({
         name: 'exists',
-        op: new Exists(i, storage, 'comments', ['id'], existsType),
+        op: new Exists(logConfig, i, storage, 'comments', ['id'], existsType),
       }),
     });
 
@@ -2332,7 +2337,7 @@ suite('NOT EXISTS', () => {
       format,
       addPostJoinsOperator: (i: Input, storage: Storage) => ({
         name: 'exists',
-        op: new Exists(i, storage, 'comments', ['id'], existsType),
+        op: new Exists(logConfig, i, storage, 'comments', ['id'], existsType),
       }),
     });
 
@@ -2382,7 +2387,7 @@ suite('NOT EXISTS', () => {
       format,
       addPostJoinsOperator: (i: Input, storage: Storage) => ({
         name: 'exists',
-        op: new Exists(i, storage, 'comments', ['id'], existsType),
+        op: new Exists(logConfig, i, storage, 'comments', ['id'], existsType),
       }),
     });
 
@@ -2466,7 +2471,7 @@ suite('NOT EXISTS', () => {
       format,
       addPostJoinsOperator: (i: Input, storage: Storage) => ({
         name: 'exists',
-        op: new Exists(i, storage, 'comments', ['id'], existsType),
+        op: new Exists(logConfig, i, storage, 'comments', ['id'], existsType),
       }),
     });
 
@@ -2517,7 +2522,7 @@ suite('NOT EXISTS', () => {
       format,
       addPostJoinsOperator: (i: Input, storage: Storage) => ({
         name: 'exists',
-        op: new Exists(i, storage, 'comments', ['id'], existsType),
+        op: new Exists(logConfig, i, storage, 'comments', ['id'], existsType),
       }),
     });
 
@@ -2568,7 +2573,7 @@ suite('NOT EXISTS', () => {
       format,
       addPostJoinsOperator: (i: Input, storage: Storage) => ({
         name: 'exists',
-        op: new Exists(i, storage, 'comments', ['id'], existsType),
+        op: new Exists(logConfig, i, storage, 'comments', ['id'], existsType),
       }),
     });
 

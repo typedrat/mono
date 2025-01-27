@@ -6,8 +6,10 @@ import {createSilentLogContext} from '../../../shared/src/logging-test-utils.js'
 import {compile, sql} from '../internal/sql.js';
 import {TableSource} from '../table-source.js';
 import type {PrimaryKey} from '../../../zero-protocol/src/primary-key.js';
+import type {LogConfig} from '../../../zql/src/log.ts';
 
 export const createSource: SourceFactory = (
+  logConfig: LogConfig,
   tableName: string,
   columns: Record<string, SchemaValue>,
   primaryKey: PrimaryKey,
@@ -24,5 +26,12 @@ export const createSource: SourceFactory = (
     )}));`,
   );
   db.exec(query);
-  return new TableSource('zqlite-test', db, tableName, columns, primaryKey);
+  return new TableSource(
+    logConfig,
+    'zqlite-test',
+    db,
+    tableName,
+    columns,
+    primaryKey,
+  );
 };

@@ -1,4 +1,4 @@
 export type LogConfig = {
-  traceFetch: boolean;
-  tracePush: boolean;
+  traceFetch?: boolean | undefined;
+  tracePush?: boolean | undefined;
 };

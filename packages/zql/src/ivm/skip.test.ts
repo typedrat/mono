@@ -5,9 +5,15 @@ import type {SourceChange} from './source.js';
 import {createSource} from './test/source-factory.js';
 import type {FetchRequest} from './operator.js';
 
+const logConfig = {
+  traceFetch: false,
+  tracePush: false,
+};
+
 suite('fetch', () => {
   function t(c: {skipBound: Bound; fetchRequest: FetchRequest}) {
     const ms = createSource(
+      logConfig,
       'users',
       {
         id: {type: 'number'},
@@ -876,6 +882,7 @@ suite('fetch', () => {
 suite('push', () => {
   function t(c: {name?: string; skipBound: Bound; pushes: SourceChange[]}) {
     const ms = createSource(
+      logConfig,
       'users',
       {
         id: {type: 'number'},

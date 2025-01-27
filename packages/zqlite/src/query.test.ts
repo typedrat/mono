@@ -9,6 +9,11 @@ import {Database} from './db.js';
 import {TableSource, toSQLiteTypeName} from './table-source.js';
 
 let queryDelegate: QueryDelegate;
+const logConfig = {
+  traceFetch: false,
+  tracePush: false,
+};
+
 beforeEach(() => {
   const db = new Database(createSilentLogContext(), ':memory:');
   const sources = new Map<string, Source>();
@@ -31,6 +36,7 @@ beforeEach(() => {
       )`);
 
       source = new TableSource(
+        logConfig,
         'query.test.ts',
         db,
         name,

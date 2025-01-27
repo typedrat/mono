@@ -15,6 +15,11 @@ type Options = {
   dbFile: string;
 };
 
+const logConfig = {
+  traceFetch: false,
+  tracePush: false,
+};
+
 // load up some data!
 export function bench(opts: Options) {
   const {dbFile} = opts;
@@ -33,6 +38,7 @@ export function bench(opts: Options) {
       const {columns, primaryKey} = spec.tableSpec;
 
       source = new TableSource(
+        logConfig,
         'benchmark',
         db,
         name,
@@ -74,5 +80,6 @@ export function bench(opts: Options) {
   q.materialize();
 
   const end = performance.now();
+  // eslint-disable-next-line no-console
   console.log(`materialize\ttook ${end - start}ms`);
 }

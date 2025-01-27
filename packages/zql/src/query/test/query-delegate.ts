@@ -61,6 +61,11 @@ export class QueryDelegateImpl implements QueryDelegate {
   }
 }
 
+const logConfig = {
+  traceFetch: false,
+  tracePush: false,
+};
+
 function makeSources() {
   const {user, issue, comment, revision, label, issueLabel} = {
     user: userSchema,
@@ -72,12 +77,23 @@ function makeSources() {
   };
 
   return {
-    user: createSource('user', user.columns, user.primaryKey),
-    issue: createSource('issue', issue.columns, issue.primaryKey),
-    comment: createSource('comment', comment.columns, comment.primaryKey),
-    revision: createSource('revision', revision.columns, revision.primaryKey),
-    label: createSource('label', label.columns, label.primaryKey),
+    user: createSource(logConfig, 'user', user.columns, user.primaryKey),
+    issue: createSource(logConfig, 'issue', issue.columns, issue.primaryKey),
+    comment: createSource(
+      logConfig,
+      'comment',
+      comment.columns,
+      comment.primaryKey,
+    ),
+    revision: createSource(
+      logConfig,
+      'revision',
+      revision.columns,
+      revision.primaryKey,
+    ),
+    label: createSource(logConfig, 'label', label.columns, label.primaryKey),
     issueLabel: createSource(
+      logConfig,
       'issueLabel',
       issueLabel.columns,
       issueLabel.primaryKey,

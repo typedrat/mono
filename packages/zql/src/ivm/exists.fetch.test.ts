@@ -26,6 +26,11 @@ const base = {
   },
 } as const;
 
+const logConfig = {
+  traceFetch: false,
+  tracePush: false,
+};
+
 const oneParentWithChildTest: FetchTest = {
   ...base,
   existsType: 'EXISTS',
@@ -1898,7 +1903,12 @@ function fetchTest(t: FetchTest, reverse: boolean = false): FetchTestResults {
 
   const sources = t.sources.map((rows, i) => {
     const ordering = t.sorts?.[i] ?? [['id', 'asc']];
-    const source = createSource(`t${i}`, t.columns[i], t.primaryKeys[i]);
+    const source = createSource(
+      logConfig,
+      `t${i}`,
+      t.columns[i],
+      t.primaryKeys[i],
+    );
     for (const row of rows) {
       source.push({type: 'add', row});
     }
@@ -1915,7 +1925,8 @@ function fetchTest(t: FetchTest, reverse: boolean = false): FetchTestResults {
 
   const existsStorage = new MemoryStorage();
   const exists = new Exists(
-    new Join({
+    logConfig,
+    new Join(logConfig, {
       parent: sources[0].snitch,
       child: sources[1].snitch,
       storage: new MemoryStorage(),

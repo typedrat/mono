@@ -42,6 +42,11 @@ import type {Schema} from '../../../zero-schema/src/builder/schema-builder.js';
 
 type AnyQuery = Query<Schema, string, any>;
 
+const logConfig = {
+  traceFetch: false,
+  tracePush: false,
+};
+
 export function newQuery<
   TSchema extends Schema,
   TTable extends keyof TSchema['tables'] & string,
@@ -592,7 +597,7 @@ export class QueryImpl<
       }
     });
 
-    const input = buildPipeline(ast, this.#delegate);
+    const input = buildPipeline(logConfig, ast, this.#delegate);
     let removeCommitObserver: (() => void) | undefined;
 
     const onDestroy = () => {

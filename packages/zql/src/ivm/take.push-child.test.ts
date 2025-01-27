@@ -9,6 +9,11 @@ import {
 } from './test/join-push-tests.js';
 import type {Format} from './view.js';
 
+const logConfig = {
+  traceFetch: false,
+  tracePush: false,
+};
+
 const sources: Sources = {
   issue: {
     columns: {
@@ -91,7 +96,7 @@ test('child change, parent is within bound', () => {
     format,
     addPostJoinsOperator: (i: Input, storage: Storage) => ({
       name: 'take',
-      op: new Take(i, storage, 2),
+      op: new Take(logConfig, i, storage, 2),
     }),
   });
 
@@ -211,7 +216,7 @@ test('child change, parent is after bound', () => {
     format,
     addPostJoinsOperator: (i: Input, storage: Storage) => ({
       name: 'take',
-      op: new Take(i, storage, 2),
+      op: new Take(logConfig, i, storage, 2),
     }),
   });
 

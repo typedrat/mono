@@ -27,6 +27,7 @@ import type {Input, Storage} from '../ivm/operator.js';
 import {Skip} from '../ivm/skip.js';
 import type {Source} from '../ivm/source.js';
 import {Take} from '../ivm/take.js';
+import type {LogConfig} from '../log.ts';
 import {createPredicate, type NoSubqueryCondition} from './filter.js';
 
 export type StaticQueryParameters = {
@@ -77,8 +78,12 @@ export interface BuilderDelegate {
  * const sink = new MySink(input);
  * ```
  */
-export function buildPipeline(ast: AST, delegate: BuilderDelegate): Input {
-  return buildPipelineInternal(ast, delegate);
+export function buildPipeline(
+  logConfig: LogConfig,
+  ast: AST,
+  delegate: BuilderDelegate,
+): Input {
+  return buildPipelineInternal(logConfig, ast, delegate);
 }
 
 export function bindStaticParameters(
@@ -159,6 +164,7 @@ function isParameter(value: ValuePosition): value is Parameter {
 }
 
 function buildPipelineInternal(
+  logConfig: LogConfig,
   ast: AST,
   delegate: BuilderDelegate,
   partitionKey?: CompoundKey | undefined,
@@ -177,20 +183,26 @@ function buildPipelineInternal(
   }
 
   for (const csq of gatherCorrelatedSubqueryQueriesFromCondition(ast.where)) {
-    end = applyCorrelatedSubQuery(csq, delegate, end);
+    end = applyCorrelatedSubQuery(logConfig, csq, delegate, end);
   }
 
   if (ast.where && !fullyAppliedFilters) {
-    end = applyWhere(end, ast.where, delegate);
+    end = applyWhere(logConfig, end, ast.where, delegate);
   }
 
   if (ast.limit) {
-    end = new Take(end, delegate.createStorage(), ast.limit, partitionKey);
+    end = new Take(
+      logConfig,
+      end,
+      delegate.createStorage(),
+      ast.limit,
+      partitionKey,
+    );
   }
 
   if (ast.related) {
     for (const csq of ast.related) {
-      end = applyCorrelatedSubQuery(csq, delegate, end);
+      end = applyCorrelatedSubQuery(logConfig, csq, delegate, end);
     }
   }
 
@@ -198,34 +210,42 @@ function buildPipelineInternal(
 }
 
 function applyWhere(
+  logConfig: LogConfig,
   input: Input,
   condition: Condition,
   delegate: BuilderDelegate,
 ): Input {
   switch (condition.type) {
     case 'and':
-      return applyAnd(input, condition, delegate);
+      return applyAnd(logConfig, input, condition, delegate);
     case 'or':
-      return applyOr(input, condition, delegate);
+      return applyOr(logConfig, input, condition, delegate);
     case 'correlatedSubquery':
-      return applyCorrelatedSubqueryCondition(input, condition, delegate);
+      return applyCorrelatedSubqueryCondition(
+        logConfig,
+        input,
+        condition,
+        delegate,
+      );
     case 'simple':
       return applySimpleCondition(input, condition);
   }
 }
 
 function applyAnd(
+  logConfig: LogConfig,
   input: Input,
   condition: Conjunction,
   delegate: BuilderDelegate,
 ) {
   for (const subCondition of condition.conditions) {
-    input = applyWhere(input, subCondition, delegate);
+    input = applyWhere(logConfig, input, subCondition, delegate);
   }
   return input;
 }
 
 export function applyOr(
+  logConfig: LogConfig,
   input: Input,
   condition: Disjunction,
   delegate: BuilderDelegate,
@@ -245,7 +265,7 @@ export function applyOr(
 
   const fanOut = new FanOut(input);
   const branches = subqueryConditions.map(subCondition =>
-    applyWhere(fanOut, subCondition, delegate),
+    applyWhere(logConfig, fanOut, subCondition, delegate),
   );
   if (otherConditions.length > 0) {
     branches.push(
@@ -294,17 +314,19 @@ function applySimpleCondition(input: Input, condition: SimpleCondition): Input {
 }
 
 function applyCorrelatedSubQuery(
+  logConfig: LogConfig,
   sq: CorrelatedSubquery,
   delegate: BuilderDelegate,
   end: Input,
 ) {
   assert(sq.subquery.alias, 'Subquery must have an alias');
   const child = buildPipelineInternal(
+    logConfig,
     sq.subquery,
     delegate,
     sq.correlation.childField,
   );
-  end = new Join({
+  end = new Join(logConfig, {
     parent: end,
     child,
     storage: delegate.createStorage(),
@@ -318,12 +340,14 @@ function applyCorrelatedSubQuery(
 }
 
 function applyCorrelatedSubqueryCondition(
+  logConfig: LogConfig,
   input: Input,
   condition: CorrelatedSubqueryCondition,
   delegate: BuilderDelegate,
 ): Input {
   assert(condition.op === 'EXISTS' || condition.op === 'NOT EXISTS');
   return new Exists(
+    logConfig,
     input,
     delegate.createStorage(),
     must(condition.related.subquery.alias),

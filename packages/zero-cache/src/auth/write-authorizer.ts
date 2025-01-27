@@ -45,6 +45,7 @@ import type {LiteAndZqlSpec} from '../db/specs.js';
 import {StatementRunner} from '../db/statements.js';
 import {DatabaseStorage} from '../services/view-syncer/database-storage.js';
 import {mapLiteDataTypeToZqlSchemaValue} from '../types/lite.js';
+import type {LogConfig} from '../../../zql/src/log.ts';
 
 type Phase = 'preMutation' | 'postMutation';
 
@@ -70,16 +71,18 @@ export class WriteAuthorizerImpl implements WriteAuthorizer {
   readonly #statementRunner: StatementRunner;
   readonly #lc: LogContext;
   readonly #clientGroupID: string;
+  readonly #logConfig: LogConfig;
 
   constructor(
     lc: LogContext,
-    config: Pick<ZeroConfig, 'storageDBTmpDir'>,
+    config: ZeroConfig,
     schema: Schema,
     permissions: PermissionsConfig | undefined,
     replica: Database,
     cgID: string,
   ) {
     this.#clientGroupID = cgID;
+    this.#logConfig = config.log;
     this.#lc = lc.withContext('class', 'WriteAuthorizerImpl');
     this.#schema = schema;
     this.#permissionsConfig = permissions ?? {};
@@ -228,6 +231,7 @@ export class WriteAuthorizerImpl implements WriteAuthorizer {
     const {columns, primaryKey} = tableSpec.tableSpec;
     assert(primaryKey.length);
     source = new TableSource(
+      this.#logConfig,
       this.#clientGroupID,
       this.#replica,
       tableName,
@@ -455,7 +459,11 @@ export class WriteAuthorizerImpl implements WriteAuthorizer {
       },
     );
 
-    const input = buildPipeline(rowQueryAst, this.#builderDelegate);
+    const input = buildPipeline(
+      this.#logConfig,
+      rowQueryAst,
+      this.#builderDelegate,
+    );
     try {
       const res = input.fetch({});
       for (const _ of res) {

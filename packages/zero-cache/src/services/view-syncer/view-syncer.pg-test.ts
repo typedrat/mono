@@ -55,6 +55,13 @@ import {relationships} from '../../../../zero-schema/src/builder/relationship-bu
 
 const SHARD_ID = 'ABC';
 
+const logConfig = {
+  traceFetch: false,
+  tracePush: false,
+  level: 'error',
+  format: 'text',
+} as const;
+
 const EXPECTED_LMIDS_AST: AST = {
   schema: '',
   table: 'zero_ABC.clients',
@@ -377,6 +384,7 @@ async function setup(permissions: PermissionsConfig = {}) {
     SHARD_ID,
     cvrDB,
     new PipelineDriver(
+      logConfig,
       lc.withContext('component', 'pipeline-driver'),
       new Snapshotter(lc, replicaDbFile.path),
       operatorStorage,

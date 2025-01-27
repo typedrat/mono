@@ -16,6 +16,13 @@ import {CREATE_STORAGE_TABLE, DatabaseStorage} from './database-storage.js';
 import {PipelineDriver} from './pipeline-driver.js';
 import {ResetPipelinesSignal, Snapshotter} from './snapshotter.js';
 
+const logConfig = {
+  traceFetch: false,
+  tracePush: false,
+  level: 'error',
+  format: 'text',
+} as const;
+
 describe('view-syncer/pipeline-driver', () => {
   let dbFile: DbFile;
   let db: DB;
@@ -32,6 +39,7 @@ describe('view-syncer/pipeline-driver', () => {
     storage.prepare(CREATE_STORAGE_TABLE).run();
 
     pipelines = new PipelineDriver(
+      logConfig,
       lc,
       new Snapshotter(lc, dbFile.path),
       new DatabaseStorage(storage).createClientGroupStorage('foo-client-group'),

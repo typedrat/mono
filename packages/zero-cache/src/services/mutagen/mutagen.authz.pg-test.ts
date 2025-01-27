@@ -25,6 +25,7 @@ import {
   string,
   table,
 } from '../../../../zero-schema/src/builder/table-builder.js';
+import type {ZeroConfig} from '../../config/zero-config.ts';
 
 const SHARD_ID = '0';
 const CG_ID = 'abc';
@@ -111,6 +112,13 @@ INSERT INTO "dataTypeTest" (
   '100', '{}', true, 1.1, 100
 );
 `;
+
+const config: ZeroConfig = {
+  log: {
+    traceFetch: false,
+    tracePush: false,
+  },
+} as unknown as ZeroConfig;
 
 async function createUpstreamTables(db: PostgresDB) {
   await db.unsafe(sqlSchema + zeroSchema(SHARD_ID));
@@ -294,7 +302,7 @@ beforeEach(async () => {
   createReplicaTables(replica);
   authorizer = new WriteAuthorizerImpl(
     lc,
-    {},
+    config,
     schema,
     permissionsConfig,
     replica,
