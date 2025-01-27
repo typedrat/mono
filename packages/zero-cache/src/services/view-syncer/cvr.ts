@@ -27,6 +27,10 @@ import {
   type RowID,
   type RowRecord,
 } from './schema/types.js';
+import {startAsyncSpan} from '../../../../otel/src/span.ts';
+import {trace} from '@opentelemetry/api';
+import {version} from '../../../../otel/src/version.ts';
+const tracer = trace.getTracer('view-syncer', version);
 
 export type RowUpdate = {
   version?: string; // Undefined for an unref.
@@ -120,7 +124,7 @@ export class CVRUpdater {
     this._cvrStore.putInstance(this._cvr);
   }
 
-  async flush(
+  flush(
     lc: LogContext,
     lastConnectTime: number,
     lastActive = Date.now(),
@@ -128,24 +132,26 @@ export class CVRUpdater {
     cvr: CVRSnapshot;
     stats: CVRFlushStats;
   }> {
-    const start = Date.now();
+    return startAsyncSpan(tracer, 'CVRUpdater.flush', async () => {
+      const start = Date.now();
 
-    this.#setLastActive(lastActive);
-    const stats = await this._cvrStore.flush(
-      this._orig.version,
-      this._cvr.version,
-      lastConnectTime,
-    );
+      this.#setLastActive(lastActive);
+      const stats = await this._cvrStore.flush(
+        this._orig.version,
+        this._cvr.version,
+        lastConnectTime,
+      );
 
-    lc.debug?.(
-      `flushed cvr@${versionString(this._cvr.version)} ${JSON.stringify(
+      lc.debug?.(
+        `flushed cvr@${versionString(this._cvr.version)} ${JSON.stringify(
+          stats,
+        )} in (${Date.now() - start} ms)`,
+      );
+      return {
+        cvr: this._cvr,
         stats,
-      )} in (${Date.now() - start} ms)`,
-    );
-    return {
-      cvr: this._cvr,
-      stats,
-    };
+      };
+    });
   }
 }
 

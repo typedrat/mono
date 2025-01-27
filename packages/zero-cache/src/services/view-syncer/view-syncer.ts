@@ -735,9 +735,11 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
         transformationHashToHash,
       );
 
-      for (const patch of await updater.deleteUnreferencedRows(lc)) {
-        pokers.forEach(poker => poker.addPatch(patch));
-      }
+      await startAsyncSpan(tracer, 'deleteUnreferencedRows', async () => {
+        for (const patch of await updater.deleteUnreferencedRows(lc)) {
+          pokers.forEach(poker => poker.addPatch(patch));
+        }
+      });
 
       // Commit the changes and update the CVR snapshot.
       this.#cvr = (await updater.flush(lc, this.#lastConnectTime)).cvr;
