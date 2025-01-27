@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1737987901491,
+  "lastUpdate": 1737991714408,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -50789,6 +50789,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 30891,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b12c13e31a65e3b9bc93e23daa49ede9bde5bba9",
+          "message": "chore: Use .ts when importing (#3624)\n\nWe now use the real file name when importing.\r\n\r\nThis is less confusing.",
+          "timestamp": "2025-01-27T15:27:40Z",
+          "tree_id": "f0e3f30baa76ee234f6e377d6beecc26d6525c1d",
+          "url": "https://github.com/rocicorp/mono/commit/b12c13e31a65e3b9bc93e23daa49ede9bde5bba9"
+        },
+        "date": 1737991703756,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 295495,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53229,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 108615,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 30889,
             "unit": "bytes"
           }
         ]
