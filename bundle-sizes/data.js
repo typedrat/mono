@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1737986924083,
+  "lastUpdate": 1737987901491,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -50725,6 +50725,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/4fec77f82ef9b7115b70c3b9dc26cef6d5499c82"
         },
         "date": 1737986913712,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 295495,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53242,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 108615,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 30891,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "475c050b8279ccb922b3eb017d529432d500b709",
+          "message": "chore: Upgrade typescript to 5.7 (#3623)",
+          "timestamp": "2025-01-27T14:23:47Z",
+          "tree_id": "0d7f9e41b9402ce244a823c48ecc22ccf1ce3c7f",
+          "url": "https://github.com/rocicorp/mono/commit/475c050b8279ccb922b3eb017d529432d500b709"
+        },
+        "date": 1737987890821,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
