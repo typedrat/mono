@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1737967467434,
+  "lastUpdate": 1737986924083,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -50691,6 +50691,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.mjs.br (Brotli compressed)",
             "value": 53246,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 108615,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 30891,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4fec77f82ef9b7115b70c3b9dc26cef6d5499c82",
+          "message": "chore: Upgrade esbuild 0.20 -> 0.24 (#3621)",
+          "timestamp": "2025-01-27T15:07:53+01:00",
+          "tree_id": "d3f372d3c3261707627a876885a7ff63fe22a260",
+          "url": "https://github.com/rocicorp/mono/commit/4fec77f82ef9b7115b70c3b9dc26cef6d5499c82"
+        },
+        "date": 1737986913712,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 295495,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53242,
             "unit": "bytes"
           },
           {
