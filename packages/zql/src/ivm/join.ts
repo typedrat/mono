@@ -2,6 +2,7 @@ import {assert, unreachable} from '../../../shared/src/asserts.js';
 import type {CompoundKey, System} from '../../../zero-protocol/src/ast.js';
 import type {Row, Value} from '../../../zero-protocol/src/data.js';
 import type {PrimaryKey} from '../../../zero-protocol/src/primary-key.js';
+import type {LogConfig} from '../log.ts';
 import type {Change, ChildChange} from './change.js';
 import {valuesEqual, type Node} from './data.js';
 import {
@@ -13,6 +14,10 @@ import {
 } from './operator.js';
 import type {SourceSchema} from './schema.js';
 import {take, type Stream} from './stream.js';
+import {version} from '../../../otel/src/version.js';
+import {trace} from '@opentelemetry/api';
+
+const tracer = trace.getTracer('zql', version);
 
 type Args = {
   parent: Input;
@@ -47,24 +52,29 @@ export class Join implements Input {
   readonly #childKey: CompoundKey;
   readonly #relationshipName: string;
   readonly #schema: SourceSchema;
+  readonly #logConfig: LogConfig;
 
   #output: Output = throwOutput;
 
-  constructor({
-    parent,
-    child,
-    storage,
-    parentKey,
-    childKey,
-    relationshipName,
-    hidden,
-    system,
-  }: Args) {
+  constructor(
+    logConfig: LogConfig,
+    {
+      parent,
+      child,
+      storage,
+      parentKey,
+      childKey,
+      relationshipName,
+      hidden,
+      system,
+    }: Args,
+  ) {
     assert(parent !== child, 'Parent and child must be different operators');
     assert(
       parentKey.length === childKey.length,
       'The parentKey and childKey keys must have same length',
     );
+    this.#logConfig = logConfig;
     this.#parent = parent;
     this.#child = child;
     this.#storage = storage;
@@ -108,6 +118,31 @@ export class Join implements Input {
   }
 
   *fetch(req: FetchRequest): Stream<Node> {
+    if (this.#logConfig.traceFetch) {
+      yield* this.#fetchTraced(req);
+    } else {
+      yield* this.#fetchImpl(req);
+    }
+  }
+
+  *#fetchTraced(req: FetchRequest): Stream<Node> {
+    const span = tracer.startSpan('join.fetch', {
+      attributes: {
+        parentTable: this.#parent.getSchema().tableName,
+        parentKey: this.#parentKey.join(','),
+        childKey: this.#childKey.join(','),
+        childTable: this.#child.getSchema().tableName,
+        relationshipName: this.#relationshipName,
+      },
+    });
+    try {
+      yield* this.#fetchImpl(req);
+    } finally {
+      span.end();
+    }
+  }
+
+  *#fetchImpl(req: FetchRequest): Stream<Node> {
     for (const parentNode of this.#parent.fetch(req)) {
       yield this.#processParentNode(
         parentNode.row,

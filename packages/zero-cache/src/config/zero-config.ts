@@ -76,6 +76,22 @@ const logOptions = {
       `Port defaults to 4318 for most collectors.`,
     ],
   },
+
+  traceFetch: {
+    type: v.boolean().optional(),
+    desc: [
+      `Trace fetch calls made by the IVM pipelines.`,
+      `This is expensive tracing and should only be used for debugging.`,
+    ],
+  },
+
+  tracePush: {
+    type: v.boolean().optional(),
+    desc: [
+      `Trace push calls made by the IVM pipelines.`,
+      `This is expensive tracing and should only be used for debugging.`,
+    ],
+  },
 };
 
 export type LogConfig = Config<typeof logOptions>;

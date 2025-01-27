@@ -3,6 +3,7 @@ import {assert, unreachable} from '../../../shared/src/asserts.js';
 import {must} from '../../../shared/src/must.js';
 import type {CompoundKey} from '../../../zero-protocol/src/ast.js';
 import type {Row} from '../../../zero-protocol/src/data.js';
+import type {LogConfig} from '../log.ts';
 import {rowForChange, type Change} from './change.js';
 import {normalizeUndefined, type NormalizedValue} from './data.js';
 import {
@@ -15,9 +16,12 @@ import {
 } from './operator.js';
 import type {SourceSchema} from './schema.js';
 import {first} from './stream.js';
+import {version} from '../../../otel/src/version.js';
+import {trace} from '@opentelemetry/api';
 
 type SizeStorageKey = `row/${string}/${string}`;
 type CacheStorageKey = `row/${string}`;
+const tracer = trace.getTracer('zql', version);
 
 interface ExistsStorage {
   get(key: SizeStorageKey | CacheStorageKey): number | undefined;
@@ -37,16 +41,19 @@ export class Exists implements Operator {
   readonly #not: boolean;
   readonly #parentJoinKey: CompoundKey;
   readonly #skipCache: boolean;
+  readonly #logConfig: LogConfig;
 
   #output: Output = throwOutput;
 
   constructor(
+    logConfig: LogConfig,
     input: Input,
     storage: Storage,
     relationshipName: string,
     parentJoinKey: CompoundKey,
     type: 'EXISTS' | 'NOT EXISTS',
   ) {
+    this.#logConfig = logConfig;
     this.#input = input;
     this.#relationshipName = relationshipName;
     this.#input.setOutput(this);
@@ -75,10 +82,33 @@ export class Exists implements Operator {
   }
 
   *fetch(req: FetchRequest) {
+    if (this.#logConfig.traceFetch) {
+      yield* this.#fetchTraced(req);
+    } else {
+      yield* this.#fetchImpl(req);
+    }
+  }
+
+  *#fetchImpl(req: FetchRequest) {
     for (const node of this.#input.fetch(req)) {
       if (this.#filter(node.row)) {
         yield node;
       }
+    }
+  }
+
+  *#fetchTraced(req: FetchRequest) {
+    const span = tracer.startSpan('exists.fetch', {
+      attributes: {
+        not: this.#not,
+        relationship: this.#relationshipName,
+        parentJoinKey: this.#parentJoinKey.join(','),
+      },
+    });
+    try {
+      yield* this.#fetchImpl(req);
+    } finally {
+      span.end();
     }
   }
 

@@ -4,6 +4,7 @@ import {must} from '../../../shared/src/must.js';
 import type {Row, Value} from '../../../zero-protocol/src/data.js';
 import type {PrimaryKey} from '../../../zero-protocol/src/primary-key.js';
 import {assertOrderingIncludesPK} from '../builder/builder.js';
+import type {LogConfig} from '../log.ts';
 import {
   rowForChange,
   type Change,
@@ -22,8 +23,11 @@ import {
 } from './operator.js';
 import type {SourceSchema} from './schema.js';
 import {first, take, type Stream} from './stream.js';
+import {version} from '../../../otel/src/version.js';
+import {trace} from '@opentelemetry/api';
 
 const MAX_BOUND_KEY = 'maxBound';
+const tracer = trace.getTracer('zql', version);
 
 type TakeState = {
   size: number;
@@ -54,15 +58,18 @@ export class Take implements Operator {
   readonly #limit: number;
   readonly #partitionKey: PartitionKey | undefined;
   readonly #partitionKeyComparator: Comparator | undefined;
+  readonly #logConfig: LogConfig;
 
   #output: Output = throwOutput;
 
   constructor(
+    logConfig: LogConfig,
     input: Input,
     storage: Storage,
     limit: number,
     partitionKey?: PartitionKey | undefined,
   ) {
+    this.#logConfig = logConfig;
     assert(limit >= 0);
     assertOrderingIncludesPK(
       input.getSchema().sort,
@@ -86,6 +93,28 @@ export class Take implements Operator {
   }
 
   *fetch(req: FetchRequest): Stream<Node> {
+    if (this.#logConfig.traceFetch) {
+      yield* this.#fetchTraced(req);
+    } else {
+      yield* this.#fetchImpl(req);
+    }
+  }
+
+  *#fetchTraced(req: FetchRequest): Stream<Node> {
+    const span = tracer.startSpan('Take.fetch', {
+      attributes: {
+        limit: this.#limit,
+        partitionKey: this.#partitionKey?.join(','),
+      },
+    });
+    try {
+      yield* this.#fetchImpl(req);
+    } finally {
+      span.end();
+    }
+  }
+
+  *#fetchImpl(req: FetchRequest): Stream<Node> {
     if (
       !this.#partitionKey ||
       (req.constraint &&

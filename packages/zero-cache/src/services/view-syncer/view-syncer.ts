@@ -4,11 +4,7 @@ import type {LogContext} from '@rocicorp/logger';
 import {resolver} from '@rocicorp/resolver';
 import type {JWTPayload} from 'jose';
 import type {Row} from 'postgres';
-import {
-  manualSpan,
-  startAsyncSpan,
-  startSpan,
-} from '../../../../otel/src/span.js';
+import {startAsyncSpan, startSpan} from '../../../../otel/src/span.js';
 import {version} from '../../../../otel/src/version.js';
 import {assert, unreachable} from '../../../../shared/src/asserts.js';
 import {CustomKeyMap} from '../../../../shared/src/custom-key-map.js';
@@ -715,15 +711,18 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
 
       const pipelines = this.#pipelines;
       function* generateRowChanges() {
-        for (const q of addQueries) {
-          lc.debug?.(`adding pipeline for query ${q.id}`, q.ast);
-          const start = performance.now();
-          yield* pipelines.addQuery(q.transformationHash, q.ast);
-          const end = performance.now();
-          manualSpan(tracer, 'vs.addAndConsumeQuery', end - start, {
-            hash: q.id,
-            transformationHash: q.transformationHash,
-          });
+        const span = tracer.startSpan('vs.generateRowChanges');
+        try {
+          for (const q of addQueries) {
+            lc.debug?.(`adding pipeline for query ${q.id}`, q.ast);
+            yield* pipelines.addQuery(q.transformationHash, q.ast);
+            span.addEvent('addQuery', {
+              hash: q.id,
+              transformationHash: q.transformationHash,
+            });
+          }
+        } finally {
+          span.end();
         }
       }
       // #processChanges does batched de-duping of rows. Wrap all pipelines in

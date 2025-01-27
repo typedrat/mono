@@ -49,6 +49,11 @@ import {Database, Statement} from './db.js';
 import {compile, format, sql} from './internal/sql.js';
 import {StatementCache} from './internal/statement-cache.js';
 import {runtimeDebugFlags, runtimeDebugStats} from './runtime-debug.js';
+import {trace} from '@opentelemetry/api';
+import {version} from '../../otel/src/version.js';
+import type {LogConfig} from '../../zql/src/log.js';
+
+const tracer = trace.getTracer('zql', version);
 
 type Connection = {
   input: Input;
@@ -94,16 +99,19 @@ export class TableSource implements Source {
   readonly #uniqueIndexes: Map<string, Set<string>>;
   readonly #primaryKey: PrimaryKey;
   readonly #clientGroupID: string;
+  readonly #logConfig: LogConfig;
   #stmts: Statements;
   #overlay?: Overlay | undefined;
 
   constructor(
+    logConfig: LogConfig,
     clientGroupID: string,
     db: Database,
     tableName: string,
     columns: Record<string, SchemaValue>,
     primaryKey: readonly [string, ...string[]],
   ) {
+    this.#logConfig = logConfig;
     this.#clientGroupID = clientGroupID;
     this.#table = tableName;
     this.#columns = columns;
@@ -256,6 +264,29 @@ export class TableSource implements Source {
   }
 
   *#fetch(req: FetchRequest, connection: Connection): Stream<Node> {
+    if (this.#logConfig.traceFetch) {
+      yield* this.#fetchTraced(req, connection);
+    } else {
+      yield* this.#fetchImpl(req, connection);
+    }
+  }
+
+  *#fetchTraced(req: FetchRequest, connection: Connection): Stream<Node> {
+    const span = tracer.startSpan('TableSource.fetch', {
+      attributes: {
+        table: this.#table,
+        reverse: req.reverse,
+      },
+    });
+
+    try {
+      yield* this.#fetchImpl(req, connection);
+    } finally {
+      span.end();
+    }
+  }
+
+  *#fetchImpl(req: FetchRequest, connection: Connection): Stream<Node> {
     const {sort} = connection;
 
     const query = this.#requestToSQL(req, connection.filters?.condition, sort);
