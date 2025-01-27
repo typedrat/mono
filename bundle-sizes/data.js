@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1737629488807,
+  "lastUpdate": 1737967467434,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -50657,6 +50657,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 30922,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fab14a182688f17f0b55f3e1154c7e1ad009988f",
+          "message": "fix(replicache): Remove an await in subscriptions fire (#3609)",
+          "timestamp": "2025-01-27T08:43:35Z",
+          "tree_id": "7f0ddae616e7375a5fbb9f3778195f0a6c2383e4",
+          "url": "https://github.com/rocicorp/mono/commit/fab14a182688f17f0b55f3e1154c7e1ad009988f"
+        },
+        "date": 1737967457376,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 295453,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53246,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 108615,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 30891,
             "unit": "bytes"
           }
         ]
