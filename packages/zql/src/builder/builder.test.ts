@@ -95,23 +95,82 @@ test('source-only', () => {
     ),
   );
 
-  expect(sink.fetch()).toEqual([
-    {row: {id: 1, name: 'aaron', recruiterID: null}, relationships: {}},
-    {row: {id: 7, name: 'alex', recruiterID: 1}, relationships: {}},
-    {row: {id: 5, name: 'cesar', recruiterID: 3}, relationships: {}},
-    {row: {id: 6, name: 'darick', recruiterID: 3}, relationships: {}},
-    {row: {id: 2, name: 'erik', recruiterID: 1}, relationships: {}},
-    {row: {id: 3, name: 'greg', recruiterID: 1}, relationships: {}},
-    {row: {id: 4, name: 'matt', recruiterID: 1}, relationships: {}},
-  ]);
+  expect(sink.fetch()).toMatchInlineSnapshot(`
+    [
+      {
+        "relationships": {},
+        "row": {
+          "id": 1,
+          "name": "aaron",
+          "recruiterID": null,
+        },
+      },
+      {
+        "relationships": {},
+        "row": {
+          "id": 7,
+          "name": "alex",
+          "recruiterID": 1,
+        },
+      },
+      {
+        "relationships": {},
+        "row": {
+          "id": 5,
+          "name": "cesar",
+          "recruiterID": 3,
+        },
+      },
+      {
+        "relationships": {},
+        "row": {
+          "id": 6,
+          "name": "darick",
+          "recruiterID": 3,
+        },
+      },
+      {
+        "relationships": {},
+        "row": {
+          "id": 2,
+          "name": "erik",
+          "recruiterID": 1,
+        },
+      },
+      {
+        "relationships": {},
+        "row": {
+          "id": 3,
+          "name": "greg",
+          "recruiterID": 1,
+        },
+      },
+      {
+        "relationships": {},
+        "row": {
+          "id": 4,
+          "name": "matt",
+          "recruiterID": 1,
+        },
+      },
+    ]
+  `);
 
   sources.users.push({type: 'add', row: {id: 8, name: 'sam'}});
-  expect(sink.pushes).toEqual([
-    {
-      type: 'add',
-      node: {row: {id: 8, name: 'sam'}, relationships: {}},
-    },
-  ]);
+  expect(sink.pushes).toMatchInlineSnapshot(`
+    [
+      {
+        "node": {
+          "relationships": {},
+          "row": {
+            "id": 8,
+            "name": "sam",
+          },
+        },
+        "type": "add",
+      },
+    ]
+  `);
 });
 
 test('filter', () => {
@@ -141,27 +200,78 @@ test('filter', () => {
     ),
   );
 
-  expect(sink.fetch()).toEqual([
-    {row: {id: 6, name: 'darick', recruiterID: 3}, relationships: {}},
-    {row: {id: 5, name: 'cesar', recruiterID: 3}, relationships: {}},
-    {row: {id: 4, name: 'matt', recruiterID: 1}, relationships: {}},
-    {row: {id: 3, name: 'greg', recruiterID: 1}, relationships: {}},
-    {row: {id: 2, name: 'erik', recruiterID: 1}, relationships: {}},
-  ]);
+  expect(sink.fetch()).toMatchInlineSnapshot(`
+    [
+      {
+        "relationships": {},
+        "row": {
+          "id": 6,
+          "name": "darick",
+          "recruiterID": 3,
+        },
+      },
+      {
+        "relationships": {},
+        "row": {
+          "id": 5,
+          "name": "cesar",
+          "recruiterID": 3,
+        },
+      },
+      {
+        "relationships": {},
+        "row": {
+          "id": 4,
+          "name": "matt",
+          "recruiterID": 1,
+        },
+      },
+      {
+        "relationships": {},
+        "row": {
+          "id": 3,
+          "name": "greg",
+          "recruiterID": 1,
+        },
+      },
+      {
+        "relationships": {},
+        "row": {
+          "id": 2,
+          "name": "erik",
+          "recruiterID": 1,
+        },
+      },
+    ]
+  `);
 
   sources.users.push({type: 'add', row: {id: 8, name: 'sam'}});
   sources.users.push({type: 'add', row: {id: 9, name: 'abby'}});
   sources.users.push({type: 'remove', row: {id: 8, name: 'sam'}});
-  expect(sink.pushes).toEqual([
-    {
-      type: 'add',
-      node: {row: {id: 8, name: 'sam'}, relationships: {}},
-    },
-    {
-      type: 'remove',
-      node: {row: {id: 8, name: 'sam'}, relationships: {}},
-    },
-  ]);
+  expect(sink.pushes).toMatchInlineSnapshot(`
+    [
+      {
+        "node": {
+          "relationships": {},
+          "row": {
+            "id": 8,
+            "name": "sam",
+          },
+        },
+        "type": "add",
+      },
+      {
+        "node": {
+          "relationships": {},
+          "row": {
+            "id": 8,
+            "name": "sam",
+          },
+        },
+        "type": "remove",
+      },
+    ]
+  `);
 });
 
 test('self-join', () => {
@@ -190,62 +300,134 @@ test('self-join', () => {
     ),
   );
 
-  expect(sink.fetch()).toEqual([
-    {
-      row: {id: 1, name: 'aaron', recruiterID: null},
-      relationships: {
-        recruiter: [],
+  expect(sink.fetch()).toMatchInlineSnapshot(`
+    [
+      {
+        "relationships": {
+          "recruiter": [],
+        },
+        "row": {
+          "id": 1,
+          "name": "aaron",
+          "recruiterID": null,
+        },
       },
-    },
-    {
-      row: {id: 2, name: 'erik', recruiterID: 1},
-      relationships: {
-        recruiter: [
-          {row: {id: 1, name: 'aaron', recruiterID: null}, relationships: {}},
-        ],
+      {
+        "relationships": {
+          "recruiter": [
+            {
+              "relationships": {},
+              "row": {
+                "id": 1,
+                "name": "aaron",
+                "recruiterID": null,
+              },
+            },
+          ],
+        },
+        "row": {
+          "id": 2,
+          "name": "erik",
+          "recruiterID": 1,
+        },
       },
-    },
-    {
-      row: {id: 3, name: 'greg', recruiterID: 1},
-      relationships: {
-        recruiter: [
-          {row: {id: 1, name: 'aaron', recruiterID: null}, relationships: {}},
-        ],
+      {
+        "relationships": {
+          "recruiter": [
+            {
+              "relationships": {},
+              "row": {
+                "id": 1,
+                "name": "aaron",
+                "recruiterID": null,
+              },
+            },
+          ],
+        },
+        "row": {
+          "id": 3,
+          "name": "greg",
+          "recruiterID": 1,
+        },
       },
-    },
-    {
-      row: {id: 4, name: 'matt', recruiterID: 1},
-      relationships: {
-        recruiter: [
-          {row: {id: 1, name: 'aaron', recruiterID: null}, relationships: {}},
-        ],
+      {
+        "relationships": {
+          "recruiter": [
+            {
+              "relationships": {},
+              "row": {
+                "id": 1,
+                "name": "aaron",
+                "recruiterID": null,
+              },
+            },
+          ],
+        },
+        "row": {
+          "id": 4,
+          "name": "matt",
+          "recruiterID": 1,
+        },
       },
-    },
-    {
-      row: {id: 5, name: 'cesar', recruiterID: 3},
-      relationships: {
-        recruiter: [
-          {row: {id: 3, name: 'greg', recruiterID: 1}, relationships: {}},
-        ],
+      {
+        "relationships": {
+          "recruiter": [
+            {
+              "relationships": {},
+              "row": {
+                "id": 3,
+                "name": "greg",
+                "recruiterID": 1,
+              },
+            },
+          ],
+        },
+        "row": {
+          "id": 5,
+          "name": "cesar",
+          "recruiterID": 3,
+        },
       },
-    },
-    {
-      row: {id: 6, name: 'darick', recruiterID: 3},
-      relationships: {
-        recruiter: [
-          {row: {id: 3, name: 'greg', recruiterID: 1}, relationships: {}},
-        ],
+      {
+        "relationships": {
+          "recruiter": [
+            {
+              "relationships": {},
+              "row": {
+                "id": 3,
+                "name": "greg",
+                "recruiterID": 1,
+              },
+            },
+          ],
+        },
+        "row": {
+          "id": 6,
+          "name": "darick",
+          "recruiterID": 3,
+        },
       },
-    },
-    {
-      row: {id: 7, name: 'alex', recruiterID: 1},
-      relationships: {
-        recruiter: [
-          {row: {id: 1, name: 'aaron', recruiterID: null}, relationships: {}},
-        ],
+      {
+        "relationships": {
+          "recruiter": [
+            {
+              "relationships": {},
+              "row": {
+                "id": 1,
+                "name": "aaron",
+                "recruiterID": null,
+              },
+            },
+          ],
+        },
+        "row": {
+          "id": 7,
+          "name": "alex",
+          "recruiterID": 1,
+        },
       },
-    },
-  ]);
+    ]
+  `);
 
   sources.users.push({type: 'add', row: {id: 8, name: 'sam', recruiterID: 2}});
   sources.users.push({type: 'add', row: {id: 9, name: 'abby', recruiterID: 8}});
@@ -255,74 +437,142 @@ test('self-join', () => {
   });
   sources.users.push({type: 'add', row: {id: 8, name: 'sam', recruiterID: 3}});
 
-  expect(sink.pushes).toEqual([
-    {
-      type: 'add',
-      node: {
-        row: {id: 8, name: 'sam', recruiterID: 2},
-        relationships: {
-          recruiter: [
-            {row: {id: 2, name: 'erik', recruiterID: 1}, relationships: {}},
-          ],
+  expect(sink.pushes).toMatchInlineSnapshot(`
+    [
+      {
+        "node": {
+          "relationships": {
+            "recruiter": [
+              {
+                "relationships": {},
+                "row": {
+                  "id": 2,
+                  "name": "erik",
+                  "recruiterID": 1,
+                },
+              },
+            ],
+          },
+          "row": {
+            "id": 8,
+            "name": "sam",
+            "recruiterID": 2,
+          },
         },
+        "type": "add",
       },
-    },
-    {
-      type: 'add',
-      node: {
-        row: {id: 9, name: 'abby', recruiterID: 8},
-        relationships: {
-          recruiter: [
-            {row: {id: 8, name: 'sam', recruiterID: 2}, relationships: {}},
-          ],
+      {
+        "node": {
+          "relationships": {
+            "recruiter": [
+              {
+                "relationships": {},
+                "row": {
+                  "id": 8,
+                  "name": "sam",
+                  "recruiterID": 2,
+                },
+              },
+            ],
+          },
+          "row": {
+            "id": 9,
+            "name": "abby",
+            "recruiterID": 8,
+          },
         },
+        "type": "add",
       },
-    },
-    {
-      type: 'remove',
-      node: {
-        row: {id: 8, name: 'sam', recruiterID: 2},
-        relationships: {
-          recruiter: [
-            {row: {id: 2, name: 'erik', recruiterID: 1}, relationships: {}},
-          ],
+      {
+        "node": {
+          "relationships": {
+            "recruiter": [
+              {
+                "relationships": {},
+                "row": {
+                  "id": 2,
+                  "name": "erik",
+                  "recruiterID": 1,
+                },
+              },
+            ],
+          },
+          "row": {
+            "id": 8,
+            "name": "sam",
+            "recruiterID": 2,
+          },
         },
+        "type": "remove",
       },
-    },
-    {
-      type: 'child',
-      row: {id: 9, name: 'abby', recruiterID: 8},
-      child: {
-        relationshipName: 'recruiter',
-        change: {
-          type: 'remove',
-          node: {row: {id: 8, name: 'sam', recruiterID: 2}, relationships: {}},
+      {
+        "child": {
+          "change": {
+            "node": {
+              "relationships": {},
+              "row": {
+                "id": 8,
+                "name": "sam",
+                "recruiterID": 2,
+              },
+            },
+            "type": "remove",
+          },
+          "relationshipName": "recruiter",
         },
-      },
-    },
-    {
-      type: 'add',
-      node: {
-        row: {id: 8, name: 'sam', recruiterID: 3},
-        relationships: {
-          recruiter: [
-            {row: {id: 3, name: 'greg', recruiterID: 1}, relationships: {}},
-          ],
+        "row": {
+          "id": 9,
+          "name": "abby",
+          "recruiterID": 8,
         },
+        "type": "child",
       },
-    },
-    {
-      type: 'child',
-      row: {id: 9, name: 'abby', recruiterID: 8},
-      child: {
-        relationshipName: 'recruiter',
-        change: {
-          type: 'add',
-          node: {row: {id: 8, name: 'sam', recruiterID: 3}, relationships: {}},
+      {
+        "node": {
+          "relationships": {
+            "recruiter": [
+              {
+                "relationships": {},
+                "row": {
+                  "id": 3,
+                  "name": "greg",
+                  "recruiterID": 1,
+                },
+              },
+            ],
+          },
+          "row": {
+            "id": 8,
+            "name": "sam",
+            "recruiterID": 3,
+          },
         },
+        "type": "add",
       },
-    },
-  ]);
+      {
+        "child": {
+          "change": {
+            "node": {
+              "relationships": {},
+              "row": {
+                "id": 8,
+                "name": "sam",
+                "recruiterID": 3,
+              },
+            },
+            "type": "add",
+          },
+          "relationshipName": "recruiter",
+        },
+        "row": {
+          "id": 9,
+          "name": "abby",
+          "recruiterID": 8,
+        },
+        "type": "child",
+      },
+    ]
+  `);
 });
 
 test('self-join edit', () => {
@@ -525,67 +775,127 @@ test('multi-join', () => {
     ),
   );
 
-  expect(sink.fetch()).toEqual([
-    {
-      row: {id: 1, name: 'aaron', recruiterID: null},
-      relationships: {
-        userStates: [
-          {
-            row: {userID: 1, stateCode: 'HI'},
-            relationships: {
-              states: [{row: {code: 'HI'}, relationships: {}}],
+  expect(sink.fetch()).toMatchInlineSnapshot(`
+    [
+      {
+        "relationships": {
+          "userStates": [
+            {
+              "relationships": {
+                "states": [
+                  {
+                    "relationships": {},
+                    "row": {
+                      "code": "HI",
+                    },
+                  },
+                ],
+              },
+              "row": {
+                "stateCode": "HI",
+                "userID": 1,
+              },
             },
-          },
-        ],
+          ],
+        },
+        "row": {
+          "id": 1,
+          "name": "aaron",
+          "recruiterID": null,
+        },
       },
-    },
-    {
-      row: {id: 2, name: 'erik', recruiterID: 1},
-      relationships: {
-        userStates: [],
+      {
+        "relationships": {
+          "userStates": [],
+        },
+        "row": {
+          "id": 2,
+          "name": "erik",
+          "recruiterID": 1,
+        },
       },
-    },
-    {
-      row: {id: 3, name: 'greg', recruiterID: 1},
-      relationships: {
-        userStates: [
-          {
-            row: {userID: 3, stateCode: 'AZ'},
-            relationships: {
-              states: [{row: {code: 'AZ'}, relationships: {}}],
+      {
+        "relationships": {
+          "userStates": [
+            {
+              "relationships": {
+                "states": [
+                  {
+                    "relationships": {},
+                    "row": {
+                      "code": "AZ",
+                    },
+                  },
+                ],
+              },
+              "row": {
+                "stateCode": "AZ",
+                "userID": 3,
+              },
             },
-          },
-          {
-            row: {userID: 3, stateCode: 'CA'},
-            relationships: {
-              states: [{row: {code: 'CA'}, relationships: {}}],
+            {
+              "relationships": {
+                "states": [
+                  {
+                    "relationships": {},
+                    "row": {
+                      "code": "CA",
+                    },
+                  },
+                ],
+              },
+              "row": {
+                "stateCode": "CA",
+                "userID": 3,
+              },
             },
-          },
-        ],
+          ],
+        },
+        "row": {
+          "id": 3,
+          "name": "greg",
+          "recruiterID": 1,
+        },
       },
-    },
-  ]);
+    ]
+  `);
 
   sources.userStates.push({type: 'add', row: {userID: 2, stateCode: 'HI'}});
 
-  expect(sink.pushes).toEqual([
-    {
-      type: 'child',
-      row: {id: 2, name: 'erik', recruiterID: 1},
-      child: {
-        relationshipName: 'userStates',
-        change: {
-          type: 'add',
-          node: {
-            row: {userID: 2, stateCode: 'HI'},
-            relationships: {
-              states: [{row: {code: 'HI'}, relationships: {}}],
+  expect(sink.pushes).toMatchInlineSnapshot(`
+    [
+      {
+        "child": {
+          "change": {
+            "node": {
+              "relationships": {
+                "states": [
+                  {
+                    "relationships": {},
+                    "row": {
+                      "code": "HI",
+                    },
+                  },
+                ],
+              },
+              "row": {
+                "stateCode": "HI",
+                "userID": 2,
+              },
             },
+            "type": "add",
           },
+          "relationshipName": "userStates",
         },
+        "row": {
+          "id": 2,
+          "name": "erik",
+          "recruiterID": 1,
+        },
+        "type": "child",
       },
-    },
-  ]);
+    ]
+  `);
 });
 
 test('join with limit', () => {
@@ -633,61 +943,111 @@ test('join with limit', () => {
     ),
   );
 
-  expect(sink.fetch()).toEqual([
-    {
-      row: {id: 1, name: 'aaron', recruiterID: null},
-      relationships: {
-        userStates: [
-          {
-            row: {userID: 1, stateCode: 'HI'},
-            relationships: {
-              states: [{row: {code: 'HI'}, relationships: {}}],
+  expect(sink.fetch()).toMatchInlineSnapshot(`
+    [
+      {
+        "relationships": {
+          "userStates": [
+            {
+              "relationships": {
+                "states": [
+                  {
+                    "relationships": {},
+                    "row": {
+                      "code": "HI",
+                    },
+                  },
+                ],
+              },
+              "row": {
+                "stateCode": "HI",
+                "userID": 1,
+              },
             },
-          },
-        ],
+          ],
+        },
+        "row": {
+          "id": 1,
+          "name": "aaron",
+          "recruiterID": null,
+        },
       },
-    },
-    {
-      row: {id: 2, name: 'erik', recruiterID: 1},
-      relationships: {
-        userStates: [],
+      {
+        "relationships": {
+          "userStates": [],
+        },
+        "row": {
+          "id": 2,
+          "name": "erik",
+          "recruiterID": 1,
+        },
       },
-    },
-    {
-      row: {id: 3, name: 'greg', recruiterID: 1},
-      relationships: {
-        userStates: [
-          {
-            row: {userID: 3, stateCode: 'AZ'},
-            relationships: {
-              states: [{row: {code: 'AZ'}, relationships: {}}],
+      {
+        "relationships": {
+          "userStates": [
+            {
+              "relationships": {
+                "states": [
+                  {
+                    "relationships": {},
+                    "row": {
+                      "code": "AZ",
+                    },
+                  },
+                ],
+              },
+              "row": {
+                "stateCode": "AZ",
+                "userID": 3,
+              },
             },
-          },
-        ],
+          ],
+        },
+        "row": {
+          "id": 3,
+          "name": "greg",
+          "recruiterID": 1,
+        },
       },
-    },
-  ]);
+    ]
+  `);
 
   sources.userStates.push({type: 'add', row: {userID: 2, stateCode: 'HI'}});
 
-  expect(sink.pushes).toEqual([
-    {
-      type: 'child',
-      row: {id: 2, name: 'erik', recruiterID: 1},
-      child: {
-        relationshipName: 'userStates',
-        change: {
-          type: 'add',
-          node: {
-            row: {userID: 2, stateCode: 'HI'},
-            relationships: {
-              states: [{row: {code: 'HI'}, relationships: {}}],
+  expect(sink.pushes).toMatchInlineSnapshot(`
+    [
+      {
+        "child": {
+          "change": {
+            "node": {
+              "relationships": {
+                "states": [
+                  {
+                    "relationships": {},
+                    "row": {
+                      "code": "HI",
+                    },
+                  },
+                ],
+              },
+              "row": {
+                "stateCode": "HI",
+                "userID": 2,
+              },
             },
+            "type": "add",
           },
+          "relationshipName": "userStates",
         },
+        "row": {
+          "id": 2,
+          "name": "erik",
+          "recruiterID": 1,
+        },
+        "type": "child",
       },
-    },
-  ]);
+    ]
+  `);
 });
 
 test('skip', () => {
@@ -706,20 +1066,58 @@ test('skip', () => {
     ),
   );
 
-  expect(sink.fetch()).toEqual([
-    {row: {id: 4, name: 'matt', recruiterID: 1}, relationships: {}},
-    {row: {id: 5, name: 'cesar', recruiterID: 3}, relationships: {}},
-    {row: {id: 6, name: 'darick', recruiterID: 3}, relationships: {}},
-    {row: {id: 7, name: 'alex', recruiterID: 1}, relationships: {}},
-  ]);
+  expect(sink.fetch()).toMatchInlineSnapshot(`
+    [
+      {
+        "relationships": {},
+        "row": {
+          "id": 4,
+          "name": "matt",
+          "recruiterID": 1,
+        },
+      },
+      {
+        "relationships": {},
+        "row": {
+          "id": 5,
+          "name": "cesar",
+          "recruiterID": 3,
+        },
+      },
+      {
+        "relationships": {},
+        "row": {
+          "id": 6,
+          "name": "darick",
+          "recruiterID": 3,
+        },
+      },
+      {
+        "relationships": {},
+        "row": {
+          "id": 7,
+          "name": "alex",
+          "recruiterID": 1,
+        },
+      },
+    ]
+  `);
 
   sources.users.push({type: 'add', row: {id: 8, name: 'sam'}});
-  expect(sink.pushes).toEqual([
-    {
-      type: 'add',
-      node: {row: {id: 8, name: 'sam'}, relationships: {}},
-    },
-  ]);
+  expect(sink.pushes).toMatchInlineSnapshot(`
+    [
+      {
+        "node": {
+          "relationships": {},
+          "row": {
+            "id": 8,
+            "name": "sam",
+          },
+        },
+        "type": "add",
+      },
+    ]
+  `);
 });
 
 test('exists junction', () => {
@@ -1445,10 +1843,10 @@ test('empty or - nothing goes through', () => {
     ),
   );
 
-  expect(sink.fetch()).toEqual([]);
+  expect(sink.fetch()).toMatchInlineSnapshot(`[]`);
 
   sources.users.push({type: 'add', row: {id: 8, name: 'sam'}});
-  expect(sink.pushes).toEqual([]);
+  expect(sink.pushes).toMatchInlineSnapshot(`[]`);
 });
 
 test('empty and - everything goes through', () => {
@@ -1473,18 +1871,20 @@ test('empty and - everything goes through', () => {
   expect(sink.fetch().length).toEqual(7);
 
   sources.users.push({type: 'add', row: {id: 8, name: 'sam'}});
-  expect(sink.pushes).toEqual([
-    {
-      node: {
-        relationships: {},
-        row: {
-          id: 8,
-          name: 'sam',
+  expect(sink.pushes).toMatchInlineSnapshot(`
+    [
+      {
+        "node": {
+          "relationships": {},
+          "row": {
+            "id": 8,
+            "name": "sam",
+          },
         },
+        "type": "add",
       },
-      type: 'add',
-    },
-  ]);
+    ]
+  `);
 });
 
 test('always false literal comparison - nothing goes through', () => {
@@ -1514,10 +1914,10 @@ test('always false literal comparison - nothing goes through', () => {
     ),
   );
 
-  expect(sink.fetch()).toEqual([]);
+  expect(sink.fetch()).toMatchInlineSnapshot(`[]`);
 
   sources.users.push({type: 'add', row: {id: 8, name: 'sam'}});
-  expect(sink.pushes).toEqual([]);
+  expect(sink.pushes).toMatchInlineSnapshot(`[]`);
 });
 
 test('always true literal comparison - everything goes through', () => {
@@ -1547,78 +1947,82 @@ test('always true literal comparison - everything goes through', () => {
     ),
   );
 
-  expect(sink.fetch()).toEqual([
-    {
-      relationships: {},
-      row: {
-        id: 1,
-        name: 'aaron',
-        recruiterID: null,
-      },
-    },
-    {
-      relationships: {},
-      row: {
-        id: 2,
-        name: 'erik',
-        recruiterID: 1,
-      },
-    },
-    {
-      relationships: {},
-      row: {
-        id: 3,
-        name: 'greg',
-        recruiterID: 1,
-      },
-    },
-    {
-      relationships: {},
-      row: {
-        id: 4,
-        name: 'matt',
-        recruiterID: 1,
-      },
-    },
-    {
-      relationships: {},
-      row: {
-        id: 5,
-        name: 'cesar',
-        recruiterID: 3,
-      },
-    },
-    {
-      relationships: {},
-      row: {
-        id: 6,
-        name: 'darick',
-        recruiterID: 3,
-      },
-    },
-    {
-      relationships: {},
-      row: {
-        id: 7,
-        name: 'alex',
-        recruiterID: 1,
-      },
-    },
-  ]);
-
-  sources.users.push({type: 'add', row: {id: 8, name: 'sam'}});
-  expect(sink.pushes).toEqual([
-    {
-      node: {
-        relationships: {},
-        row: {
-          id: 8,
-          name: 'sam',
+  expect(sink.fetch()).toMatchInlineSnapshot(`
+    [
+      {
+        "relationships": {},
+        "row": {
+          "id": 1,
+          "name": "aaron",
+          "recruiterID": null,
         },
       },
-      type: 'add',
-    },
-  ]);
+      {
+        "relationships": {},
+        "row": {
+          "id": 2,
+          "name": "erik",
+          "recruiterID": 1,
+        },
+      },
+      {
+        "relationships": {},
+        "row": {
+          "id": 3,
+          "name": "greg",
+          "recruiterID": 1,
+        },
+      },
+      {
+        "relationships": {},
+        "row": {
+          "id": 4,
+          "name": "matt",
+          "recruiterID": 1,
+        },
+      },
+      {
+        "relationships": {},
+        "row": {
+          "id": 5,
+          "name": "cesar",
+          "recruiterID": 3,
+        },
+      },
+      {
+        "relationships": {},
+        "row": {
+          "id": 6,
+          "name": "darick",
+          "recruiterID": 3,
+        },
+      },
+      {
+        "relationships": {},
+        "row": {
+          "id": 7,
+          "name": "alex",
+          "recruiterID": 1,
+        },
+      },
+    ]
+  `);
+
+  sources.users.push({type: 'add', row: {id: 8, name: 'sam'}});
+  expect(sink.pushes).toMatchInlineSnapshot(`
+    [
+      {
+        "node": {
+          "relationships": {},
+          "row": {
+            "id": 8,
+            "name": "sam",
+          },
+        },
+        "type": "add",
+      },
+    ]
+  `);
 });
 
 test('groupSubqueryConditions', () => {
