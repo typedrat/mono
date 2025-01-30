@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1737993086097,
+  "lastUpdate": 1738237133103,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -50857,6 +50857,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/f247a98d0d66e577c83616d691e00b462efb12b9"
         },
         "date": 1737993075763,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 295495,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53229,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 108615,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 30889,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1e43c9a560a328a1ff564fa226ccd2fcaeecdce0",
+          "message": "chore(zero-client)!: Reduce exports (#3644)\n\nWe do not need to expose these Replicache types...\r\n\r\nThis triggered a yak shave...\r\n\r\nAdd eslint rule to disable importing mod.ts and fix all the files.",
+          "timestamp": "2025-01-30T11:37:46Z",
+          "tree_id": "c38a0b50c9fb87fd2263cbf5f43e853f261bf810",
+          "url": "https://github.com/rocicorp/mono/commit/1e43c9a560a328a1ff564fa226ccd2fcaeecdce0"
+        },
+        "date": 1738237122029,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
