@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738324276289,
+  "lastUpdate": 1738330885464,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -50945,6 +50945,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/0780b640e989f8783979e7c07168466455f82f13"
         },
         "date": 1738324265064,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 295617,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53250,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 108520,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 30896,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7b385b27a14922431d94cffe6bc4491420e278d9",
+          "message": "chore(replicache): Fix docusaurus build (#3667)",
+          "timestamp": "2025-01-31T13:40:30Z",
+          "tree_id": "e79bb41dd252b8ab11f3930b514ac3d18cbc4965",
+          "url": "https://github.com/rocicorp/mono/commit/7b385b27a14922431d94cffe6bc4491420e278d9"
+        },
+        "date": 1738330874240,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
