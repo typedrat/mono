@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738330885464,
+  "lastUpdate": 1738363458340,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -50989,6 +50989,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/7b385b27a14922431d94cffe6bc4491420e278d9"
         },
         "date": 1738330874240,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 295617,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53250,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 108520,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 30896,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "652f89a6488ae5000662a3fb50348a9c7850d719",
+          "message": "chore: Move replicache/doc to replicache-doc (#3678)\n\nAnd upgrade packages",
+          "timestamp": "2025-01-31T22:43:12Z",
+          "tree_id": "a5c1eba5b251724092ec4f47d3efa6e8dd38e5aa",
+          "url": "https://github.com/rocicorp/mono/commit/652f89a6488ae5000662a3fb50348a9c7850d719"
+        },
+        "date": 1738363447214,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
