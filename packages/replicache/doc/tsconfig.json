@@ -1,4 +1,30 @@
 {
-  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "Node16",
+    "verbatimModuleSyntax": true,
+    "allowImportingTsExtensions": true,
+    "esModuleInterop": true,
+    "moduleResolution": "Node16",
+    "moduleDetection": "force",
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "declaration": true,
+    "noEmit": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowJs": true,
+    "preserveSymlinks": true,
+    "types": [],
+    "resolveJsonModule": true,
+    "incremental": true,
+    "skipLibCheck": true
+  },
+
   "include": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"]
 }
