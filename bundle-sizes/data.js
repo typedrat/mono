@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738237133103,
+  "lastUpdate": 1738324276289,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -50921,6 +50921,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 30889,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0780b640e989f8783979e7c07168466455f82f13",
+          "message": "chore(replicache): Add onClientsDeleted callback (#3666)\n\nReplicache has 3 different gc processes:\r\n\r\n- Collect IDB (also applies to mem if you keep your browser open long enough)\r\n  - When this happens we look at all the clients in the store before deleting it and call the callback.\r\n- Collect Client:\r\n  - When a client gets collected we call the callback\r\n- Collect Client Group:\r\n  - A client group is only collected if it no longer has any clients in it so there is nothing to do in this case.\r\n\r\n\r\nThis callback will be used in Zero to tell the server about the deleted clients.",
+          "timestamp": "2025-01-31T12:50:19+01:00",
+          "tree_id": "d838d1a144311489e388a5650d7caae565593778",
+          "url": "https://github.com/rocicorp/mono/commit/0780b640e989f8783979e7c07168466455f82f13"
+        },
+        "date": 1738324265064,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 295617,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53250,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 108520,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 30896,
             "unit": "bytes"
           }
         ]
