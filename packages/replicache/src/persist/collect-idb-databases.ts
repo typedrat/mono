@@ -94,9 +94,7 @@ export async function collectIDBDatabases(
   for (const [dbName, [canCollect, clientIDs]] of collectResults) {
     if (canCollect) {
       dbNamesToRemove.push(dbName);
-      // replicache/docs uses as an old version of TypeScript that doesn't infer
-      // the type of `clientIDs` correctly. We need to cast it to `ClientID[]`.
-      clientIDsToRemove.push(...(clientIDs as ClientID[]));
+      clientIDsToRemove.push(...clientIDs);
     }
   }
 
