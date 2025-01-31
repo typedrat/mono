@@ -1,0 +1,21 @@
+{
+  "name": "zero-sst",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "scripts": {
+    "format": "prettier --write .",
+    "check-format": "prettier --check ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "sst": "3.6.7"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "8.10.147",
+    "prettier": "@rocicorp/prettier-config"
+  }
+}
