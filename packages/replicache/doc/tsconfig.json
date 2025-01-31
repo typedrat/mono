@@ -1,3 +1,5 @@
+// This is not using extends because Docusaurus uses an old version of
+// TypeScript
 {
   "compilerOptions": {
     "target": "es2022",
