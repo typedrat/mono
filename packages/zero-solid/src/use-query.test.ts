@@ -47,6 +47,7 @@ test('useQuery', async () => {
   await 1;
 
   ms.push({row: {a: 3, b: 'c'}, type: 'add'});
+  queryDelegate.commit();
 
   expect(rows()).toEqual([
     {a: 1, b: 'a'},
@@ -102,7 +103,7 @@ test('useQuery deps change', async () => {
 });
 
 test('useQuery deps change testEffect', () => {
-  const {ms, tableQuery} = setupTestEnvironment();
+  const {ms, tableQuery, queryDelegate} = setupTestEnvironment();
   const [a, setA] = createSignal(1);
   const [rows] = useQuery(() => tableQuery.where('a', a()));
   return testEffect(done =>
@@ -110,6 +111,7 @@ test('useQuery deps change testEffect', () => {
       if (run === 0) {
         expect(rows()).toEqual([{a: 1, b: 'a'}]);
         ms.push({type: 'edit', oldRow: {a: 1, b: 'a'}, row: {a: 1, b: 'a2'}});
+        queryDelegate.commit();
       } else if (run === 1) {
         expect(rows()).toEqual([{a: 1, b: 'a2'}]);
         setA(2);
