@@ -1,6 +1,6 @@
 import {
   createStore,
-  produce,
+  reconcile,
   type SetStoreFunction,
   type Store,
 } from 'solid-js/store';
@@ -31,10 +31,9 @@ export class SolidView<V> implements Output {
   readonly #format: Format;
   readonly #onDestroy: () => void;
 
+  #draftState: State;
   #state: Store<State>;
   #setState: SetStoreFunction<State>;
-
-  #pendingChanges: Change[] = [];
 
   constructor(
     input: Input,
@@ -47,13 +46,29 @@ export class SolidView<V> implements Output {
     onTransactionCommit(this.#onTransactionCommit);
     this.#format = format;
     this.#onDestroy = onDestroy;
+    this.#draftState = [
+      {'': format.singular ? undefined : []},
+      queryComplete === true ? complete : unknown,
+    ];
     [this.#state, this.#setState] = createStore<State>([
       {'': format.singular ? undefined : []},
       queryComplete === true ? complete : unknown,
     ]);
     input.setOutput(this);
 
-    this.#applyChanges(input.fetch({}), node => ({type: 'add', node}));
+    for (const node of input.fetch({})) {
+      applyChange(
+        this.#draftState[0],
+        {
+          type: 'add',
+          node,
+        },
+        this.#input.getSchema(),
+        '',
+        this.#format,
+      );
+    }
+    this.#setState(reconcile(this.#draftState));
 
     if (queryComplete !== true) {
       void queryComplete.then(() => {
@@ -75,32 +90,17 @@ export class SolidView<V> implements Output {
   }
 
   #onTransactionCommit = () => {
-    this.#applyChanges(this.#pendingChanges, c => c);
+    this.#setState(reconcile(this.#draftState));
   };
 
-  #applyChanges<T>(changes: Iterable<T>, mapper: (v: T) => Change): void {
-    try {
-      this.#setState(
-        produce((draftState: State) => {
-          for (const change of changes) {
-            applyChange(
-              draftState[0],
-              mapper(change),
-              this.#input.getSchema(),
-              '',
-              this.#format,
-            );
-          }
-        }),
-      );
-    } finally {
-      this.#pendingChanges = [];
-    }
-  }
-
   push(change: Change): void {
-    // Delay setting the state until the transaction commit.
-    this.#pendingChanges.push(change);
+    applyChange(
+      this.#draftState[0],
+      change,
+      this.#input.getSchema(),
+      '',
+      this.#format,
+    );
   }
 }
 
