@@ -16,12 +16,12 @@ import {
   type ViewFactory,
 } from '../../zero/src/advanced.ts';
 import type {ResultType, Schema} from '../../zero/src/zero.ts';
+import {deepClone} from '../../shared/src/deep-clone.ts';
+import {createSignal} from 'solid-js';
 
 export type QueryResultDetails = {
   readonly type: ResultType;
 };
-
-type State = [Entry, QueryResultDetails];
 
 const complete = {type: 'complete'} as const;
 const unknown = {type: 'unknown'} as const;
@@ -31,9 +31,12 @@ export class SolidView<V> implements Output {
   readonly #format: Format;
   readonly #onDestroy: () => void;
 
-  #draftState: State;
-  #state: Store<State>;
-  #setState: SetStoreFunction<State>;
+  // Synthetic "root" entry that has a single "" relationship, so that we can
+  // treat all changes, including the root change, generically.
+  #root: Entry;
+  #rootStore: Store<Entry>;
+  #setRootStore: SetStoreFunction<Entry>;
+  #resultDetails: () => QueryResultDetails;
 
   constructor(
     input: Input,
@@ -46,19 +49,12 @@ export class SolidView<V> implements Output {
     onTransactionCommit(this.#onTransactionCommit);
     this.#format = format;
     this.#onDestroy = onDestroy;
-    this.#draftState = [
-      {'': format.singular ? undefined : []},
-      queryComplete === true ? complete : unknown,
-    ];
-    [this.#state, this.#setState] = createStore<State>([
-      {'': format.singular ? undefined : []},
-      queryComplete === true ? complete : unknown,
-    ]);
+    this.#root = {'': format.singular ? undefined : []};
     input.setOutput(this);
 
     for (const node of input.fetch({})) {
       applyChange(
-        this.#draftState[0],
+        this.#root,
         {
           type: 'add',
           node,
@@ -68,21 +64,28 @@ export class SolidView<V> implements Output {
         this.#format,
       );
     }
-    this.#setState(reconcile(this.#draftState));
+
+    [this.#rootStore, this.#setRootStore] = createStore<Entry>(
+      deepClone(this.#root) as Entry,
+    );
+    const [resultDetails, setResultDetails] = createSignal<QueryResultDetails>(
+      queryComplete === true ? complete : unknown,
+    );
+    this.#resultDetails = resultDetails;
 
     if (queryComplete !== true) {
       void queryComplete.then(() => {
-        this.#setState(oldState => [oldState[0], complete]);
+        setResultDetails(complete);
       });
     }
   }
 
   get data(): V {
-    return this.#state[0][''] as V;
+    return this.#rootStore[''] as V;
   }
 
   get resultDetails(): QueryResultDetails {
-    return this.#state[1];
+    return this.#resultDetails();
   }
 
   destroy(): void {
@@ -90,17 +93,11 @@ export class SolidView<V> implements Output {
   }
 
   #onTransactionCommit = () => {
-    this.#setState(reconcile(this.#draftState));
+    this.#setRootStore(reconcile(this.#root));
   };
 
   push(change: Change): void {
-    applyChange(
-      this.#draftState[0],
-      change,
-      this.#input.getSchema(),
-      '',
-      this.#format,
-    );
+    applyChange(this.#root, change, this.#input.getSchema(), '', this.#format);
   }
 }
 
