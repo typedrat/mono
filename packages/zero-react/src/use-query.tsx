@@ -23,19 +23,38 @@ export function useQuery<
   TReturn,
 >(
   q: Query<TSchema, TTable, TReturn>,
-  enable: boolean = true,
+  enableOrOptions:
+    | boolean
+    | {
+        enable?: boolean | undefined;
+        serverSnapshot: TReturn | undefined;
+      }
+    | undefined = true,
 ): QueryResult<TReturn> {
   const z = useZero();
+  const enable =
+    typeof enableOrOptions === 'boolean'
+      ? enableOrOptions
+      : enableOrOptions.enable ?? false;
+  const options =
+    typeof enableOrOptions === 'boolean' ? undefined : enableOrOptions;
+  const serverSnapshot = options?.serverSnapshot;
   const view = viewStore.getView(
     z.clientID,
     q as AdvancedQuery<TSchema, TTable, TReturn>,
     enable && z.server !== null,
+    serverSnapshot !== undefined,
   );
   // https://react.dev/reference/react/useSyncExternalStore
   return useSyncExternalStore(
     view.subscribeReactInternals,
     view.getSnapshot,
-    view.getSnapshot,
+    serverSnapshot
+      ? () => [
+          serverSnapshot as unknown as HumanReadable<TReturn>,
+          {type: 'complete'},
+        ]
+      : undefined,
   );
 }
 
@@ -164,6 +183,7 @@ export class ViewStore {
     clientID: string,
     query: AdvancedQuery<TSchema, TTable, TReturn>,
     enabled: boolean,
+    requireComplete: boolean,
   ): {
     getSnapshot: () => QueryResult<TReturn>;
     subscribeReactInternals: (internals: () => void) => () => void;
@@ -193,6 +213,7 @@ export class ViewStore {
         () => {
           this.#views.delete(hash);
         },
+        requireComplete,
       ) as ViewWrapper<TSchema, TTable, TReturn>;
       this.#views.set(hash, existing);
     }
@@ -238,17 +259,20 @@ class ViewWrapper<
   readonly #query: AdvancedQuery<TSchema, TTable, TReturn>;
   #snapshot: QueryResult<TReturn>;
   #reactInternals: Set<() => void>;
+  #requireComplete: boolean;
 
   constructor(
     query: AdvancedQuery<TSchema, TTable, TReturn>,
     onMaterialized: (view: ViewWrapper<TSchema, TTable, TReturn>) => void,
     onDematerialized: () => void,
+    requireComplete: boolean,
   ) {
     this.#snapshot = getDefaultSnapshot(query.format.singular);
     this.#onMaterialized = onMaterialized;
     this.#onDematerialized = onDematerialized;
     this.#reactInternals = new Set();
     this.#query = query;
+    this.#requireComplete = requireComplete;
     this.#materializeIfNeeded();
   }
 
@@ -256,6 +280,20 @@ class ViewWrapper<
     snap: Immutable<HumanReadable<TReturn>>,
     resultType: ResultType,
   ) => {
+    // We allow waiting for first compelete result in the case where there's a
+    // server snapshot. We don't want to bounce back to an older result from
+    // local store if there's a server snapshot.
+    //
+    // Note: when we have consistency, we can have a local complete result that
+    // is still behind network. So in this case we'd have to add a new 'source'
+    // or something that means whether it came from the server.
+    if (this.#requireComplete && resultType !== 'complete') {
+      return;
+    }
+    // Once the first complete result is received, we no longer want to ignore
+    // other result types. Queries can bounce back to unknown for certain
+    // changes and we want caller to receive those updates.
+    this.#requireComplete = false;
     const data =
       snap === undefined
         ? snap
