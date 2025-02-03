@@ -8,8 +8,9 @@ import {definePermissions} from './permissions.ts';
 const {string} = column;
 
 const userSchema = table('user')
+  .from('users')
   .columns({
-    id: string(),
+    id: string().from('user_id'),
     login: string(),
     name: string(),
     avatar: string(),
@@ -49,7 +50,7 @@ test('permission rules create query ASTs', async () => {
 
   expect(config).toMatchInlineSnapshot(`
     {
-      "user": {
+      "users": {
         "cell": undefined,
         "row": {
           "delete": [
@@ -119,6 +120,7 @@ test('permission rules create query ASTs', async () => {
 test('nested parameters', async () => {
   type AuthData = {
     sub: string;
+    role: 'admin' | 'user';
     attributes: {role: 'admin' | 'user'; id: string};
   };
   const config = await definePermissions<AuthData, typeof schema>(
@@ -126,8 +128,12 @@ test('nested parameters', async () => {
     () => {
       const allowIfAdmin = (
         authData: AuthData,
-        {cmpLit}: ExpressionBuilder<ZeroSchema, string>,
-      ) => cmpLit(authData.attributes.role, '=', 'admin');
+        {or, cmpLit}: ExpressionBuilder<ZeroSchema, string>,
+      ) =>
+        or(
+          cmpLit(authData.role, '=', 'admin'),
+          cmpLit(authData.attributes.role, '=', 'admin'),
+        );
 
       const allowIfSelf = (
         authData: AuthData,
@@ -151,27 +157,45 @@ test('nested parameters', async () => {
 
   expect(config).toMatchInlineSnapshot(`
     {
-      "user": {
+      "users": {
         "cell": undefined,
         "row": {
           "delete": [
             [
               "allow",
               {
-                "left": {
-                  "anchor": "authData",
-                  "field": [
-                    "attributes",
-                    "role",
-                  ],
-                  "type": "static",
-                },
-                "op": "=",
-                "right": {
-                  "type": "literal",
-                  "value": "admin",
-                },
-                "type": "simple",
+                "conditions": [
+                  {
+                    "left": {
+                      "anchor": "authData",
+                      "field": "role",
+                      "type": "static",
+                    },
+                    "op": "=",
+                    "right": {
+                      "type": "literal",
+                      "value": "admin",
+                    },
+                    "type": "simple",
+                  },
+                  {
+                    "left": {
+                      "anchor": "authData",
+                      "field": [
+                        "attributes",
+                        "role",
+                      ],
+                      "type": "static",
+                    },
+                    "op": "=",
+                    "right": {
+                      "type": "literal",
+                      "value": "admin",
+                    },
+                    "type": "simple",
+                  },
+                ],
+                "type": "or",
               },
             ],
           ],
@@ -179,20 +203,38 @@ test('nested parameters', async () => {
             [
               "allow",
               {
-                "left": {
-                  "anchor": "authData",
-                  "field": [
-                    "attributes",
-                    "role",
-                  ],
-                  "type": "static",
-                },
-                "op": "=",
-                "right": {
-                  "type": "literal",
-                  "value": "admin",
-                },
-                "type": "simple",
+                "conditions": [
+                  {
+                    "left": {
+                      "anchor": "authData",
+                      "field": "role",
+                      "type": "static",
+                    },
+                    "op": "=",
+                    "right": {
+                      "type": "literal",
+                      "value": "admin",
+                    },
+                    "type": "simple",
+                  },
+                  {
+                    "left": {
+                      "anchor": "authData",
+                      "field": [
+                        "attributes",
+                        "role",
+                      ],
+                      "type": "static",
+                    },
+                    "op": "=",
+                    "right": {
+                      "type": "literal",
+                      "value": "admin",
+                    },
+                    "type": "simple",
+                  },
+                ],
+                "type": "or",
               },
             ],
           ],
@@ -200,20 +242,38 @@ test('nested parameters', async () => {
             [
               "allow",
               {
-                "left": {
-                  "anchor": "authData",
-                  "field": [
-                    "attributes",
-                    "role",
-                  ],
-                  "type": "static",
-                },
-                "op": "=",
-                "right": {
-                  "type": "literal",
-                  "value": "admin",
-                },
-                "type": "simple",
+                "conditions": [
+                  {
+                    "left": {
+                      "anchor": "authData",
+                      "field": "role",
+                      "type": "static",
+                    },
+                    "op": "=",
+                    "right": {
+                      "type": "literal",
+                      "value": "admin",
+                    },
+                    "type": "simple",
+                  },
+                  {
+                    "left": {
+                      "anchor": "authData",
+                      "field": [
+                        "attributes",
+                        "role",
+                      ],
+                      "type": "static",
+                    },
+                    "op": "=",
+                    "right": {
+                      "type": "literal",
+                      "value": "admin",
+                    },
+                    "type": "simple",
+                  },
+                ],
+                "type": "or",
               },
             ],
           ],
@@ -224,7 +284,7 @@ test('nested parameters', async () => {
                 "allow",
                 {
                   "left": {
-                    "name": "id",
+                    "name": "user_id",
                     "type": "column",
                   },
                   "op": "=",

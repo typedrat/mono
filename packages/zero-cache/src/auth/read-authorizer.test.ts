@@ -738,6 +738,7 @@ test('exists rules in permissions are tagged as the permissions system', () => {
           },
           "subquery": {
             "alias": "zsubq_unreadable",
+            "limit": undefined,
             "orderBy": [
               [
                 "id",
@@ -745,6 +746,8 @@ test('exists rules in permissions are tagged as the permissions system', () => {
               ],
             ],
             "related": undefined,
+            "schema": undefined,
+            "start": undefined,
             "table": "unreadable",
             "where": undefined,
           },
@@ -800,6 +803,7 @@ test('exists rules in permissions are tagged as the permissions system', () => {
                 },
                 "subquery": {
                   "alias": "zsubq_unreadable",
+                  "limit": undefined,
                   "orderBy": [
                     [
                       "id",
@@ -807,6 +811,8 @@ test('exists rules in permissions are tagged as the permissions system', () => {
                     ],
                   ],
                   "related": undefined,
+                  "schema": undefined,
+                  "start": undefined,
                   "table": "unreadable",
                   "where": undefined,
                 },
