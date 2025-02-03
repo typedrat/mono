@@ -2,7 +2,7 @@ name: Build and Deploy Sandbox Zero-Cache AWS SST
 
 on:
   push:
-    branches: [sandbox]
+    branches: [cesara/one_docker_build]
 env:
   # Setting an environment variable with the value of a configuration variable
   ECR_IMAGE_ZERO_CACHE: zero-zbugs-sandbox
@@ -59,7 +59,7 @@ jobs:
         run: |
           docker buildx create --use
           docker buildx inspect --bootstrap
-          docker buildx build --platform linux/amd64 -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_IMAGE_ZERO_CACHE:${{ env.SHA }} -f ./prod/zbugs/Dockerfile --push .
+          docker buildx build --platform linux/amd64 --build-arg ZERO_VERSION=rocicorp-zero-*.tgz -t ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_IMAGE_ZERO_CACHE:${{ env.SHA }} -f ./packages/zero/Dockerfile --push .
       - name: Generate Schema
         run: |
           cd packages/zero
