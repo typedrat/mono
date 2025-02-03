@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738363458340,
+  "lastUpdate": 1738588278913,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -51053,6 +51053,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 30896,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "759b1fd1c44be4657914a9463d0bf0c4a834c2f2",
+          "message": "chore(replicache): Get rid of client v4 (#3668)",
+          "timestamp": "2025-02-03T13:10:12Z",
+          "tree_id": "747c61292579ca4ae40dc92a1c2140265c9d04fb",
+          "url": "https://github.com/rocicorp/mono/commit/759b1fd1c44be4657914a9463d0bf0c4a834c2f2"
+        },
+        "date": 1738588268269,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 293292,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 52925,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 108341,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 30875,
             "unit": "bytes"
           }
         ]
