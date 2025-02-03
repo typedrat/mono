@@ -11,7 +11,7 @@ RUN mkdir -p /opt/app
 WORKDIR /opt/app
 
 # Copy the entire prod/zbugs directory from the build context
-COPY packages/zero/pkgs/ /tmp/pkgs/
+COPY pkgs/ /tmp/pkgs/
 
 # Install zero package based on version format
 RUN if echo "$ZERO_VERSION" | grep -q "\.tgz$"; then \
