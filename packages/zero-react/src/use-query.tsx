@@ -1,4 +1,4 @@
-import {useSyncExternalStore} from 'react';
+import {useMemo, useSyncExternalStore} from 'react';
 import {deepClone} from '../../shared/src/deep-clone.ts';
 import type {Immutable} from '../../shared/src/immutable.ts';
 import type {ReadonlyJSONValue} from '../../shared/src/json.ts';
@@ -45,16 +45,19 @@ export function useQuery<
     enable && z.server !== null,
     serverSnapshot !== undefined,
   );
+  const ss = useMemo(
+    () =>
+      [
+        serverSnapshot as unknown as HumanReadable<TReturn>,
+        {type: 'complete'},
+      ] as const,
+    [serverSnapshot],
+  );
   // https://react.dev/reference/react/useSyncExternalStore
   return useSyncExternalStore(
     view.subscribeReactInternals,
     view.getSnapshot,
-    serverSnapshot
-      ? () => [
-          serverSnapshot as unknown as HumanReadable<TReturn>,
-          {type: 'complete'},
-        ]
-      : undefined,
+    serverSnapshot ? () => ss : undefined,
   );
 }
 
