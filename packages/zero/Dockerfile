@@ -18,7 +18,7 @@ RUN if echo "$ZERO_VERSION" | grep -q "\.tgz$"; then \
     FILENAME=$(basename $ZERO_VERSION) && \
     echo "Installing from local tarball $FILENAME" && \
     cp /tmp/pkgs/$FILENAME . && \
-    npm install -g ./$FILENAME; && \
+    npm install -g ./$FILENAME && \
     rm -rf /tmp/pkgs; \
   else \
     echo "Installing from npm @rocicorp/zero@$ZERO_VERSION" && \
