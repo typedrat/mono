@@ -74,7 +74,7 @@ export default $config({
       ZERO_LITESTREAM_BACKUP_URL: $interpolate`s3://${replicationBucket.name}/backup`,
       ZERO_IMAGE_URL:
         process.env.ZERO_IMAGE_URL ||
-        `${process.env.AWS_ACCOUNT_ID}.dkr.ecr.${process.env.AWS_REGION}.amazonaws.com/${process.env.ECR_IMAGE_ZERO_CACHE}:latest`,
+        `${process.env.AWS_ACCOUNT_ID}.dkr.ecr.${process.env.AWS_REGION}.amazonaws.com/${process.env.ECR_IMAGE_ZERO_CACHE}`,
     };
 
     if (!commonEnv.ZERO_IMAGE_URL) {
