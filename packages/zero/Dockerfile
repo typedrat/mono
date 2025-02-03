@@ -11,13 +11,13 @@ RUN mkdir -p /opt/app
 WORKDIR /opt/app
 
 # Copy the entire prod/zbugs directory from the build context
-COPY prod/zbugs/ /tmp/zbugs/
+COPY packages/zero/pkgs/ /tmp/pkgs/
 
 # Install zero package based on version format
 RUN if echo "$ZERO_VERSION" | grep -q "\.tgz$"; then \
     FILENAME=$(basename $ZERO_VERSION) && \
     echo "Installing from local tarball $FILENAME" && \
-    cp /tmp/zbugs/$FILENAME . && \
+    cp /tmp/pkgs/$FILENAME . && \
     npm install -g ./$FILENAME; \
   else \
     echo "Installing from npm @rocicorp/zero@$ZERO_VERSION" && \
