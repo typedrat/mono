@@ -33,6 +33,6 @@ ENV ZERO_LITESTREAM_CONFIG_PATH=/etc/litestream.yml
 ENV ZERO_LOG_LEVEL=debug
 ENV ZERO_LOG_FORMAT=json
 
-EXPOSE 4848
+EXPOSE 4848 4849
 ENTRYPOINT ["/bin/sh", "-c"]
 CMD ["npx zero-cache"]
