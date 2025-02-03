@@ -72,7 +72,7 @@ export default $config({
       ZERO_LOG_FORMAT: "json",
       ZERO_REPLICA_FILE: "sync-replica.db",
       ZERO_LITESTREAM_BACKUP_URL: $interpolate`s3://${replicationBucket.name}/backup`,
-      ZERO_IMAGE_URL: process.env.ZERO_IMAGE_URL!
+      ZERO_IMAGE_URL: process.env.ZERO_IMAGE_URL!,
     };
 
     // Replication Manager Service
