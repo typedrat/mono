@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738588278913,
+  "lastUpdate": 1738696901920,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -51077,6 +51077,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/759b1fd1c44be4657914a9463d0bf0c4a834c2f2"
         },
         "date": 1738588268269,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 293292,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 52925,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 108341,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 30875,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "132324914+darkgnotic@users.noreply.github.com",
+            "name": "Darick Tong",
+            "username": "darkgnotic"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "242465f1438572e7904c45429d97a4ef372442cf",
+          "message": "feat(zero-cache): map CRUD operations to server names (#3705)",
+          "timestamp": "2025-02-04T11:20:40-08:00",
+          "tree_id": "c22347ed6dffd82c1977b84d9c152c6a10a63255",
+          "url": "https://github.com/rocicorp/mono/commit/242465f1438572e7904c45429d97a4ef372442cf"
+        },
+        "date": 1738696891282,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
