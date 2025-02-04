@@ -85,6 +85,14 @@ export class SolidView<V> implements Output {
     }
   };
 
+  push(change: Change): void {
+    // Delay updating the solid store state until the transaction commit
+    // (because each update of the solid store is quite expensive), but
+    // read the relationships now as they are only valid to read
+    // when the push is received.
+    this.#pendingChanges.push(materializeRelationships(change));
+  }
+
   #applyChanges<T>(changes: Iterable<T>, mapper: (v: T) => ViewChange): void {
     this.#setState(oldState => {
       // Optimization: if the store is currently empty build up
@@ -109,12 +117,6 @@ export class SolidView<V> implements Output {
     });
   }
 
-  #initialEmptyEntry(): Entry {
-    return {
-      '': this.#format.singular ? undefined : [],
-    };
-  }
-
   #applyChangesToRoot<T>(
     changes: Iterable<T>,
     mapper: (v: T) => ViewChange,
@@ -131,12 +133,10 @@ export class SolidView<V> implements Output {
     }
   }
 
-  push(change: Change): void {
-    // Delay updating the solid store state until the transaction commit
-    // (because each update of the solid store is quite expensive), but
-    // read the relationships now as they are only valid to read
-    // when the push is received.
-    this.#pendingChanges.push(materializeRelationships(change));
+  #initialEmptyEntry(): Entry {
+    return {
+      '': this.#format.singular ? undefined : [],
+    };
   }
 }
 
