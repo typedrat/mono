@@ -79,7 +79,6 @@ export class ZeroContext implements QueryDelegate {
   }
 
   processChanges(changes: NoIndexDiff) {
-    console.log('process changes', changes.length);
     this.batchViewUpdates(() => {
       try {
         for (const diff of changes) {
