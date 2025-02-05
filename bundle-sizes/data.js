@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738696901920,
+  "lastUpdate": 1738752334660,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -51141,6 +51141,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 30875,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fc3506ee446c3bf19f3ab08b4a3cb070abdf8794",
+          "message": "fix(replicache): Collecting IDB with pending mutations... (#3710)\n\nAllow collecting IDB databases with pending mutations if mutation\r\nrecovery is disabled.\r\n\r\nThis is important because in Zero client we have disabled mutation\r\nrecovery and if we do not collect old IDB databases with pending\r\nmutations, we will never collect them.",
+          "timestamp": "2025-02-05T11:44:06+01:00",
+          "tree_id": "09bdd57b97897a74941e467710a7bb09f5053837",
+          "url": "https://github.com/rocicorp/mono/commit/fc3506ee446c3bf19f3ab08b4a3cb070abdf8794"
+        },
+        "date": 1738752323793,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 293692,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53000,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 108367,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 30897,
             "unit": "bytes"
           }
         ]
