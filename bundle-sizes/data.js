@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738752334660,
+  "lastUpdate": 1738778971682,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -51185,6 +51185,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 30897,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mlaw@roci.dev",
+            "name": "Matt Wonlaw",
+            "username": "tantaman"
+          },
+          "committer": {
+            "email": "matt.wonlaw@gmail.com",
+            "name": "Matt Wonlaw",
+            "username": "tantaman"
+          },
+          "distinct": true,
+          "id": "8585051bac492cebc8630d941f8a209944f6bfaf",
+          "message": "chore(zero-client): test initialization of the ivm sync head",
+          "timestamp": "2025-02-05T13:08:30-05:00",
+          "tree_id": "8e4765d1fd6d4383f17a38f78e0f1d5e2725af92",
+          "url": "https://github.com/rocicorp/mono/commit/8585051bac492cebc8630d941f8a209944f6bfaf"
+        },
+        "date": 1738778961195,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 294893,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53104,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 108814,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 30981,
             "unit": "bytes"
           }
         ]
