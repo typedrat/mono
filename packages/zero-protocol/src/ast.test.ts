@@ -8,7 +8,7 @@ import {
 import {
   clientToServer,
   serverToClient,
-} from '../../zero-schema/src/name-mapper.ts';
+} from '../../zero-schema/src/table-mapper.ts';
 import type {AST} from './ast.ts';
 import {astSchema, mapAST, normalizeAST} from './ast.ts';
 import {PROTOCOL_VERSION} from './protocol-version.ts';

@@ -11,7 +11,7 @@ import {defined} from '../../shared/src/arrays.ts';
 import {assert} from '../../shared/src/asserts.ts';
 import {must} from '../../shared/src/must.ts';
 import * as v from '../../shared/src/valita.ts';
-import type {NameMapper} from '../../zero-schema/src/name-mapper.ts';
+import type {TableMapper} from '../../zero-schema/src/table-mapper.ts';
 import {rowSchema, type Row} from './data.ts';
 
 export const selectorSchema = v.string();
@@ -446,7 +446,7 @@ export function normalizeAST(ast: AST): Required<AST> {
   return normalized;
 }
 
-export function mapAST(ast: AST, mapper: NameMapper) {
+export function mapAST(ast: AST, mapper: TableMapper) {
   return transformAST(ast, {
     tableName: table => mapper.tableName(table),
     columnName: (table, col) => mapper.columnName(table, col),
@@ -459,7 +459,7 @@ export function mapAST(ast: AST, mapper: NameMapper) {
 export function mapCondition(
   cond: Condition,
   table: string,
-  mapper: NameMapper,
+  mapper: TableMapper,
 ) {
   return transformWhere(cond, table, {
     tableName: table => mapper.tableName(table),

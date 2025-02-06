@@ -62,9 +62,9 @@ import type {NullableVersion} from '../../../zero-protocol/src/version.ts';
 import {nullableVersionSchema} from '../../../zero-protocol/src/version.ts';
 import type {Schema} from '../../../zero-schema/src/builder/schema-builder.ts';
 import {
-  type NameMapper,
+  type TableMapper,
   clientToServer,
-} from '../../../zero-schema/src/name-mapper.ts';
+} from '../../../zero-schema/src/table-mapper.ts';
 import {newQuery} from '../../../zql/src/query/query-impl.ts';
 import type {Query} from '../../../zql/src/query/query.ts';
 import {nanoid} from '../util/nanoid.ts';
@@ -271,7 +271,7 @@ export class Zero<
   readonly #pokeHandler: PokeHandler;
   readonly #queryManager: QueryManager;
   readonly #ivmSources: IVMSourceRepo;
-  readonly #clientToServer: NameMapper;
+  readonly #clientToServer: TableMapper;
 
   /**
    * The queries we sent when inside the sec-protocol header when establishing a connection.

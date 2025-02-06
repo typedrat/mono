@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import {clientToServer} from '../name-mapper.ts';
+import {clientToServer} from '../table-mapper.ts';
 import type {
   Relationship,
   RelationshipsSchema,

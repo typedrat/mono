@@ -5,7 +5,7 @@ import {
   string,
   table,
 } from '../../zero-schema/src/builder/table-builder.ts';
-import {clientToServer} from '../../zero-schema/src/name-mapper.ts';
+import {clientToServer} from '../../zero-schema/src/table-mapper.ts';
 import {mapCRUD} from './push.ts';
 
 const schema = createSchema(1, {

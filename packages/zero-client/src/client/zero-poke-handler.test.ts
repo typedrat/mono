@@ -12,7 +12,7 @@ import {
 import type {AST} from '../../../zero-protocol/src/ast.ts';
 import {createSchema} from '../../../zero-schema/src/builder/schema-builder.ts';
 import {string, table} from '../../../zero-schema/src/builder/table-builder.ts';
-import {serverToClient} from '../../../zero-schema/src/name-mapper.ts';
+import {serverToClient} from '../../../zero-schema/src/table-mapper.ts';
 import {PokeHandler, mergePokes} from './zero-poke-handler.ts';
 
 let rafStub: MockInstance<(cb: FrameRequestCallback) => number>;

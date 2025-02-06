@@ -20,8 +20,8 @@ import type {RowPatchOp} from '../../../zero-protocol/src/row-patch.ts';
 import type {Schema} from '../../../zero-schema/src/builder/schema-builder.ts';
 import {
   serverToClient,
-  type NameMapper,
-} from '../../../zero-schema/src/name-mapper.ts';
+  type TableMapper,
+} from '../../../zero-schema/src/table-mapper.ts';
 import {
   toClientsKey,
   toDesiredQueriesKey,
@@ -56,7 +56,7 @@ export class PokeHandler {
   // order poke errors.
   readonly #pokeLock = new Lock();
   readonly #schema: Schema;
-  readonly #serverToClient: NameMapper;
+  readonly #serverToClient: TableMapper;
 
   readonly #raf =
     getBrowserGlobalMethod('requestAnimationFrame') ?? rafFallback;
@@ -201,7 +201,7 @@ export class PokeHandler {
 export function mergePokes(
   pokeBuffer: PokeAccumulator[],
   schema: Schema,
-  serverToClient: NameMapper,
+  serverToClient: TableMapper,
 ): PokeInternal | undefined {
   if (pokeBuffer.length === 0) {
     return undefined;
@@ -305,7 +305,7 @@ function clientsPatchOpToReplicachePatchOp(op: ClientsPatchOp): PatchOperation {
 function queryPatchOpToReplicachePatchOp(
   op: QueriesPatchOp,
   toKey: (hash: string) => string,
-  serverToClient: NameMapper,
+  serverToClient: TableMapper,
 ): PatchOperation {
   switch (op.op) {
     case 'clear':
@@ -328,7 +328,7 @@ function queryPatchOpToReplicachePatchOp(
 function rowsPatchOpToReplicachePatchOp(
   op: RowPatchOp,
   schema: Schema,
-  serverToClient: NameMapper,
+  serverToClient: TableMapper,
 ): PatchOperationInternal {
   if (op.op === 'clear') {
     return op;

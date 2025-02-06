@@ -1,6 +1,6 @@
 import {jsonSchema} from '../../shared/src/json-schema.ts';
 import * as v from '../../shared/src/valita.ts';
-import type {NameMapper} from '../../zero-schema/src/name-mapper.ts';
+import type {TableMapper} from '../../zero-schema/src/table-mapper.ts';
 import {rowSchema} from './data.ts';
 import * as MutationType from './mutation-type-enum.ts';
 import {primaryKeySchema, primaryKeyValueRecordSchema} from './primary-key.ts';
@@ -109,7 +109,7 @@ export type PushMessage = v.Infer<typeof pushMessageSchema>;
 
 export function mapCRUD(
   arg: CRUDMutationArg,
-  map: NameMapper,
+  map: TableMapper,
 ): CRUDMutationArg {
   return {
     ops: arg.ops.map(({op, tableName, primaryKey, value}) => {

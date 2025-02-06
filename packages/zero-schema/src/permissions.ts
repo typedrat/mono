@@ -14,7 +14,7 @@ import type {
   AssetPermissions as CompiledAssetPermissions,
   PermissionsConfig as CompiledPermissionsConfig,
 } from './compiled-permissions.ts';
-import {clientToServer, NameMapper} from './name-mapper.ts';
+import {clientToServer, TableMapper} from './table-mapper.ts';
 
 export const ANYONE_CAN = undefined;
 export const NOBODY_CAN = [];
@@ -118,7 +118,7 @@ function compileRowConfig<
   TSchema extends Schema,
   TTable extends keyof TSchema['tables'] & string,
 >(
-  clientToServer: NameMapper,
+  clientToServer: TableMapper,
   tableName: TTable,
   rowRules: AssetPermissions<TAuthDataShape, TSchema, TTable> | undefined,
   expressionBuilder: ExpressionBuilder<TSchema, TTable>,
@@ -172,7 +172,7 @@ function compileRules<
   TSchema extends Schema,
   TTable extends keyof TSchema['tables'] & string,
 >(
-  clientToServer: NameMapper,
+  clientToServer: TableMapper,
   tableName: TTable,
   rules: PermissionRule<TAuthDataShape, TSchema, TTable>[] | undefined,
   expressionBuilder: ExpressionBuilder<TSchema, TTable>,
@@ -192,7 +192,7 @@ function compileCellConfig<
   TSchema extends Schema,
   TTable extends keyof TSchema['tables'] & string,
 >(
-  clientToServer: NameMapper,
+  clientToServer: TableMapper,
   tableName: TTable,
   cellRules:
     | Record<string, AssetPermissions<TAuthDataShape, TSchema, TTable>>

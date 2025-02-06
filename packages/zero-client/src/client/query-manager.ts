@@ -12,8 +12,8 @@ import type {ChangeDesiredQueriesMessage} from '../../../zero-protocol/src/chang
 import type {QueriesPatchOp} from '../../../zero-protocol/src/queries-patch.ts';
 import {
   clientToServer,
-  type NameMapper,
-} from '../../../zero-schema/src/name-mapper.ts';
+  type TableMapper,
+} from '../../../zero-schema/src/table-mapper.ts';
 import type {TableSchema} from '../../../zero-schema/src/table-schema.ts';
 import type {GotCallback} from '../../../zql/src/query/query-impl.ts';
 import {desiredQueriesPrefixForClient, GOT_QUERIES_KEY_PREFIX} from './keys.ts';
@@ -28,7 +28,7 @@ type QueryHash = string;
  */
 export class QueryManager {
   readonly #clientID: ClientID;
-  readonly #clientToServer: NameMapper;
+  readonly #clientToServer: TableMapper;
   readonly #send: (change: ChangeDesiredQueriesMessage) => void;
   readonly #queries: Map<
     QueryHash,

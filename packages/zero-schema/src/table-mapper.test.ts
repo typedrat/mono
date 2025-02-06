@@ -1,7 +1,7 @@
 import {expect, test} from 'vitest';
 import {createSchema} from './builder/schema-builder.ts';
 import {boolean, string, table} from './builder/table-builder.ts';
-import {clientToServer, serverToClient} from './name-mapper.ts';
+import {clientToServer, serverToClient} from './table-mapper.ts';
 
 const schema = createSchema(1, {
   tables: [

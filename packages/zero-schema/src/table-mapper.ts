@@ -12,20 +12,20 @@ type DestNames = {
 
 export function clientToServer(
   tables: Record<string, TableSchema>,
-): NameMapper {
+): TableMapper {
   return createMapperFrom('client', tables);
 }
 
 export function serverToClient(
   tables: Record<string, TableSchema>,
-): NameMapper {
+): TableMapper {
   return createMapperFrom('server', tables);
 }
 
 function createMapperFrom(
   src: 'client' | 'server',
   tables: Record<string, TableSchema>,
-): NameMapper {
+): TableMapper {
   const mapping = new Map(
     Object.entries(tables).map(
       ([tableName, {serverName: serverTableName, columns}]) => {
@@ -53,10 +53,10 @@ function createMapperFrom(
       },
     ),
   );
-  return new NameMapper(mapping);
+  return new TableMapper(mapping);
 }
 
-export class NameMapper {
+export class TableMapper {
   readonly #tables = new Map<string, DestNames>();
 
   constructor(tables: Map<string, DestNames>) {
