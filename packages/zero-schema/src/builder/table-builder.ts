@@ -1,5 +1,6 @@
 import type {ReadonlyJSONValue} from '../../../shared/src/json.ts';
 import type {PrimaryKey} from '../../../zero-protocol/src/primary-key.ts';
+import type {NameMapper} from '../name-mapper.ts';
 import type {SchemaValue, TableSchema} from '../table-schema.ts';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -108,26 +109,46 @@ export class TableBuilderWithColumns<TShape extends TableSchema> {
     return this.#schema;
   }
 
-  build() {
+  build(mapper: NameMapper) {
     // We can probably get the type system to throw an error if primaryKey is not called
     // before passing the schema to createSchema
     // Till then --
     if (this.#schema.primaryKey.length === 0) {
       throw new Error(`Table "${this.#schema.name}" is missing a primary key`);
     }
-    const names = new Set<string>();
-    for (const [col, {serverName}] of Object.entries(this.#schema.columns)) {
-      const name = serverName ?? col;
-      if (names.has(name)) {
-        throw new Error(
-          `Table "${
-            this.#schema.name
-          }" has multiple columns referencing "${name}"`,
-        );
-      }
-      names.add(name);
-    }
-    return this.#schema;
+
+    const mapColumns = (columns: Record<string, SchemaValue>) => {
+      const names = new Set<string>();
+      return Object.fromEntries(
+        Object.entries(columns).map(([jsName, schema]) => {
+          const serverName = schema.serverName ?? mapper(jsName);
+          if (names.has(serverName)) {
+            throw new Error(
+              `Table "${
+                this.#schema.name
+              }" has multiple columns referencing "${serverName}"`,
+            );
+          }
+          names.add(serverName);
+          return [
+            jsName,
+            {
+              ...schema,
+              serverName,
+            },
+          ];
+        }),
+      );
+    };
+
+    const ret: TShape = {
+      name: this.#schema.name,
+      serverName: this.#schema.serverName ?? mapper(this.#schema.name),
+      columns: mapColumns(this.#schema.columns),
+      primaryKey: this.#schema.primaryKey.map(mapper),
+    } as unknown as TShape;
+
+    return ret;
   }
 }
 

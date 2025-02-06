@@ -46,11 +46,13 @@ test('getSource', () => {
         "id": {
           "customType": null,
           "optional": false,
+          "serverName": "id",
           "type": "string",
         },
         "name": {
           "customType": null,
           "optional": false,
+          "serverName": "name",
           "type": "string",
         },
       },
@@ -74,11 +76,13 @@ test('getSource', () => {
         "stateCode": {
           "customType": null,
           "optional": false,
+          "serverName": "stateCode",
           "type": "string",
         },
         "userID": {
           "customType": null,
           "optional": false,
+          "serverName": "userID",
           "type": "string",
         },
       },

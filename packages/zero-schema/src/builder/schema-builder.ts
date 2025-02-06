@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import {getNameMapper, type NameMapping} from '../name-mapper.ts';
 import {clientToServer} from '../table-mapper.ts';
 import type {
   Relationship,
@@ -40,6 +41,7 @@ export function createSchema<
   options: {
     readonly tables: TTables;
     readonly relationships?: TRelationships | undefined;
+    readonly nameMapping?: NameMapping | undefined;
   },
 ): {
   version: number;
@@ -56,12 +58,14 @@ export function createSchema<
     >['relationships'];
   };
 } {
+  const nameMapper = getNameMapper(options.nameMapping ?? 'none');
   const retTables: Record<string, TableSchema> = {};
   const retRelationships: Record<string, Record<string, Relationship>> = {};
   const serverNames = new Set<string>();
 
   options.tables.forEach(table => {
-    const {serverName = table.schema.name} = table.schema;
+    const tableSchema = table.build(nameMapper);
+    const serverName = tableSchema.serverName ?? tableSchema.name;
     if (serverNames.has(serverName)) {
       throw new Error(`Multiple tables reference the name "${serverName}"`);
     }
@@ -71,7 +75,7 @@ export function createSchema<
         `Table "${table.schema.name}" is defined more than once in the schema`,
       );
     }
-    retTables[table.schema.name] = table.build();
+    retTables[table.schema.name] = table.build(nameMapper);
   });
   options.relationships?.forEach(relationships => {
     if (retRelationships[relationships.name]) {

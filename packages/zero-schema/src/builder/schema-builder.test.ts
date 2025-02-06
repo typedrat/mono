@@ -3,6 +3,7 @@ import type {Query} from '../../../zql/src/query/query.ts';
 import {relationships} from './relationship-builder.ts';
 import {createSchema, mapSchemaToServer} from './schema-builder.ts';
 import {number, string, table} from './table-builder.ts';
+import {getNameMapper} from '../name-mapper.ts';
 
 const mockQuery = {
   select() {
@@ -475,7 +476,7 @@ test('alternate db names', () => {
     })
     .primaryKey('id');
 
-  expect(user.build()).toMatchInlineSnapshot(`
+  expect(user.build(getNameMapper('none'))).toMatchInlineSnapshot(`
     {
       "columns": {
         "id": {
@@ -514,7 +515,7 @@ test('alternate db names', () => {
     })
     .primaryKey('bar');
 
-  expect(foo.build()).toMatchInlineSnapshot(`
+  expect(foo.build(getNameMapper('none'))).toMatchInlineSnapshot(`
     {
       "columns": {
         "bar": {
@@ -556,7 +557,9 @@ test('conflicting column names', () => {
     })
     .primaryKey('a');
 
-  expect(() => user.build()).toThrowErrorMatchingInlineSnapshot(
+  expect(() =>
+    user.build(getNameMapper('none')),
+  ).toThrowErrorMatchingInlineSnapshot(
     `[Error: Table "user" has multiple columns referencing "c"]`,
   );
 });
@@ -777,6 +780,7 @@ test('map schema to server', () => {
             "id": {
               "customType": null,
               "optional": false,
+              "serverName": "id",
               "type": "string",
             },
             "owner_id": {
@@ -788,6 +792,7 @@ test('map schema to server', () => {
             "title": {
               "customType": null,
               "optional": false,
+              "serverName": "title",
               "type": "string",
             },
           },
@@ -801,11 +806,13 @@ test('map schema to server', () => {
             "id": {
               "customType": null,
               "optional": false,
+              "serverName": "id",
               "type": "number",
             },
             "name": {
               "customType": null,
               "optional": false,
+              "serverName": "name",
               "type": "string",
             },
           },
@@ -819,11 +826,13 @@ test('map schema to server', () => {
             "id": {
               "customType": null,
               "optional": false,
+              "serverName": "id",
               "type": "string",
             },
             "name": {
               "customType": null,
               "optional": false,
+              "serverName": "name",
               "type": "string",
             },
             "recruiter_id": {

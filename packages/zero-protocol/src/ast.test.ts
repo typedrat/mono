@@ -12,6 +12,7 @@ import {
 import type {AST} from './ast.ts';
 import {astSchema, mapAST, normalizeAST} from './ast.ts';
 import {PROTOCOL_VERSION} from './protocol-version.ts';
+import {getNameMapper} from '../../zero-schema/src/name-mapper.ts';
 
 test('fields are placed into correct positions', () => {
   function normalizeAndStringify(ast: AST) {
@@ -311,7 +312,7 @@ test('makeServerAST', () => {
         modified: number(),
       })
       .primaryKey('id')
-      .build(),
+      .build(getNameMapper('none')),
 
     comment: table('comment')
       .from('comments')
@@ -320,7 +321,7 @@ test('makeServerAST', () => {
         issueId: string().from('issue_id'),
       })
       .primaryKey('id')
-      .build(),
+      .build(getNameMapper('none')),
 
     user: table('user')
       .from('users')
@@ -328,7 +329,7 @@ test('makeServerAST', () => {
         id: string().from('user_id'),
       })
       .primaryKey('id')
-      .build(),
+      .build(getNameMapper('none')),
   };
   const serverAST = mapAST(ast, clientToServer(tables));
 
