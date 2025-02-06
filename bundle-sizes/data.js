@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738778971682,
+  "lastUpdate": 1738869783912,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -51224,6 +51224,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs",
             "value": 108814,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 30981,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mlaw@roci.dev",
+            "name": "Matt Wonlaw",
+            "username": "tantaman"
+          },
+          "committer": {
+            "email": "matt.wonlaw@gmail.com",
+            "name": "Matt Wonlaw",
+            "username": "tantaman"
+          },
+          "distinct": true,
+          "id": "8493a720f5583973f95fc478abb4fc1b5c15cd90",
+          "message": "chore(zero-client): review nits from #3704",
+          "timestamp": "2025-02-06T14:22:00-05:00",
+          "tree_id": "3b5b238d16bb58e83c8546ab5cb555cc662cfc6b",
+          "url": "https://github.com/rocicorp/mono/commit/8493a720f5583973f95fc478abb4fc1b5c15cd90"
+        },
+        "date": 1738869773080,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 294636,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53154,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 108745,
             "unit": "bytes"
           },
           {
