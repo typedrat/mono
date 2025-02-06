@@ -1131,7 +1131,7 @@ test('pusher maps CRUD mutation names', async () => {
         },
         {
           op: 'upsert',
-          tableName: 'compoundPKTest',
+          tableName: 'compound_pktest',
           primaryKey: ['id_1', 'id_2'],
           value: {['id_1']: 'voo', ['id_2']: 'doo', text: 'zoo'},
         },

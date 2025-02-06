@@ -58,7 +58,7 @@ export function createSchema<
     >['relationships'];
   };
 } {
-  const nameMapper = getNameMapper(options.nameMapping ?? 'none');
+  const nameMapper = getNameMapper(options.nameMapping ?? 'snake');
   const retTables: Record<string, TableSchema> = {};
   const retRelationships: Record<string, Record<string, Relationship>> = {};
   const serverNames = new Set<string>();

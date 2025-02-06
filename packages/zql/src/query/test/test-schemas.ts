@@ -156,6 +156,18 @@ export const schema = createSchema(1, {
   ],
 });
 
+export const schemaNoMapping = createSchema(1, {
+  tables: [issue, user, comment, revision, label, issueLabel],
+  relationships: [
+    issueRelationships,
+    userRelationships,
+    commentRelationships,
+    revisionRelationships,
+    labelRelationships,
+  ],
+  nameMapping: 'none',
+});
+
 export const issueSchema = schema.tables.issue;
 export const commentSchema = schema.tables.comment;
 export const issueLabelSchema = schema.tables.issueLabel;

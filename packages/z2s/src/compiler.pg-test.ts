@@ -2,7 +2,7 @@ import {beforeAll} from 'vitest';
 import {testDBs} from '../../zero-cache/src/test/db.ts';
 import type {PostgresDB} from '../../zero-cache/src/types/pg.ts';
 import {compile} from './compiler.ts';
-import {schema} from '../../zql/src/query/test/test-schemas.ts';
+import {schemaNoMapping} from '../../zql/src/query/test/test-schemas.ts';
 import {Database} from '../../zqlite/src/db.ts';
 import {createSilentLogContext} from '../../shared/src/logging-test-utils.ts';
 import {formatSqlite, sql} from './sql.ts';
@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS "revision" (
 
 let pg: PostgresDB;
 let sqlite: Database;
+const schema = schemaNoMapping;
 type Schema = typeof schema;
 
 let issueQuery: Query<Schema, 'issue'>;

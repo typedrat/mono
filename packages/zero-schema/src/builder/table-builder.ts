@@ -142,10 +142,9 @@ export class TableBuilderWithColumns<TShape extends TableSchema> {
     };
 
     const ret: TShape = {
-      name: this.#schema.name,
+      ...this.#schema,
       serverName: this.#schema.serverName ?? mapper(this.#schema.name),
       columns: mapColumns(this.#schema.columns),
-      primaryKey: this.#schema.primaryKey.map(mapper),
     } as unknown as TShape;
 
     return ret;

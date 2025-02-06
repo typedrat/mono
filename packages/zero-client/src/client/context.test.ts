@@ -76,13 +76,13 @@ test('getSource', () => {
         "stateCode": {
           "customType": null,
           "optional": false,
-          "serverName": "stateCode",
+          "serverName": "state_code",
           "type": "string",
         },
         "userID": {
           "customType": null,
           "optional": false,
-          "serverName": "userID",
+          "serverName": "user_id",
           "type": "string",
         },
       },

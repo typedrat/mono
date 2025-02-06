@@ -37,14 +37,14 @@ test('name mapping to server', () => {
 
   expect(map.tableName('issues')).toBe('issue');
   expect(map.tableName('comments')).toBe('comment');
-  expect(map.tableName('noMappings')).toBe('noMappings');
+  expect(map.tableName('no_mappings')).toBe('noMappings');
   expect(() => map.tableName('unknown')).toThrowErrorMatchingInlineSnapshot(
     `[Error: unknown table "unknown" ]`,
   );
 
   expect(map.columnName('issues', 'id')).toBe('id');
   expect(map.columnName('comments', 'comment_id')).toBe('id');
-  expect(map.columnName('noMappings', 'id')).toBe('id');
+  expect(map.columnName('no_mappings', 'id')).toBe('id');
   expect(() =>
     map.columnName('comments', 'unknown'),
   ).toThrowErrorMatchingInlineSnapshot(
@@ -62,7 +62,7 @@ test('name mapping to server', () => {
     }),
   ).toEqual({id: 'baz', issueId: 'foo', unknown: 'passthrough'});
   const uncopiedRow = {id: 'boo', description: 'uncopied'};
-  expect(map.row('noMappings', uncopiedRow)).toBe(uncopiedRow);
+  expect(map.row('no_mappings', uncopiedRow)).toBe(uncopiedRow);
 
   expect(map.columns('issues', ['id', 'owner_id', 'unknown'])).toEqual([
     'id',
@@ -74,7 +74,7 @@ test('name mapping to server', () => {
   ).toEqual(['id', 'issueId', 'unknown']);
 
   const uncopiedColumns = ['id', 'description'];
-  expect(map.columns('noMappings', uncopiedColumns)).toBe(uncopiedColumns);
+  expect(map.columns('no_mappings', uncopiedColumns)).toBe(uncopiedColumns);
 });
 
 test('name mapping to client', () => {
@@ -82,7 +82,7 @@ test('name mapping to client', () => {
 
   expect(map.tableName('issue')).toBe('issues');
   expect(map.tableName('comment')).toBe('comments');
-  expect(map.tableName('noMappings')).toBe('noMappings');
+  expect(map.tableName('noMappings')).toBe('no_mappings');
   expect(() => map.tableName('unknown')).toThrowErrorMatchingInlineSnapshot(
     `[Error: unknown table "unknown" ]`,
   );

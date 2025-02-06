@@ -103,7 +103,7 @@ test('map names', () => {
           "primaryKey": [
             "id",
           ],
-          "tableName": "noMappings",
+          "tableName": "no_mappings",
           "value": {
             "description": "doo",
             "id": "voo",
