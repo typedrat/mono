@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738925647634,
+  "lastUpdate": 1738939622187,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -51361,6 +51361,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 30994,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0922506a428e59ba5d09e367085a1bd5705142f7",
+          "message": "feat(zero-client): Send deleteClients to server (#3709)\n\nThis is work in progress to support cleaning up clients on the server. At this point the server doesn't do anything with this message.\r\n\r\nHere is how it is intended to work:\r\n- Replicache tells zero client when a replicache client is deleted.\r\n- Zero client sends a `deleteClients` message to the server.\r\n- It also stores the IDs of the deleted clients persistently (using the perdag). It stores these in a new head. The deleted clients is a shared state between all client groups.\r\n- When the server receives a `deleteClients` message it deletes the clients (not yet implemented), and...\r\n- Sends a deleteClients message back to the client with the IDs of the clients that were actually deleted.\r\n- The client then removes the IDs from the list of deleted clients.\r\n- Zero client also sends the list of deleted clients to the server when it connects, so the server can clean up clients that were deleted while the client was offline. This is done using the sec-websocket-protocol if it fits or in the initConnection message otherwise..",
+          "timestamp": "2025-02-07T14:45:46Z",
+          "tree_id": "e17853d9a2e4d40e6f49ed00a16f81e3faffbb08",
+          "url": "https://github.com/rocicorp/mono/commit/0922506a428e59ba5d09e367085a1bd5705142f7"
+        },
+        "date": 1738939611192,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 295187,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53233,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 108942,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31035,
             "unit": "bytes"
           }
         ]
