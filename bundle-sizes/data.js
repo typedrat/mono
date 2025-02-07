@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738869783912,
+  "lastUpdate": 1738922647255,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -51253,6 +51253,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/8493a720f5583973f95fc478abb4fc1b5c15cd90"
         },
         "date": 1738869773080,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 294636,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53154,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 108745,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 30981,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "96e7139f71c259eddf9a0528c93c9dd3023d0383",
+          "message": "chore: Fix lint (#3726)\n\nWe no longer allow importing from .test.ts files. This commit fixes all\r\nthe lint errors.",
+          "timestamp": "2025-02-07T11:03:02+01:00",
+          "tree_id": "ffd34066f987725fde07339abd8f24e0fb9ffa7f",
+          "url": "https://github.com/rocicorp/mono/commit/96e7139f71c259eddf9a0528c93c9dd3023d0383"
+        },
+        "date": 1738922635813,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
