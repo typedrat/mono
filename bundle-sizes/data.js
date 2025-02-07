@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738922647255,
+  "lastUpdate": 1738925647634,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -51317,6 +51317,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 30981,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ce0c33d2f9e5d9dae9797d7c7c5810fd3f6bcb7a",
+          "message": "fix(replicache): Add GC for client group without mutation recovery (#3719)\n\nWhen enableMutationRecovery is false we gc client groups that are not\r\nreferenced by any client even if they have pending mutations.",
+          "timestamp": "2025-02-07T10:53:06Z",
+          "tree_id": "67adb620e3bdf8d5b86e48289bee82cbf9f95269",
+          "url": "https://github.com/rocicorp/mono/commit/ce0c33d2f9e5d9dae9797d7c7c5810fd3f6bcb7a"
+        },
+        "date": 1738925636948,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 294728,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53175,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 108750,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 30994,
             "unit": "bytes"
           }
         ]
