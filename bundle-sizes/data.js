@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1738939622187,
+  "lastUpdate": 1739193490684,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -51405,6 +51405,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31035,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2f4d54e65d5b839d49b02936e3fba94934ba9aeb",
+          "message": "chore(zero, replicache): Let replicache manage the deleted clients head (#3740)\n\nNow, replicache writes the deleted clients head as clients are deleted.\r\n\r\nThis was previously managed by zero since replicache does not really\r\nneed this information.",
+          "timestamp": "2025-02-10T13:17:08Z",
+          "tree_id": "511b6c3509021c025ea36e16c3870df1d4123274",
+          "url": "https://github.com/rocicorp/mono/commit/2f4d54e65d5b839d49b02936e3fba94934ba9aeb"
+        },
+        "date": 1739193479445,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 296192,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53411,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 109274,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31144,
             "unit": "bytes"
           }
         ]
