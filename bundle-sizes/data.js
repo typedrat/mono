@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739266599636,
+  "lastUpdate": 1739266903572,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -51493,6 +51493,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31237,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "135206407de6509fb808b5fc3a5a8d56b6ba9190",
+          "message": "chore(replicache): Remove a withWriteNoImplicitCommit (#3759)",
+          "timestamp": "2025-02-11T10:40:40+01:00",
+          "tree_id": "9d6b0ee26cdede10594b742e39fdc75da7a3c5b4",
+          "url": "https://github.com/rocicorp/mono/commit/135206407de6509fb808b5fc3a5a8d56b6ba9190"
+        },
+        "date": 1739266893328,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 297504,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53553,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 109632,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31241,
             "unit": "bytes"
           }
         ]
