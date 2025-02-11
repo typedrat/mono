@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /* eslint-disable @typescript-eslint/naming-convention */
 /**
  * Test suite that
@@ -103,6 +104,24 @@ describe('basic select', () => {
     'select * from %s limit 100',
     async table => {
       await checkZqlAndSql(pg, queries[table].limit(100));
+    },
+  );
+
+  test.each(tables.map(table => [table]))(
+    'select * from %s limit 100 order by x/y/z',
+    async table => {
+      const {columns} = schema.tables[table];
+      for (const c of Object.keys(columns)) {
+        const q = queries[table] as AnyQuery;
+        for (const d of ['asc', 'desc'] as const) {
+          try {
+            await checkZqlAndSql(pg, q.limit(100).orderBy(c, d));
+          } catch (e) {
+            console.log(`SDF ${table} ${c} ${d}`);
+            throw e;
+          }
+        }
+      }
     },
   );
 });
