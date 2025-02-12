@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739266903572,
+  "lastUpdate": 1739367442114,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -51537,6 +51537,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31241,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "392a7811cc174b555de2cf9713ae43e5f34f44e3",
+          "message": "fix(zero-client): Allow reading legacy deleted clients head (#3777)\n\nThe client heads change from `ClientID[]` to `{clientIDs: ClientID[],\nclientGroupIDs: clientGroupID[]}`.\n\nEven though this was never released it broke zbugs which gets deployed\nfrom main. This change allows reading the old format.",
+          "timestamp": "2025-02-12T14:36:14+01:00",
+          "tree_id": "7270d3b05d75bbeeaf71873283db200d562ef992",
+          "url": "https://github.com/rocicorp/mono/commit/392a7811cc174b555de2cf9713ae43e5f34f44e3"
+        },
+        "date": 1739367431267,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 297699,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53583,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 109702,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31267,
             "unit": "bytes"
           }
         ]
