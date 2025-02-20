@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1739367442114,
+  "lastUpdate": 1740090912743,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -51561,6 +51561,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/392a7811cc174b555de2cf9713ae43e5f34f44e3"
         },
         "date": 1739367431267,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 297699,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53583,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 109702,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31267,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "132324914+darkgnotic@users.noreply.github.com",
+            "name": "Darick Tong",
+            "username": "darkgnotic"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "93b231497d9bb0934ef18647a06251c0420e1c31",
+          "message": "chore: update to esbuild 0.25.0 (#3845)",
+          "timestamp": "2025-02-20T22:34:10Z",
+          "tree_id": "756a548c278e5c83f1e030ed71b2beb2a0347d57",
+          "url": "https://github.com/rocicorp/mono/commit/93b231497d9bb0934ef18647a06251c0420e1c31"
+        },
+        "date": 1740090902132,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
