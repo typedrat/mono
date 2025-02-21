@@ -5,6 +5,7 @@ import type {
   LiteralValue,
   ValuePosition,
 } from '../../../zero-protocol/src/ast.ts';
+import {createSimplePredicate} from './filter.ts';
 
 export function foldConstants(ast: AST): AST {
   if (!ast.where) {
@@ -88,11 +89,9 @@ function simplifySimple(condition: Condition): Condition {
   if (left === undefined || right === undefined) {
     return condition;
   }
-  const value = evaluate(condition.op, left, right);
-  if (value === undefined) {
-    return condition;
-  }
-  return value ? TRUE : FALSE;
+
+  const pred = createSimplePredicate(condition);
+  return pred(left) ? TRUE : FALSE;
 }
 
 function getLiteralValue(value: ValuePosition): LiteralValue | undefined {
@@ -100,12 +99,4 @@ function getLiteralValue(value: ValuePosition): LiteralValue | undefined {
     return value.value;
   }
   return undefined;
-}
-
-function evaluate(
-  op: string,
-  left: LiteralValue,
-  right: LiteralValue,
-): boolean | undefined {
-  throw new Error('TODO');
 }
