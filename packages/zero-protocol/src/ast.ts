@@ -312,18 +312,14 @@ export type SimpleCondition = {
   readonly right: Exclude<ValuePosition, ColumnReference>;
 };
 
-export type Clause =
-  | {type: 'condition'; condition: Condition}
-  | {type: 'literal'; value: LiteralValue};
-
 export type Conjunction = {
   type: 'and';
-  clauses: readonly Clause[];
+  conditions: readonly Condition[];
 };
 
 export type Disjunction = {
   type: 'or';
-  clauses: readonly Clause[];
+  conditions: readonly Condition[];
 };
 
 export type CorrelatedSubqueryCondition = {
