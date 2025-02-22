@@ -50,12 +50,12 @@ function isFALSE(condition: Condition): boolean {
   return condition.type === 'or' && condition.conditions.length === 0;
 }
 
-const TRUE: Condition = {
+export const TRUE: Condition = {
   type: 'and',
   conditions: [],
 };
 
-const FALSE: Condition = {
+export const FALSE: Condition = {
   type: 'or',
   conditions: [],
 };
@@ -82,7 +82,7 @@ function simplifyOr(condition: Condition): Condition {
   return condition;
 }
 
-function simplifySimple(condition: Condition): Condition {
+export function simplifySimple(condition: Condition): Condition {
   assert(condition.type === 'simple');
   const left = getLiteralValue(condition.left);
   const right = getLiteralValue(condition.right);
@@ -90,7 +90,7 @@ function simplifySimple(condition: Condition): Condition {
     return condition;
   }
 
-  const pred = createSimplePredicate(condition);
+  const pred = createSimplePredicate(right, condition.op);
   return pred(left) ? TRUE : FALSE;
 }
 

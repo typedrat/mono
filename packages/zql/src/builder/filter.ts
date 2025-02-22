@@ -1,6 +1,7 @@
 import {assert, unreachable} from '../../../shared/src/asserts.ts';
 import type {
   Condition,
+  LiteralValue,
   SimpleCondition,
   SimpleOperator,
 } from '../../../zero-protocol/src/ast.ts';
@@ -58,7 +59,7 @@ export function createPredicate(
     'static values should be resolved before creating predicates',
   );
 
-  const pred = createSimplePredicate(condition);
+  const pred = createSimplePredicate(right.value, condition.op);
   switch (left.type) {
     case 'column':
       return (row: Row) => pred(row[left.name]);
@@ -69,13 +70,14 @@ export function createPredicate(
   }
 }
 
-export function createSimplePredicate(condition: SimpleCondition) {
-  const {right} = condition;
-
-  switch (condition.op) {
+export function createSimplePredicate(
+  right: LiteralValue,
+  op: SimpleOperator,
+): SimplePredicate {
+  switch (op) {
     case 'IS':
     case 'IS NOT': {
-      return createIsPredicate(right, condition.op);
+      return createIsPredicate(right, op);
     }
   }
 
@@ -83,7 +85,7 @@ export function createSimplePredicate(condition: SimpleCondition) {
     return () => false;
   }
 
-  const impl = createPredicateImpl(right, condition.op);
+  const impl = createPredicateImpl(right, op);
 
   return (left: Value | undefined) => {
     if (left === null || left === undefined) {
