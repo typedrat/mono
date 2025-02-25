@@ -233,22 +233,24 @@ export default $config({
               ],
             }),
       },
-      transform: defu(EBS_TRANSFORM, {
-        ...BASE_TRANSFORM,
-        target: {
-          ...BASE_TRANSFORM.target,
-          stickiness: {
-            enabled: true,
-            type: "lb_cookie",
-            cookieDuration: 120,
+      transform: defu(
+        EBS_TRANSFORM,
+        BASE_TRANSFORM,
+        {
+          target: {
+            stickiness: {
+              enabled: true,
+              type: "lb_cookie",
+              cookieDuration: 120,
+            },
+            loadBalancingAlgorithmType: "least_outstanding_requests",
           },
-          loadBalancingAlgorithmType: "least_outstanding_requests",
-        },
-        autoScalingTarget: {
-          minCapacity: 1,
-          maxCapacity: 10,
-        },
-      }),
+          autoScalingTarget: {
+            minCapacity: 1,
+            maxCapacity: 10,
+          },
+        }
+      ),
       // Set this to `true` to make SST wait for the view-syncer to be deployed
       // before proceeding (to permissions deployment, etc.). This makes the deployment
       // take a lot longer and is only necessary if there is an AST format change.
