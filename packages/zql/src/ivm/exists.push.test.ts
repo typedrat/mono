@@ -380,11 +380,9 @@ suite('EXISTS 1 to many', () => {
 
     expect(actualStorage['exists']).toMatchInlineSnapshot(`
       {
-        "row/["i1"]": 0,
         "row/["i1"]/["c1"]": 0,
         "row/["i1"]/["c2"]": 0,
         "row/["i1"]/["c3"]": 0,
-        "row/["i2"]": 1,
         "row/["i2"]/["c4"]": 1,
       }
     `);
