@@ -80,6 +80,13 @@ test('zero-cache --help', () => {
                                                                 This can be lost, but if it is, zero-cache will have to re-replicate next                         
                                                                 time it starts up.                                                                                
                                                                                                                                                                   
+     --replica-vacuum-interval-hours number                     optional                                                                                          
+       ZERO_REPLICA_VACUUM_INTERVAL_HOURS env                                                                                                                     
+                                                                Performs a VACUUM at server startup if the specified number of hours has elapsed                  
+                                                                since the last VACUUM (or initial-sync). The VACUUM operation is heavyweight                      
+                                                                and requires double the size of the db in disk space. If unspecified, VACUUM                      
+                                                                operations are not performed.                                                                     
+                                                                                                                                                                  
      --log-level debug,info,warn,error                          default: "info"                                                                                   
        ZERO_LOG_LEVEL env                                                                                                                                         
                                                                                                                                                                   
