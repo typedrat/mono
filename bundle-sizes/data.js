@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1740090912743,
+  "lastUpdate": 1741106508398,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -51605,6 +51605,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/93b231497d9bb0934ef18647a06251c0420e1c31"
         },
         "date": 1740090902132,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 297699,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53583,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 109702,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31267,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "96a064a55e778308014ecf8a04b1c82f71000bfc",
+          "message": "chore: Upgrade to vitest 3.0.7 (#3917)\n\nMaybe it will fix some of the flakes we are seeing in CI?",
+          "timestamp": "2025-03-04T16:40:45Z",
+          "tree_id": "0eb64d5abd539f392030f473c608dfb190801e2f",
+          "url": "https://github.com/rocicorp/mono/commit/96a064a55e778308014ecf8a04b1c82f71000bfc"
+        },
+        "date": 1741106497807,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
