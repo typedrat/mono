@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1741106508398,
+  "lastUpdate": 1741225405464,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -51669,6 +51669,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31267,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mlaw@roci.dev",
+            "name": "Matt Wonlaw",
+            "username": "tantaman"
+          },
+          "committer": {
+            "email": "matt.wonlaw@gmail.com",
+            "name": "Matt Wonlaw",
+            "username": "tantaman"
+          },
+          "distinct": true,
+          "id": "04835c00781a279c5b4d8c85c30166a67b663dee",
+          "message": "feat(custom-mutators): back out `makeSchemaQuery`\n\nsince many things can be racing to fork IVM sources:\n- persist\n- refresh\n- pull end\n\nthe previous method of grabbing IVM sources did not work.\n\nBacking this out and going with a new approach in the next PR.",
+          "timestamp": "2025-03-05T20:42:21-05:00",
+          "tree_id": "f4674dacce0a40e50a2d867309b1beb33f3abcdf",
+          "url": "https://github.com/rocicorp/mono/commit/04835c00781a279c5b4d8c85c30166a67b663dee"
+        },
+        "date": 1741225391341,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 296943,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53432,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 109381,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31177,
             "unit": "bytes"
           }
         ]
