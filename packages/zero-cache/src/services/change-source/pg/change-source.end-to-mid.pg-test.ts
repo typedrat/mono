@@ -1099,7 +1099,6 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
         {
           tag: 'insert',
           relation: {
-            tag: 'relation',
             schema: 'public',
             name: 'nopk',
             replicaIdentity: 'default',
