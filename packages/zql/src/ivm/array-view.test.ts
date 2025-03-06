@@ -1,6 +1,8 @@
 import {expect, test} from 'vitest';
+import type {LogConfig} from '../../../otel/src/log-options.ts';
 import {assertArray, unreachable} from '../../../shared/src/asserts.ts';
 import type {ReadonlyJSONValue} from '../../../shared/src/json.ts';
+import {createSilentLogContext} from '../../../shared/src/logging-test-utils.ts';
 import {stringCompare} from '../../../shared/src/string-compare.ts';
 import {ArrayView} from './array-view.ts';
 import type {Change} from './change.ts';
@@ -10,8 +12,6 @@ import type {Input} from './operator.ts';
 import type {SourceSchema} from './schema.ts';
 import {Take} from './take.ts';
 import {createSource} from './test/source-factory.ts';
-import {createSilentLogContext} from '../../../shared/src/logging-test-utils.ts';
-import type {LogConfig} from '../../../otel/src/log-options.ts';
 
 const lc = createSilentLogContext();
 const logConfig: LogConfig = {
@@ -120,6 +120,9 @@ test('single-format', () => {
   expect(() => ms.push({row: {a: 2, b: 'b'}, type: 'add'})).toThrow(
     'single output already exists',
   );
+
+  // Adding the same element is not an error in the ArrayView but it is an error
+  // in the Source. This case is tested in view-apply-change.ts.
 
   ms.push({row: {a: 1, b: 'a'}, type: 'remove'});
 
