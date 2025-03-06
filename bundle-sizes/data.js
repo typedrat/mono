@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1741225405464,
+  "lastUpdate": 1741228914589,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -51693,6 +51693,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/04835c00781a279c5b4d8c85c30166a67b663dee"
         },
         "date": 1741225391341,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 296943,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53432,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 109381,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31177,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mlaw@roci.dev",
+            "name": "Matt Wonlaw",
+            "username": "tantaman"
+          },
+          "committer": {
+            "email": "matt.wonlaw@gmail.com",
+            "name": "Matt Wonlaw",
+            "username": "tantaman"
+          },
+          "distinct": true,
+          "id": "e1f88897b19389292857b6acb582b24fd863e98c",
+          "message": "feat(zero-client): only track the `main` branch for IVM\n\nNo longer tracks the sync head. Only tracks `main` and forks and re-winds as needed.\n\n- refresh\n- pullEnd\n- persist\n\nwill all call `forkToHead` to get the correct copy of the IVM sources.\n\n`advance` is currently not yet called. It will be called in a future PR when we have the data required (expectedHash, newHash, diffs). ExperimentalWatch does not provided the two hashes we need so I'll be updating Replicache to call `advance` directly.",
+          "timestamp": "2025-03-05T21:40:44-05:00",
+          "tree_id": "763b62a00403df1bf09c68e533cacdb3db68497c",
+          "url": "https://github.com/rocicorp/mono/commit/e1f88897b19389292857b6acb582b24fd863e98c"
+        },
+        "date": 1741228902951,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
