@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1741228914589,
+  "lastUpdate": 1741287078327,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -51757,6 +51757,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31177,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mlaw@roci.dev",
+            "name": "Matt Wonlaw",
+            "username": "tantaman"
+          },
+          "committer": {
+            "email": "matt.wonlaw@gmail.com",
+            "name": "Matt Wonlaw",
+            "username": "tantaman"
+          },
+          "distinct": true,
+          "id": "ab3459ddc0ff618e2963a6a5c6fded26ddf6612f",
+          "message": "chore(replicache): remove public interface type impact of `zeroOption`",
+          "timestamp": "2025-03-06T13:49:52-05:00",
+          "tree_id": "7785ab994ebfe31dc862165226c1dc9220a362c5",
+          "url": "https://github.com/rocicorp/mono/commit/ab3459ddc0ff618e2963a6a5c6fded26ddf6612f"
+        },
+        "date": 1741287045272,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 297167,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53533,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 109451,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31222,
             "unit": "bytes"
           }
         ]
