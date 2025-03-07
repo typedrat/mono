@@ -2152,6 +2152,7 @@ describe('view-syncer/service', () => {
       zeroMessages.update('schemaVersions', {
         lock: true,
         minSupportedVersion: 3,
+        maxSupportedVersion: 3,
       }),
     );
 
