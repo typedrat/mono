@@ -20,6 +20,16 @@ export type Graph = {
   edges: EdgeVisual[];
 };
 
+// Add new types
+type Event = {
+  type: 'push' | 'fetch';
+  time: number;
+  source: number;
+  dest: number;
+};
+
+type Trace = Event[];
+
 const nodeTypes = {
   Source: {color: '#6ede87', icon: '🔌'},
   Join: {color: '#ff9966', icon: '🔗'},
@@ -52,6 +62,16 @@ class DAGVisualizer {
     HTMLElement,
     any
   >;
+  private currentTime = 0;
+  private trace: Event[] = [];
+  private timelineContainer: d3.Selection<
+    HTMLDivElement,
+    unknown,
+    HTMLElement,
+    any
+  >;
+  private slider: d3.Selection<HTMLInputElement, unknown, HTMLElement, any>;
+  private timeDisplay: d3.Selection<HTMLDivElement, unknown, HTMLElement, any>;
 
   constructor(containerId: string) {
     // Create the main container with full height
@@ -68,22 +88,63 @@ class DAGVisualizer {
       .append('div')
       .attr('class', 'input-container')
       .style('padding', '10px')
-      .style('height', '140px'); // Fixed height for input area
+      .style('height', '200px') // Increased height
+      .style('display', 'flex')
+      .style('gap', '10px');
 
-    // Create textarea for JSON input
-    this.textArea = this.inputContainer
+    // Create left side for graph input
+    const graphInput = this.inputContainer
+      .append('div')
+      .style('flex', '1')
+      .style('display', 'flex')
+      .style('flex-direction', 'column')
+      .style('gap', '5px');
+
+    graphInput.append('div').text('Graph JSON:');
+
+    this.textArea = graphInput
       .append('textarea')
       .attr('placeholder', 'Paste your graph JSON here...')
-      .style('width', '100%')
-      .style('height', '100px');
+      .style('flex', '1')
+      .style('width', '100%');
 
-    // Create button to visualize
-    this.inputContainer
+    // Create right side for trace input
+    const traceInput = this.inputContainer
+      .append('div')
+      .style('flex', '1')
+      .style('display', 'flex')
+      .style('flex-direction', 'column')
+      .style('gap', '5px');
+
+    traceInput.append('div').text('Trace JSON:');
+
+    const traceArea = traceInput
+      .append('textarea')
+      .attr('placeholder', 'Paste your trace JSON here...')
+      .style('flex', '1')
+      .style('width', '100%');
+
+    // Create button container
+    const buttonContainer = this.inputContainer
+      .append('div')
+      .style('display', 'flex')
+      .style('flex-direction', 'column')
+      .style('gap', '5px')
+      .style('justify-content', 'flex-end');
+
+    // Update visualize button
+    buttonContainer
       .append('button')
       .text('Visualize')
       .style('padding', '8px 16px')
       .style('cursor', 'pointer')
-      .on('click', () => this.handleVisualize());
+      .on('click', () => {
+        const graphData = JSON.parse(this.textArea.property('value'));
+        this.render(graphData);
+
+        const traceData = JSON.parse(traceArea.property('value'));
+        this.setTrace(traceData);
+      });
 
     // Create zoom behavior
     this.zoom = d3
@@ -138,6 +199,34 @@ class DAGVisualizer {
       .append('path')
       .attr('d', 'M0,-5L10,0L0,5')
       .attr('fill', '#999');
+
+    // Add timeline controls below the graph
+    this.timelineContainer = this.container
+      .append('div')
+      .style('padding', '10px')
+      .style('height', '60px')
+      .style('display', 'flex')
+      .style('flex-direction', 'column')
+      .style('gap', '5px');
+
+    // Add time display
+    this.timeDisplay = this.timelineContainer
+      .append('div')
+      .text('Time: 0')
+      .style('font-family', 'monospace');
+
+    // Add slider
+    this.slider = this.timelineContainer
+      .append('input')
+      .attr('type', 'range')
+      .attr('min', 0)
+      .attr('max', 0)
+      .attr('value', 0)
+      .style('width', '100%')
+      .on('input', () => {
+        this.currentTime = +this.slider.property('value');
+        this.updateVisualization();
+      });
   }
 
   private handleVisualize(): void {
@@ -268,6 +357,12 @@ class DAGVisualizer {
 
     // Center the graph
     this.centerGraph(width, height);
+
+    // Reset timeline when rendering new graph
+    this.currentTime = 0;
+    this.trace = [];
+    this.slider.attr('value', 0);
+    this.updateVisualization();
   }
 
   private dragStarted(event: d3.D3DragEvent<SVGGElement, any, any>): void {
@@ -309,6 +404,60 @@ class DAGVisualizer {
         this.zoom.transform,
         d3.zoomIdentity.translate(translateX, translateY).scale(scale),
       );
+  }
+
+  // Add method to set trace
+  setTrace(trace: Trace): void {
+    this.trace = trace;
+    const maxTime = Math.max(...trace.map(e => e.time));
+    this.slider.attr('max', maxTime);
+    this.updateVisualization();
+  }
+
+  private updateVisualization(): void {
+    // Update time display
+    this.timeDisplay.text(`Time: ${this.currentTime}`);
+
+    // Get active events at current time
+    const activeEvents = this.trace.filter(e => e.time === this.currentTime);
+
+    // Reset all nodes and edges to inactive state
+    this.g
+      .selectAll('.node circle')
+      .attr('stroke-width', 2)
+      .attr('stroke', '#666');
+
+    this.g.selectAll('.link').attr('stroke', '#999').attr('stroke-width', 1.5);
+
+    // Highlight active nodes and edges
+    activeEvents.forEach(event => {
+      // Highlight source node
+      this.g
+        .selectAll('.node')
+        .filter((d: any) => d.data.id === event.source)
+        .select('circle')
+        .attr('stroke-width', 4)
+        .attr('stroke', event.type === 'push' ? '#ff4444' : '#4444ff');
+
+      // Highlight destination node
+      this.g
+        .selectAll('.node')
+        .filter((d: any) => d.data.id === event.dest)
+        .select('circle')
+        .attr('stroke-width', 4)
+        .attr('stroke', event.type === 'push' ? '#ff4444' : '#4444ff');
+
+      // Highlight edge
+      this.g
+        .selectAll('.link')
+        .filter(
+          (d: any) =>
+            d.source.data.id === String(event.source) &&
+            d.target.data.id === String(event.dest),
+        )
+        .attr('stroke', event.type === 'push' ? '#ff4444' : '#4444ff')
+        .attr('stroke-width', 3);
+    });
   }
 }
 
