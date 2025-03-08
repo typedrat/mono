@@ -3,6 +3,7 @@
 import * as d3 from 'd3';
 import {graphStratify} from 'd3-dag';
 import {sugiyama, layeringSimplex, decrossOpt, coordGreedy} from 'd3-dag';
+import JSON5 from 'json5';
 
 export type NodeVisual = {
   id: number;
@@ -72,6 +73,8 @@ class DAGVisualizer {
   >;
   private slider: d3.Selection<HTMLInputElement, unknown, HTMLElement, any>;
   private timeDisplay: d3.Selection<HTMLDivElement, unknown, HTMLElement, any>;
+  private playInterval: number | null = null;
+  private playSpeed = 1000; // 1 second between steps
 
   constructor(containerId: string) {
     // Create the main container with full height
@@ -139,10 +142,10 @@ class DAGVisualizer {
       .style('padding', '8px 16px')
       .style('cursor', 'pointer')
       .on('click', () => {
-        const graphData = JSON.parse(this.textArea.property('value'));
+        const graphData = JSON5.parse(this.textArea.property('value'));
         this.render(graphData);
 
-        const traceData = JSON.parse(traceArea.property('value'));
+        const traceData = JSON5.parse(traceArea.property('value'));
         this.setTrace(traceData);
       });
 
@@ -227,14 +230,42 @@ class DAGVisualizer {
         this.currentTime = +this.slider.property('value');
         this.updateVisualization();
       });
-  }
 
-  private handleVisualize(): void {
-    const jsonData = JSON.parse(this.textArea.property('value'));
-    this.render(jsonData);
+    // Add playback controls to timeline container
+    const controlsContainer = this.timelineContainer
+      .append('div')
+      .style('display', 'flex')
+      .style('gap', '10px')
+      .style('align-items', 'center')
+      .style('margin-top', '5px');
+
+    // Step backward button
+    controlsContainer
+      .append('button')
+      .text('⏪')
+      .style('padding', '5px 10px')
+      .on('click', () => this.stepBackward());
+
+    // Play/Pause button
+    const playButton = controlsContainer
+      .append('button')
+      .text('▶️')
+      .style('padding', '5px 10px')
+      .on('click', () => this.togglePlay(playButton));
+
+    // Step forward button
+    controlsContainer
+      .append('button')
+      .text('⏩')
+      .style('padding', '5px 10px')
+      .on('click', () => this.stepForward());
   }
 
   render(data: Graph): void {
+    if (this.playInterval) {
+      clearInterval(this.playInterval);
+      this.playInterval = null;
+    }
     // Clear previous graph
     this.g.selectAll('*').remove();
 
@@ -408,6 +439,10 @@ class DAGVisualizer {
 
   // Add method to set trace
   setTrace(trace: Trace): void {
+    if (this.playInterval) {
+      clearInterval(this.playInterval);
+      this.playInterval = null;
+    }
     this.trace = trace;
     const maxTime = Math.max(...trace.map(e => e.time));
     this.slider.attr('max', maxTime);
@@ -459,6 +494,50 @@ class DAGVisualizer {
         .attr('stroke-width', 3);
     });
   }
+
+  private stepForward(): void {
+    const maxTime = +this.slider.attr('max');
+    if (this.currentTime < maxTime) {
+      this.currentTime++;
+      this.slider.property('value', this.currentTime);
+      this.updateVisualization();
+    } else {
+      // Loop back to start if at end
+      this.currentTime = 0;
+      this.slider.property('value', this.currentTime);
+      this.updateVisualization();
+    }
+  }
+
+  private stepBackward(): void {
+    if (this.currentTime > 0) {
+      this.currentTime--;
+      this.slider.property('value', this.currentTime);
+      this.updateVisualization();
+    } else {
+      // Loop to end if at start
+      this.currentTime = +this.slider.attr('max');
+      this.slider.property('value', this.currentTime);
+      this.updateVisualization();
+    }
+  }
+
+  private togglePlay(
+    playButton: d3.Selection<HTMLButtonElement, unknown, HTMLElement, any>,
+  ): void {
+    if (this.playInterval) {
+      // Stop playing
+      clearInterval(this.playInterval);
+      this.playInterval = null;
+      playButton.text('▶️');
+    } else {
+      // Start playing
+      playButton.text('⏸️');
+      this.playInterval = window.setInterval(() => {
+        this.stepForward();
+      }, this.playSpeed);
+    }
+  }
 }
 
 // Initialize the visualizer
@@ -497,5 +576,39 @@ document.addEventListener('DOMContentLoaded', () => {
     ],
   };
 
+  // Example trace to show on load
+  const exampleTrace: Trace = [
+    // Start with source nodes pushing data
+    {type: 'push', time: 0, source: 13, dest: 16}, // issue -> Join
+    {type: 'push', time: 0, source: 14, dest: 15}, // comment -> Take(3)
+
+    // Take(3) processes and pushes
+    {type: 'push', time: 1, source: 15, dest: 16}, // Take(3) -> Join
+
+    // Join processes and pushes to FanOut
+    {type: 'push', time: 2, source: 16, dest: 17}, // Join -> FanOut
+
+    // FanOut pushes to both branches
+    {type: 'push', time: 3, source: 17, dest: 18}, // FanOut -> id = literal
+    {type: 'push', time: 3, source: 17, dest: 21}, // FanOut -> id = literal and ownerId = literal
+
+    // Filter branches process
+    {type: 'push', time: 4, source: 18, dest: 19}, // id = literal -> closed = literal
+    {type: 'push', time: 4, source: 21, dest: 22}, // id = literal and ownerId = literal -> FanIn
+
+    // More filtering
+    {type: 'push', time: 5, source: 19, dest: 20}, // closed = literal -> Exists
+
+    // Exists processes and pushes
+    {type: 'push', time: 6, source: 20, dest: 22}, // Exists -> FanIn
+
+    // FanIn collects and pushes
+    {type: 'push', time: 7, source: 22, dest: 24}, // FanIn -> Join(comments)
+
+    // Final source pushes to join
+    {type: 'push', time: 7, source: 23, dest: 24}, // comment -> Join(comments)
+  ];
+
   visualizer.render(exampleData);
+  visualizer.setTrace(exampleTrace);
 });
