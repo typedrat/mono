@@ -1,5 +1,4 @@
 import {describe, expect, test} from 'vitest';
-import type {LogConfig} from '../../otel/src/log-options.ts';
 import type {JSONValue} from '../../shared/src/json.ts';
 import {createSilentLogContext} from '../../shared/src/logging-test-utils.ts';
 import type {Ordering} from '../../zero-protocol/src/ast.ts';
@@ -15,6 +14,7 @@ import {
   TableSource,
   UnsupportedValueError,
 } from './table-source.ts';
+import {testLogConfig} from '../../otel/src/test-log-config.ts';
 
 const columns = {
   id: {type: 'string'},
@@ -24,12 +24,6 @@ const columns = {
 } as const;
 
 const lc = createSilentLogContext();
-const logConfig: LogConfig = {
-  format: 'text',
-  level: 'debug',
-  ivmSampling: 0,
-  slowRowThreshold: 0,
-};
 
 describe('fetching from a table source', () => {
   type Foo = {id: string; a: number; b: number; c: number};
@@ -183,7 +177,7 @@ describe('fetching from a table source', () => {
   ] as const)('$name', ({sourceArgs, fetchArgs, expectedRows}) => {
     const source = new TableSource(
       lc,
-      logConfig,
+      testLogConfig,
       'table-source.test.ts',
       db,
       sourceArgs[0],
@@ -285,7 +279,7 @@ describe('fetched value types', () => {
       stmt.run(c.input);
       const source = new TableSource(
         lc,
-        logConfig,
+        testLogConfig,
         'table-source.test.ts',
         db,
         'foo',
@@ -327,7 +321,7 @@ describe('no primary key', () => {
   stmt.run(['foo', 345, 789, 555]);
   const source = new TableSource(
     lc,
-    logConfig,
+    testLogConfig,
     'table-source.test.ts',
     db,
     'foo',
@@ -350,7 +344,7 @@ describe('no primary key', () => {
       const createSource = () =>
         new TableSource(
           lc,
-          logConfig,
+          testLogConfig,
           'table-source.test.ts',
           db,
           'foo',
@@ -446,7 +440,7 @@ test('pushing values does the correct writes and outputs', () => {
   );
   const source = new TableSource(
     lc,
-    logConfig,
+    testLogConfig,
     'table-source.test.ts',
     db1,
     'foo',
@@ -712,7 +706,7 @@ test('getByKey', () => {
 
   const source = new TableSource(
     lc,
-    logConfig,
+    testLogConfig,
     'table-source.test.ts',
     db,
     'foo',

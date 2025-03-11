@@ -22,20 +22,15 @@ import {ExpressionBuilder} from '../../../../zql/src/query/expression.ts';
 import type {Row} from '../../../../zql/src/query/query.ts';
 import {Database} from '../../../../zqlite/src/db.ts';
 import {WriteAuthorizerImpl} from '../../auth/write-authorizer.ts';
-import type {LogConfig, ZeroConfig} from '../../config/zero-config.ts';
+import type {ZeroConfig} from '../../config/zero-config.ts';
 import {testDBs} from '../../test/db.ts';
 import type {PostgresDB} from '../../types/pg.ts';
 import {zeroSchema} from './mutagen-test-shared.ts';
 import {processMutation} from './mutagen.ts';
+import {testLogConfig} from '../../../../otel/src/test-log-config.ts';
 
-const logConfig: LogConfig = {
-  format: 'text',
-  level: 'debug',
-  ivmSampling: 0,
-  slowRowThreshold: 0,
-};
 const zeroConfig = {
-  log: logConfig,
+  log: testLogConfig,
 } as unknown as ZeroConfig;
 
 const APP_ID = 'fooz';

@@ -33,17 +33,17 @@ test('slow queries are logged', () => {
     [
       'warn',
       {class: 'Database', path: ':memory:', method: 'pragma'},
-      ['Slow query', 0],
+      ['Slow SQLite query', 0],
     ],
     [
       'warn',
       {class: 'Database', path: ':memory:', method: 'exec'},
-      ['Slow query', 0],
+      ['Slow SQLite query', 0],
     ],
     [
       'warn',
       {class: 'Database', path: ':memory:', method: 'exec'},
-      ['Slow query', 0],
+      ['Slow SQLite query', 0],
     ],
     [
       'warn',
@@ -52,7 +52,7 @@ test('slow queries are logged', () => {
         path: ':memory:',
         method: 'prepare',
       },
-      ['Slow query', 0],
+      ['Slow SQLite query', 0],
     ],
     [
       'warn',
@@ -62,7 +62,7 @@ test('slow queries are logged', () => {
         sql: 'SELECT * FROM foo WHERE name = ?',
         method: 'run',
       },
-      ['Slow query', 0],
+      ['Slow SQLite query', 0],
     ],
     [
       'warn',
@@ -72,7 +72,7 @@ test('slow queries are logged', () => {
         sql: 'SELECT * FROM foo WHERE name = ?',
         method: 'get',
       },
-      ['Slow query', 0],
+      ['Slow SQLite query', 0],
     ],
     [
       'warn',
@@ -82,7 +82,7 @@ test('slow queries are logged', () => {
         sql: 'SELECT * FROM foo WHERE name = ?',
         method: 'all',
       },
-      ['Slow query', 0],
+      ['Slow SQLite query', 0],
     ],
     [
       'warn',
@@ -91,7 +91,7 @@ test('slow queries are logged', () => {
         path: ':memory:',
         method: 'prepare',
       },
-      ['Slow query', 0],
+      ['Slow SQLite query', 0],
     ],
     [
       'warn',
@@ -102,7 +102,7 @@ test('slow queries are logged', () => {
         method: 'iterate',
         type: 'total',
       },
-      ['Slow query', 200],
+      ['Slow SQLite query', 200],
     ],
     [
       'warn',
@@ -113,7 +113,7 @@ test('slow queries are logged', () => {
         method: 'iterate',
         type: 'sqlite',
       },
-      ['Slow query', 0],
+      ['Slow SQLite query', 0],
     ],
   ]);
 });

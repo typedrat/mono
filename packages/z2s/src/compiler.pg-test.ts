@@ -16,18 +16,12 @@ import {
 import {newQueryDelegate} from '../../zqlite/src/test/source-factory.ts';
 import {describe, expect, test} from 'vitest';
 import {formatPg} from './sql.ts';
-import type {LogConfig} from '../../otel/src/log-options.ts';
 import type {JSONValue} from '../../shared/src/json.ts';
 import {fromSQLiteTypes, toSQLiteTypes} from '../../zqlite/src/table-source.ts';
 import {type Row} from '../../zero-protocol/src/data.ts';
+import {testLogConfig} from '../../otel/src/test-log-config.ts';
 
 const lc = createSilentLogContext();
-const logConfig: LogConfig = {
-  format: 'text',
-  level: 'debug',
-  ivmSampling: 0,
-  slowRowThreshold: 0,
-};
 
 let pg: PostgresDB;
 let sqlite: Database;
@@ -112,7 +106,7 @@ beforeAll(async () => {
     }
   }
 
-  const queryDelegate = newQueryDelegate(lc, logConfig, sqlite, schema);
+  const queryDelegate = newQueryDelegate(lc, testLogConfig, sqlite, schema);
 
   issueQuery = newQuery(queryDelegate, schema, 'issue');
 

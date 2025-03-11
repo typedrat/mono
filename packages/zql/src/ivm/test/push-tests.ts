@@ -11,17 +11,11 @@ import type {Source, SourceChange} from '../source.ts';
 import type {Format} from '../view.ts';
 import {createSource} from './source-factory.ts';
 import {createSilentLogContext} from '../../../../shared/src/logging-test-utils.ts';
-import type {LogConfig} from '../../../../otel/src/log-options.ts';
 import {TestBuilderDelegate} from '../../builder/test-builder-delegate.ts';
 import {buildPipeline} from '../../builder/builder.ts';
+import {testLogConfig} from '../../../../otel/src/test-log-config.ts';
 
 const lc = createSilentLogContext();
-const logConfig: LogConfig = {
-  format: 'text',
-  level: 'debug',
-  ivmSampling: 0,
-  slowRowThreshold: 0,
-};
 
 function makeSource(
   tableName: string,
@@ -29,7 +23,13 @@ function makeSource(
   columns: Readonly<Record<string, SchemaValue>>,
   primaryKeys: PrimaryKey,
 ): Source {
-  const source = createSource(lc, logConfig, tableName, columns, primaryKeys);
+  const source = createSource(
+    lc,
+    testLogConfig,
+    tableName,
+    columns,
+    primaryKeys,
+  );
   for (const row of rows) {
     source.push({type: 'add', row});
   }

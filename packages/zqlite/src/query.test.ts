@@ -4,22 +4,16 @@ import {must} from '../../shared/src/must.ts';
 import {newQuery, type QueryDelegate} from '../../zql/src/query/query-impl.ts';
 import {schema} from '../../zql/src/query/test/test-schemas.ts';
 import {Database} from './db.ts';
-import type {LogConfig} from '../../otel/src/log-options.ts';
 import {newQueryDelegate} from './test/source-factory.ts';
+import {testLogConfig} from '../../otel/src/test-log-config.ts';
 
 let queryDelegate: QueryDelegate;
 
 const lc = createSilentLogContext();
-const logConfig: LogConfig = {
-  format: 'text',
-  level: 'debug',
-  ivmSampling: 0,
-  slowRowThreshold: 0,
-};
 
 beforeEach(() => {
   const db = new Database(createSilentLogContext(), ':memory:');
-  queryDelegate = newQueryDelegate(lc, logConfig, db, schema);
+  queryDelegate = newQueryDelegate(lc, testLogConfig, db, schema);
 
   const userSource = must(queryDelegate.getSource('user'));
   const issueSource = must(queryDelegate.getSource('issue'));

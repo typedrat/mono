@@ -4,7 +4,6 @@ import {createSilentLogContext} from '../../../../shared/src/logging-test-utils.
 import type {AST} from '../../../../zero-protocol/src/ast.ts';
 import type {Database as DB} from '../../../../zqlite/src/db.ts';
 import {Database} from '../../../../zqlite/src/db.ts';
-import type {LogConfig} from '../../config/zero-config.ts';
 import {DbFile} from '../../test/lite.ts';
 import {initChangeLog} from '../replicator/schema/change-log.ts';
 import {initReplicationState} from '../replicator/schema/replication-state.ts';
@@ -16,13 +15,7 @@ import {
 import {CREATE_STORAGE_TABLE, DatabaseStorage} from './database-storage.ts';
 import {PipelineDriver} from './pipeline-driver.ts';
 import {ResetPipelinesSignal, Snapshotter} from './snapshotter.ts';
-
-const logConfig: LogConfig = {
-  format: 'text',
-  level: 'debug',
-  ivmSampling: 0,
-  slowRowThreshold: 0,
-};
+import {testLogConfig} from '../../../../otel/src/test-log-config.ts';
 
 describe('view-syncer/pipeline-driver', () => {
   let dbFile: DbFile;
@@ -41,7 +34,7 @@ describe('view-syncer/pipeline-driver', () => {
 
     pipelines = new PipelineDriver(
       lc,
-      logConfig,
+      testLogConfig,
       new Snapshotter(lc, dbFile.path, {appID: 'zeroz'}),
       {appID: 'zeroz', shardNum: 1},
       new DatabaseStorage(storage).createClientGroupStorage('foo-client-group'),
