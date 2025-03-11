@@ -1,4 +1,4 @@
-import {escapeLike, type TTL} from '@rocicorp/zero';
+import {escapeLike} from '@rocicorp/zero';
 import {useQuery} from '@rocicorp/zero/react';
 import {useVirtualizer} from '@tanstack/react-virtual';
 import classNames from 'classnames';
@@ -28,6 +28,7 @@ import {recordPageLoad} from '../../page-load-stats.ts';
 import {mark} from '../../perf-log.ts';
 import type {ListContext} from '../../routes.ts';
 import {preload} from '../../zero-setup.ts';
+import {CACHE_AWHILE, CACHE_NONE} from '../../query-cache-policy.ts';
 
 let firstRowRendered = false;
 const itemSize = 56;
@@ -56,9 +57,6 @@ export function ListPage({onReady}: {onReady: () => void}) {
   const sortDirection =
     qs.get('sortDir')?.toLowerCase() === 'asc' ? 'asc' : 'desc';
 
-  // TODO: debounce
-  let ttl: TTL = '1h';
-
   let q = z.query.issue
     .orderBy(sortField, sortDirection)
     .orderBy('id', sortDirection)
@@ -81,7 +79,6 @@ export function ListPage({onReady}: {onReady: () => void}) {
   }
 
   if (textFilter) {
-    ttl = '10m';
     q = q.where(({or, cmp, exists}) =>
       or(
         cmp('title', 'ILIKE', `%${escapeLike(textFilter)}%`),
@@ -97,7 +94,12 @@ export function ListPage({onReady}: {onReady: () => void}) {
     q = q.whereExists('labels', q => q.where('name', label));
   }
 
-  const [issues, issuesResult] = useQuery(q, {ttl});
+  const [issues, issuesResult] = useQuery(
+    q,
+    // We debounce the text input to avoid thrashing the history. For same
+    // reason we want to avoid generating zillions of queries.
+    textFilterQuery === textFilter ? CACHE_AWHILE : CACHE_NONE,
+  );
 
   useEffect(() => {
     if (issues.length > 0 || issuesResult.type === 'complete') {
