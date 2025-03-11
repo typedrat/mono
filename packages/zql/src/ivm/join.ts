@@ -350,7 +350,7 @@ export class Join implements Input {
         assert(editNewApplied);
         editOldApplied = true;
         applied = true;
-        yield overlay.node;
+        yield overlay.oldNode;
       }
     }
 
