@@ -80,6 +80,7 @@ test('parse options', () => {
           "format": "text",
           "ivmSampling": 5000,
           "level": "info",
+          "slowHydrateThreshold": 100,
           "slowRowThreshold": 2,
         },
         "perUserMutationLimit": {
@@ -148,6 +149,7 @@ test('parse options', () => {
         "ZERO_LOG_FORMAT": "text",
         "ZERO_LOG_IVM_SAMPLING": "5000",
         "ZERO_LOG_LEVEL": "info",
+        "ZERO_LOG_SLOW_HYDRATE_THRESHOLD": "100",
         "ZERO_LOG_SLOW_ROW_THRESHOLD": "2",
         "ZERO_PER_USER_MUTATION_LIMIT_WINDOW_MS": "60000",
         "ZERO_PORT": "4848",
@@ -345,6 +347,10 @@ test('zero-cache --help', () => {
      --log-slow-row-threshold number                            default: 2                                                                                        
        ZERO_LOG_SLOW_ROW_THRESHOLD env                                                                                                                            
                                                                 The number of ms a row must take to fetch from table-source before it is considered slow.         
+                                                                                                                                                                  
+     --log-slow-hydrate-threshold number                        default: 100                                                                                      
+       ZERO_LOG_SLOW_HYDRATE_THRESHOLD env                                                                                                                        
+                                                                The number of milliseconds a query hydration must take to print a slow warning.                   
                                                                                                                                                                   
      --log-ivm-sampling number                                  default: 5000                                                                                     
        ZERO_LOG_IVM_SAMPLING env                                                                                                                                  

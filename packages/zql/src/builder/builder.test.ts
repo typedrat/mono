@@ -8,21 +8,15 @@ import {
   groupSubqueryConditions,
 } from './builder.ts';
 import {createSilentLogContext} from '../../../shared/src/logging-test-utils.ts';
-import type {LogConfig} from '../../../otel/src/log-options.ts';
+import {testLogConfig} from '../../../otel/src/test-log-config.ts';
 import {TestBuilderDelegate} from './test-builder-delegate.ts';
 
 const lc = createSilentLogContext();
-const logConfig: LogConfig = {
-  format: 'text',
-  level: 'debug',
-  ivmSampling: 0,
-  slowRowThreshold: 0,
-};
 
 export function testBuilderDelegate() {
   const users = createSource(
     lc,
-    logConfig,
+    testLogConfig,
     'table',
     {
       id: {type: 'number'},
@@ -41,7 +35,7 @@ export function testBuilderDelegate() {
 
   const states = createSource(
     lc,
-    logConfig,
+    testLogConfig,
     'table',
     {code: {type: 'string'}},
     ['code'],
@@ -54,7 +48,7 @@ export function testBuilderDelegate() {
 
   const userStates = createSource(
     lc,
-    logConfig,
+    testLogConfig,
     'table',
     {userID: {type: 'number'}, stateCode: {type: 'string'}},
     ['userID', 'stateCode'],

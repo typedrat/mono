@@ -15,15 +15,9 @@ import {
   newQuery,
   type QueryDelegate,
 } from '../../../zql/src/query/query-impl.ts';
-import type {LogConfig} from '../../../otel/src/log-options.ts';
+import {testLogConfig} from '../../../otel/src/test-log-config.ts';
 
 const lc = createSilentLogContext();
-const logConfig: LogConfig = {
-  format: 'text',
-  level: 'debug',
-  ivmSampling: 0,
-  slowRowThreshold: 0,
-};
 
 let pg: PostgresDB;
 let sqlite: Database;
@@ -58,7 +52,7 @@ beforeAll(async () => {
     {tableCopyWorkers: 1, rowBatchSize: 10000},
   );
 
-  queryDelegate = newQueryDelegate(lc, logConfig, sqlite, schema);
+  queryDelegate = newQueryDelegate(lc, testLogConfig, sqlite, schema);
   issueQuery = newQuery(queryDelegate, schema, 'issue');
 });
 

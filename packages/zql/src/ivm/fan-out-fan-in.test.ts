@@ -5,20 +5,14 @@ import {FanOut} from './fan-out.ts';
 import {Filter} from './filter.ts';
 import {createSource} from './test/source-factory.ts';
 import {createSilentLogContext} from '../../../shared/src/logging-test-utils.ts';
-import type {LogConfig} from '../../../otel/src/log-options.ts';
+import {testLogConfig} from '../../../otel/src/test-log-config.ts';
 
 const lc = createSilentLogContext();
-const logConfig: LogConfig = {
-  format: 'text',
-  level: 'debug',
-  ivmSampling: 0,
-  slowRowThreshold: 0,
-};
 
 test('fan-out pushes along all paths', () => {
   const s = createSource(
     lc,
-    logConfig,
+    testLogConfig,
     'table',
     {a: {type: 'number'}, b: {type: 'string'}},
     ['a'],
@@ -143,7 +137,7 @@ test('fan-out pushes along all paths', () => {
 test('fan-out,fan-in pairing does not duplicate pushes', () => {
   const s = createSource(
     lc,
-    logConfig,
+    testLogConfig,
     'table',
     {a: {type: 'number'}, b: {type: 'string'}},
     ['a'],
@@ -200,7 +194,7 @@ test('fan-out,fan-in pairing does not duplicate pushes', () => {
 test('fan-in fetch', () => {
   const s = createSource(
     lc,
-    logConfig,
+    testLogConfig,
     'table',
     {a: {type: 'boolean'}, b: {type: 'boolean'}},
     ['a', 'b'],
@@ -255,7 +249,7 @@ test('fan-in fetch', () => {
 test('cleanup called once per branch', () => {
   const s = createSource(
     lc,
-    logConfig,
+    testLogConfig,
     'table',
     {a: {type: 'number'}, b: {type: 'string'}},
     ['a'],

@@ -41,7 +41,6 @@ import {
 } from '../../../../zero-schema/src/permissions.ts';
 import type {ExpressionBuilder} from '../../../../zql/src/query/expression.ts';
 import {Database} from '../../../../zqlite/src/db.ts';
-import type {LogConfig} from '../../config/zero-config.ts';
 import {StatementRunner} from '../../db/statements.ts';
 import {testDBs} from '../../test/db.ts';
 import {DbFile} from '../../test/lite.ts';
@@ -73,17 +72,11 @@ import {PipelineDriver} from './pipeline-driver.ts';
 import {initViewSyncerSchema} from './schema/init.ts';
 import {Snapshotter} from './snapshotter.ts';
 import {pickToken, type SyncContext, ViewSyncerService} from './view-syncer.ts';
+import {testLogConfig} from '../../../../otel/src/test-log-config.ts';
 
 const APP_ID = 'this_app';
 const SHARD_NUM = 2;
 const SHARD = {appID: APP_ID, shardNum: SHARD_NUM};
-
-const logConfig: LogConfig = {
-  format: 'text',
-  level: 'debug',
-  ivmSampling: 0,
-  slowRowThreshold: 0,
-};
 
 const EXPECTED_LMIDS_AST: AST = {
   schema: '',
@@ -451,7 +444,7 @@ async function setup(permissions: PermissionsConfig | undefined) {
     cvrDB,
     new PipelineDriver(
       lc.withContext('component', 'pipeline-driver'),
-      logConfig,
+      testLogConfig,
       new Snapshotter(lc, replicaDbFile.path, SHARD),
       SHARD,
       operatorStorage,
@@ -459,6 +452,7 @@ async function setup(permissions: PermissionsConfig | undefined) {
     ),
     stateChanges,
     drainCoordinator,
+    100,
     undefined,
     undefined,
     setTimeoutFn,
@@ -485,10 +479,10 @@ async function setup(permissions: PermissionsConfig | undefined) {
     void (async function () {
       try {
         for await (const msg of source) {
-          queue.enqueue(msg);
+          await queue.enqueue(msg);
         }
       } catch (e) {
-        queue.enqueueRejection(e);
+        await queue.enqueueRejection(e);
       }
     })();
 

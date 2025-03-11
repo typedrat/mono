@@ -105,6 +105,10 @@ test('zero-cache --help', () => {
        ZERO_LOG_SLOW_ROW_THRESHOLD env                                                                                                                            
                                                                 The number of ms a row must take to fetch from table-source before it is considered slow.         
                                                                                                                                                                   
+     --log-slow-hydrate-threshold number                        default: 100                                                                                      
+       ZERO_LOG_SLOW_HYDRATE_THRESHOLD env                                                                                                                        
+                                                                The number of milliseconds a query hydration must take to print a slow warning.                   
+                                                                                                                                                                  
      --log-ivm-sampling number                                  default: 5000                                                                                     
        ZERO_LOG_IVM_SAMPLING env                                                                                                                                  
                                                                 How often to collect IVM metrics. 1 out of N requests will be sampled where N is this value.      

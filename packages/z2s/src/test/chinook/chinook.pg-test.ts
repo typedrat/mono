@@ -25,7 +25,7 @@ import {
   type QueryDelegate,
 } from '../../../../zql/src/query/query-impl.ts';
 import {newQueryDelegate} from '../../../../zqlite/src/test/source-factory.ts';
-import type {LogConfig} from '../../../../otel/src/log-options.ts';
+import {testLogConfig} from '../../../../otel/src/test-log-config.ts';
 import {schema} from './schema.ts';
 import type {Query} from '../../../../zql/src/query/query.ts';
 import {formatPg} from '../../sql.ts';
@@ -85,12 +85,6 @@ const memoryQueries: Queries = {...zqliteQueries} as any;
 const tables = Object.keys(zqliteQueries) as (keyof typeof zqliteQueries)[];
 
 const lc = createSilentLogContext();
-const logConfig: LogConfig = {
-  format: 'text',
-  level: 'debug',
-  ivmSampling: 0,
-  slowRowThreshold: 0,
-};
 
 function makeMemorySources() {
   return Object.fromEntries(
@@ -111,7 +105,7 @@ beforeEach(async () => {
   const memorySources = makeMemorySources();
   await writeChinook(pg, sqlite);
 
-  zqliteQueryDelegate = newQueryDelegate(lc, logConfig, sqlite, schema);
+  zqliteQueryDelegate = newQueryDelegate(lc, testLogConfig, sqlite, schema);
   memoryQueryDelegate = new TestMemoryQueryDelegate(memorySources);
 
   tables.forEach(table => {

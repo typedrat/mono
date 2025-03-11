@@ -1,5 +1,4 @@
 import {describe, expect, test} from 'vitest';
-import type {LogConfig} from '../../../otel/src/log-options.ts';
 import {deepClone} from '../../../shared/src/deep-clone.ts';
 import {createSilentLogContext} from '../../../shared/src/logging-test-utils.ts';
 import {must} from '../../../shared/src/must.ts';
@@ -14,6 +13,7 @@ import {newQuery, type QueryDelegate, QueryImpl} from './query-impl.ts';
 import type {AdvancedQuery} from './query-internal.ts';
 import {QueryDelegateImpl} from './test/query-delegate.ts';
 import {schema} from './test/test-schemas.ts';
+import {testLogConfig} from '../../../otel/src/test-log-config.ts';
 
 /**
  * Some basic manual tests to get us started.
@@ -31,12 +31,6 @@ import {schema} from './test/test-schemas.ts';
  */
 
 const lc = createSilentLogContext();
-const logConfig: LogConfig = {
-  format: 'text',
-  level: 'debug',
-  ivmSampling: 0,
-  slowRowThreshold: 0,
-};
 
 function addData(queryDelegate: QueryDelegate) {
   const userSource = must(queryDelegate.getSource('user'));
@@ -1025,14 +1019,14 @@ test('join with compound keys', async () => {
   const sources = {
     a: createSource(
       lc,
-      logConfig,
+      testLogConfig,
       'a',
       schema.tables.a.columns,
       schema.tables.a.primaryKey,
     ),
     b: createSource(
       lc,
-      logConfig,
+      testLogConfig,
       'b',
       schema.tables.b.columns,
       schema.tables.b.primaryKey,

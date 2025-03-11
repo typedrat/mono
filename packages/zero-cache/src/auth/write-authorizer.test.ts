@@ -11,18 +11,13 @@ import type {
   Rule,
 } from '../../../zero-schema/src/compiled-permissions.ts';
 import {Database} from '../../../zqlite/src/db.ts';
-import type {LogConfig, ZeroConfig} from '../config/zero-config.ts';
+import type {ZeroConfig} from '../config/zero-config.ts';
 import {WriteAuthorizerImpl} from './write-authorizer.ts';
+import {testLogConfig} from '../../../otel/src/test-log-config.ts';
 
 const lc = createSilentLogContext();
-const logConfig: LogConfig = {
-  format: 'text',
-  level: 'debug',
-  ivmSampling: 0,
-  slowRowThreshold: 0,
-};
 const zeroConfig = {
-  log: logConfig,
+  log: testLogConfig,
 } as unknown as ZeroConfig;
 
 const allowIfSubject = [
