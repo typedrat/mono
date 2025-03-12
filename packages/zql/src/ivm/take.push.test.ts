@@ -3789,6 +3789,267 @@ suite('take with partition', () => {
   });
 });
 
+test('limit 0', () => {
+  const base = {
+    columns: {
+      id: {type: 'string'},
+      created: {type: 'number'},
+    },
+    primaryKey: ['id'],
+    sort: [
+      ['created', 'asc'],
+      ['id', 'asc'],
+    ],
+    partition: undefined,
+  } as const;
+  const {messages, storage, pushes} = takeTest({
+    ...base,
+    sourceRows: [],
+    limit: 1000,
+    pushes: [
+      {type: 'add', row: {id: 'i1', created: 50}},
+      {type: 'add', row: {id: 'i2', created: 60}},
+      {type: 'add', row: {id: 'i3', created: 70}},
+      {type: 'remove', row: {id: 'i3', created: 70}},
+      {type: 'remove', row: {id: 'i2', created: 60}},
+      {type: 'remove', row: {id: 'i1', created: 50}},
+    ],
+  });
+  expect(messages).toMatchInlineSnapshot(`
+    [
+      [
+        "takeSnitch",
+        "push",
+        {
+          "row": {
+            "created": 50,
+            "id": "i1",
+          },
+          "type": "add",
+        },
+      ],
+      [
+        "takeSnitch",
+        "push",
+        {
+          "row": {
+            "created": 60,
+            "id": "i2",
+          },
+          "type": "add",
+        },
+      ],
+      [
+        "takeSnitch",
+        "push",
+        {
+          "row": {
+            "created": 70,
+            "id": "i3",
+          },
+          "type": "add",
+        },
+      ],
+      [
+        "takeSnitch",
+        "push",
+        {
+          "row": {
+            "created": 70,
+            "id": "i3",
+          },
+          "type": "remove",
+        },
+      ],
+      [
+        "takeSnitch",
+        "fetch",
+        {
+          "constraint": undefined,
+          "reverse": true,
+          "start": {
+            "basis": "after",
+            "row": {
+              "created": 70,
+              "id": "i3",
+            },
+          },
+        },
+      ],
+      [
+        "takeSnitch",
+        "fetch",
+        {
+          "constraint": undefined,
+          "start": {
+            "basis": "at",
+            "row": {
+              "created": 70,
+              "id": "i3",
+            },
+          },
+        },
+      ],
+      [
+        "takeSnitch",
+        "push",
+        {
+          "row": {
+            "created": 60,
+            "id": "i2",
+          },
+          "type": "remove",
+        },
+      ],
+      [
+        "takeSnitch",
+        "fetch",
+        {
+          "constraint": undefined,
+          "reverse": true,
+          "start": {
+            "basis": "after",
+            "row": {
+              "created": 60,
+              "id": "i2",
+            },
+          },
+        },
+      ],
+      [
+        "takeSnitch",
+        "fetch",
+        {
+          "constraint": undefined,
+          "start": {
+            "basis": "at",
+            "row": {
+              "created": 60,
+              "id": "i2",
+            },
+          },
+        },
+      ],
+      [
+        "takeSnitch",
+        "push",
+        {
+          "row": {
+            "created": 50,
+            "id": "i1",
+          },
+          "type": "remove",
+        },
+      ],
+      [
+        "takeSnitch",
+        "fetch",
+        {
+          "constraint": undefined,
+          "reverse": true,
+          "start": {
+            "basis": "after",
+            "row": {
+              "created": 50,
+              "id": "i1",
+            },
+          },
+        },
+      ],
+      [
+        "takeSnitch",
+        "fetch",
+        {
+          "constraint": undefined,
+          "start": {
+            "basis": "at",
+            "row": {
+              "created": 50,
+              "id": "i1",
+            },
+          },
+        },
+      ],
+    ]
+  `);
+  expect(storage).toMatchInlineSnapshot(`
+    {
+      "["take"]": {
+        "bound": undefined,
+        "size": 0,
+      },
+      "maxBound": {
+        "created": 70,
+        "id": "i3",
+      },
+    }
+  `);
+  expect(pushes).toMatchInlineSnapshot(`
+    [
+      {
+        "node": {
+          "relationships": {},
+          "row": {
+            "created": 50,
+            "id": "i1",
+          },
+        },
+        "type": "add",
+      },
+      {
+        "node": {
+          "relationships": {},
+          "row": {
+            "created": 60,
+            "id": "i2",
+          },
+        },
+        "type": "add",
+      },
+      {
+        "node": {
+          "relationships": {},
+          "row": {
+            "created": 70,
+            "id": "i3",
+          },
+        },
+        "type": "add",
+      },
+      {
+        "node": {
+          "relationships": {},
+          "row": {
+            "created": 70,
+            "id": "i3",
+          },
+        },
+        "type": "remove",
+      },
+      {
+        "node": {
+          "relationships": {},
+          "row": {
+            "created": 60,
+            "id": "i2",
+          },
+        },
+        "type": "remove",
+      },
+      {
+        "node": {
+          "relationships": {},
+          "row": {
+            "created": 50,
+            "id": "i1",
+          },
+        },
+        "type": "remove",
+      },
+    ]
+  `);
+});
+
 function takeTest(t: TakeTest): TakeTestReults {
   const log: SnitchMessage[] = [];
   const source = createSource(lc, logConfig, 'table', t.columns, t.primaryKey);
