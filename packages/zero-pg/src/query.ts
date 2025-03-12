@@ -109,4 +109,8 @@ export class Z2SQuery<
   materialize(): TypedView<HumanReadable<TReturn>> {
     throw new Error('Z2SQuery cannot be materialized');
   }
+
+  updateTTL(): void {
+    throw new Error('Z2SQuery cannot be materialized');
+  }
 }

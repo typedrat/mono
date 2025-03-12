@@ -49,6 +49,10 @@ export class StaticQuery<
     throw new Error('StaticQuery cannot be materialized');
   }
 
+  updateTTL(): void {
+    throw new Error('StaticQuery cannot have TTL');
+  }
+
   run(): Promise<HumanReadable<TReturn>> {
     return Promise.reject(new Error('StaticQuery cannot be run'));
   }

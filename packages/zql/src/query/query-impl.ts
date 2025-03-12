@@ -542,6 +542,7 @@ export abstract class AbstractQuery<
 
   abstract materialize(): TypedView<HumanReadable<TReturn>>;
   abstract materialize<T>(factory: ViewFactory<TSchema, TTable, TReturn, T>): T;
+  abstract updateTTL(ttl: TTL): void;
   abstract run(): Promise<HumanReadable<TReturn>>;
   abstract preload(): {
     cleanup: () => void;
@@ -630,6 +631,10 @@ export class QueryImpl<
     );
 
     return view as T;
+  }
+
+  updateTTL(ttl: TTL): void {
+    this.#delegate.addServerQuery(this._completeAst(), ttl);
   }
 
   run(): Promise<HumanReadable<TReturn>> {

@@ -14,6 +14,7 @@ export interface AdvancedQuery<
     factory: ViewFactory<TSchema, TTable, TReturn, T>,
     ttl?: TTL,
   ): T;
+  updateTTL(ttl: TTL): void;
   get format(): Format;
   hash(): string;
 }

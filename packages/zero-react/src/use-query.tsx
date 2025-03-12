@@ -194,7 +194,9 @@ export class ViewStore {
 
     const hash = query.hash() + clientID;
     let existing = this.#views.get(hash);
-    if (!existing) {
+    if (existing) {
+      existing.updateTTL(ttl);
+    } else {
       existing = new ViewWrapper(
         query,
         ttl,
@@ -256,7 +258,7 @@ class ViewWrapper<
   readonly #query: AdvancedQuery<TSchema, TTable, TReturn>;
   #snapshot: QueryResult<TReturn>;
   #reactInternals: Set<() => void>;
-  readonly #ttl: TTL;
+  #ttl: TTL;
 
   constructor(
     query: AdvancedQuery<TSchema, TTable, TReturn>,
@@ -271,6 +273,10 @@ class ViewWrapper<
     this.#snapshot = getDefaultSnapshot(query.format.singular);
     this.#reactInternals = new Set();
     this.#materializeIfNeeded();
+  }
+
+  updateTTL(ttl: TTL) {
+    this.#query.updateTTL(ttl);
   }
 
   #onData = (
