@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1741287078327,
+  "lastUpdate": 1741787598071,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -51801,6 +51801,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31222,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mlaw@roci.dev",
+            "name": "Matt Wonlaw",
+            "username": "tantaman"
+          },
+          "committer": {
+            "email": "matt.wonlaw@gmail.com",
+            "name": "Matt Wonlaw",
+            "username": "tantaman"
+          },
+          "distinct": true,
+          "id": "49b2f88cca385e421bee57bcf7865d810172ac3b",
+          "message": "chore(custom-mutators): tick a few more times in `zero-rate.test.ts`\n\nTheory: Since Replicache calls into `Zero` to `getTxData` this can sometimes result in a read\nfrom idb which means an extra tick of the event loop can go by",
+          "timestamp": "2025-03-12T09:52:01-04:00",
+          "tree_id": "e3c1e1676544d8094187b9e6818a846c3b58d69c",
+          "url": "https://github.com/rocicorp/mono/commit/49b2f88cca385e421bee57bcf7865d810172ac3b"
+        },
+        "date": 1741787586929,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 298366,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53734,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 109977,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31361,
             "unit": "bytes"
           }
         ]
