@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1741787598071,
+  "lastUpdate": 1741890203975,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -51845,6 +51845,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31361,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mlaw@roci.dev",
+            "name": "Matt Wonlaw",
+            "username": "tantaman"
+          },
+          "committer": {
+            "email": "matt.wonlaw@gmail.com",
+            "name": "Matt Wonlaw",
+            "username": "tantaman"
+          },
+          "distinct": true,
+          "id": "a93d8393e68f97c343edd250e89725d7c712db44",
+          "message": "feat(replicache): allow providing an open source read to `lazyStore`\n\nIf lazy store is being read from while within a read from the source store\nwe must provide the already open read rather than opening a new one.\n\nOpening a new read will auto-commit the outer-read when the source store is IDB backed.",
+          "timestamp": "2025-03-13T14:22:20-04:00",
+          "tree_id": "ee5ef857d9ee007cd24a85342ed6fdb811b453fd",
+          "url": "https://github.com/rocicorp/mono/commit/a93d8393e68f97c343edd250e89725d7c712db44"
+        },
+        "date": 1741890192589,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 299113,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53867,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 110155,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31455,
             "unit": "bytes"
           }
         ]
