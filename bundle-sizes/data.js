@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1741890203975,
+  "lastUpdate": 1741946296487,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -51869,6 +51869,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/a93d8393e68f97c343edd250e89725d7c712db44"
         },
         "date": 1741890192589,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 299113,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53867,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 110155,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31455,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1d37dc6ba60f9494f6ac2941365bf4c0d03f7801",
+          "message": "chore: Pin vitest and vite versions (#3980)",
+          "timestamp": "2025-03-14T09:57:15Z",
+          "tree_id": "25ba59c80e90193b27a4a7fda64184f6bf4d8055",
+          "url": "https://github.com/rocicorp/mono/commit/1d37dc6ba60f9494f6ac2941365bf4c0d03f7801"
+        },
+        "date": 1741946285632,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
