@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1741946296487,
+  "lastUpdate": 1741966444240,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -51913,6 +51913,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/1d37dc6ba60f9494f6ac2941365bf4c0d03f7801"
         },
         "date": 1741946285632,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 299113,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53867,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 110155,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31455,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6ac8e6088954735ae7702b555e3583c01d0d9115",
+          "message": "chore: Update Playwright to version 1.51.0 and adjust installation steps in workflows (#3993)",
+          "timestamp": "2025-03-14T16:33:00+01:00",
+          "tree_id": "f14634dfd314574987ba243dc37877895f823180",
+          "url": "https://github.com/rocicorp/mono/commit/6ac8e6088954735ae7702b555e3583c01d0d9115"
+        },
+        "date": 1741966432854,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
