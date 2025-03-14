@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1741966444240,
+  "lastUpdate": 1741967998565,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -51957,6 +51957,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/6ac8e6088954735ae7702b555e3583c01d0d9115"
         },
         "date": 1741966432854,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 299113,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53867,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 110155,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31455,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "fc4128dd36310f7bedffa85c3b2246268f0a261a",
+          "message": "chore: Update TypeScript version constraints to use tilde for consistency (#3989)\n\nWhen using ^5.7.3 it allows 5.8.x. Since TS does not follow semver we\ncan end up with an incompatible version. This change updates all\nTypeScript version constraints to use tilde for consistency.",
+          "timestamp": "2025-03-14T16:58:58+01:00",
+          "tree_id": "30dde037579f900ed11a51a6eeb5beca8bc0837c",
+          "url": "https://github.com/rocicorp/mono/commit/fc4128dd36310f7bedffa85c3b2246268f0a261a"
+        },
+        "date": 1741967987629,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
