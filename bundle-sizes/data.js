@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1742321541077,
+  "lastUpdate": 1742391298606,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -52089,6 +52089,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/d747db0307dc78e466ea532044eb52e36c849654"
         },
         "date": 1742321523820,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 299166,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53867,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 110179,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31542,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "494987bbd97af603665f4c6fbb4030269792a721",
+          "message": "chore: Update prettier config to 0.3 (#4030)\n\nThis is to allow some syntax that 0.2 didn't support",
+          "timestamp": "2025-03-19T13:33:44Z",
+          "tree_id": "f047c382fb5623e4d5d311733e81a278130a4972",
+          "url": "https://github.com/rocicorp/mono/commit/494987bbd97af603665f4c6fbb4030269792a721"
+        },
+        "date": 1742391287087,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
