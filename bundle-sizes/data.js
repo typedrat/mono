@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1742392813798,
+  "lastUpdate": 1742468988417,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -52197,6 +52197,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31542,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a3ed272780ce5a5f487a4aaf0a1747df8c6002fe",
+          "message": "chore: Add meta data to package.json (#4049)\n\nhttps://bugs.rocicorp.dev/issue/3612",
+          "timestamp": "2025-03-20T11:08:44Z",
+          "tree_id": "a1216e4e45dc06c6bcf9cc07322bb451a9044e59",
+          "url": "https://github.com/rocicorp/mono/commit/a3ed272780ce5a5f487a4aaf0a1747df8c6002fe"
+        },
+        "date": 1742468976314,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 299022,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53853,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 110122,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31423,
             "unit": "bytes"
           }
         ]
