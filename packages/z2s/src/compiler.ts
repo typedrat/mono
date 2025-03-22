@@ -56,9 +56,7 @@ export class Compiler {
     const selectionSet = this.related(ast.related ?? [], format, ast.table);
     const table = this.#tables[ast.table];
     for (const column of Object.keys(table.columns)) {
-      selectionSet.push(
-        sql`${sql.ident(ast.table)}.${this.#mapColumn(ast.table, column)}`,
-      );
+      selectionSet.push(this.#selectCol(ast.table, column, 'unknown'));
     }
     return sql`SELECT ${sql.join(selectionSet, ',')} FROM ${this.#mapTable(
       ast.table,
@@ -396,5 +394,76 @@ export class Compiler {
   #mapTableNoAlias(table: string) {
     const mapped = this.#nameMapper.tableName(table);
     return sql.ident(mapped);
+  }
+
+  #selectCol(table: string, column: string, dataType: string) {
+    switch (dataType.toLowerCase()) {
+      case 'smallint':
+      case 'integer':
+      case 'int':
+      case 'int2':
+      case 'int4':
+      case 'int8':
+      case 'bigint':
+      case 'smallserial':
+      case 'serial':
+      case 'serial2':
+      case 'serial4':
+      case 'serial8':
+      case 'bigserial':
+      case 'decimal':
+      case 'numeric':
+      case 'real':
+      case 'double precision':
+      case 'float':
+      case 'float4':
+      case 'float8':
+        return this.#selectColumnNoConversion(table, column);
+
+      case 'date':
+      case 'timestamp':
+        return sql`EXTRACT(EPOCH FROM ${this.#mapColumnNoAlias(
+          table,
+          column,
+        )}::timestamp AT TIME ZONE 'UTC'::timestamptz) * 1000 as ${sql.ident(
+          column,
+        )}`;
+      case 'timestamptz':
+      case 'timestamp with time zone':
+      case 'timestamp without time zone':
+        // Timestamps are represented as epoch milliseconds (at microsecond resolution using floating point),
+        // and DATEs are represented as epoch milliseconds of UTC midnight of the date.
+        return sql`EXTRACT(EPOCH FROM ${this.#mapColumnNoAlias(
+          table,
+          column,
+        )}) * 1000 as ${sql.ident(column)}`;
+      case 'bpchar':
+      case 'character':
+      case 'character varying':
+      case 'text':
+      case 'uuid':
+      case 'varchar':
+        return this.#selectColumnNoConversion(table, column);
+
+      case 'bool':
+      case 'boolean':
+        return this.#selectColumnNoConversion(table, column);
+
+      case 'json':
+      case 'jsonb':
+        return this.#selectColumnNoConversion(table, column);
+
+      // TODO: Add support for these.
+      // case 'bytea':
+      default:
+        // if (liteTypeString.includes(TEXT_ENUM_ATTRIBUTE)) {
+        //   return 'string';
+        // }
+        return this.#selectColumnNoConversion(table, column);
+    }
+  }
+
+  #selectColumnNoConversion(table: string, column: string) {
+    return sql`${sql.ident(table)}.${this.#mapColumn(table, column)}`;
   }
 }
