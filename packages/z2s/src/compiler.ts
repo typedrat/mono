@@ -14,7 +14,10 @@ import {
   type SimpleCondition,
 } from '../../zero-protocol/src/ast.ts';
 import {clientToServer, NameMapper} from '../../zero-schema/src/name-mapper.ts';
-import type {TableSchema} from '../../zero-schema/src/table-schema.ts';
+import type {
+  TableSchema,
+  ValueType,
+} from '../../zero-schema/src/table-schema.ts';
 import type {Format} from '../../zql/src/ivm/view.ts';
 import {sql} from './sql.ts';
 import type {SQLQuery} from '@databases/sql';
@@ -54,9 +57,9 @@ export class Compiler {
     correlation: SQLQuery | undefined,
   ) {
     const selectionSet = this.related(ast.related ?? [], format, ast.table);
-    const table = this.#tables[ast.table];
-    for (const column of Object.keys(table.columns)) {
-      selectionSet.push(this.#selectCol(ast.table, column, 'unknown'));
+    const tableSchema = this.#tables[ast.table];
+    for (const [column, columnSchema] of Object.entries(tableSchema.columns)) {
+      selectionSet.push(this.#selectCol(ast.table, column, columnSchema.type));
     }
     return sql`SELECT ${sql.join(selectionSet, ',')} FROM ${this.#mapTable(
       ast.table,
@@ -396,74 +399,13 @@ export class Compiler {
     return sql.ident(mapped);
   }
 
-  #selectCol(table: string, column: string, dataType: string) {
-    switch (dataType.toLowerCase()) {
-      case 'smallint':
-      case 'integer':
-      case 'int':
-      case 'int2':
-      case 'int4':
-      case 'int8':
-      case 'bigint':
-      case 'smallserial':
-      case 'serial':
-      case 'serial2':
-      case 'serial4':
-      case 'serial8':
-      case 'bigserial':
-      case 'decimal':
-      case 'numeric':
-      case 'real':
-      case 'double precision':
-      case 'float':
-      case 'float4':
-      case 'float8':
-        return this.#selectColumnNoConversion(table, column);
-
-      case 'date':
-      case 'timestamp':
-        return sql`EXTRACT(EPOCH FROM ${this.#mapColumnNoAlias(
-          table,
-          column,
-        )}::timestamp AT TIME ZONE 'UTC'::timestamptz) * 1000 as ${sql.ident(
-          column,
-        )}`;
-      case 'timestamptz':
-      case 'timestamp with time zone':
-      case 'timestamp without time zone':
-        // Timestamps are represented as epoch milliseconds (at microsecond resolution using floating point),
-        // and DATEs are represented as epoch milliseconds of UTC midnight of the date.
-        return sql`EXTRACT(EPOCH FROM ${this.#mapColumnNoAlias(
-          table,
-          column,
-        )}) * 1000 as ${sql.ident(column)}`;
-      case 'bpchar':
-      case 'character':
-      case 'character varying':
-      case 'text':
-      case 'uuid':
-      case 'varchar':
-        return this.#selectColumnNoConversion(table, column);
-
-      case 'bool':
-      case 'boolean':
-        return this.#selectColumnNoConversion(table, column);
-
-      case 'json':
-      case 'jsonb':
-        return this.#selectColumnNoConversion(table, column);
-
-      // TODO: Add support for these.
-      // case 'bytea':
-      default:
-        // if (liteTypeString.includes(TEXT_ENUM_ATTRIBUTE)) {
-        //   return 'string';
-        // }
-        return this.#selectColumnNoConversion(table, column);
+  #selectCol(table: string, column: string, type: ValueType) {
+    if (type === 'date' || type === 'timestamp') {
+      return sql`EXTRACT(EPOCH FROM ${this.#mapColumnNoAlias(
+        table,
+        column,
+      )}::timestamp AT TIME ZONE 'UTC') * 1000 as ${sql.ident(column)}`;
     }
-  }
-
-  #selectColumnNoConversion(table: string, column: string) {
     return sql`${sql.ident(table)}.${this.#mapColumn(table, column)}`;
   }
 }
