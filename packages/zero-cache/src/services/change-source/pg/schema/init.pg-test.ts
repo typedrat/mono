@@ -14,8 +14,8 @@ const SHARD_NUM = 23;
 
 // Update as necessary.
 const CURRENT_SCHEMA_VERSIONS = {
-  dataVersion: 7,
-  schemaVersion: 7,
+  dataVersion: 6,
+  schemaVersion: 6,
   minSafeVersion: 1,
   lock: 'v',
 } as const;
@@ -110,7 +110,7 @@ describe('change-streamer/pg/schema/init', () => {
       },
     },
     {
-      name: 'v5 to v7',
+      name: 'v5 to v6',
       upstreamSetup: `
         CREATE SCHEMA ${APP_ID}_${SHARD_NUM};
         CREATE TABLE ${APP_ID}_${SHARD_NUM}."shardConfig" (
@@ -164,10 +164,7 @@ describe('change-streamer/pg/schema/init', () => {
           {
             appID: APP_ID,
             shardNum: SHARD_NUM,
-            publications: c.requestedPublications ?? [
-              `_${APP_ID}_metadata_23`,
-              `_${APP_ID}_public_23`,
-            ],
+            publications: c.requestedPublications ?? [],
           },
           '123',
         );
