@@ -40,6 +40,19 @@ const issue = table('issue')
   })
   .primaryKey('id');
 
+/**
+ * Denormalization of subscribers to issues.
+ * It would be too expensive to check all comments and all reactions
+ * to gather all interested parties to an issue on every
+ * mutation of that issue.
+ */
+const issueSubscriber = table('issueSubscriber')
+  .columns({
+    issueID: string(),
+    userID: string(),
+  })
+  .primaryKey('issueID', 'userID');
+
 const viewState = table('viewState')
   .columns({
     issueID: string(),
@@ -111,6 +124,18 @@ const issueRelationships = relationships(issue, ({many, one}) => ({
       sourceField: ['labelID'],
       destField: ['id'],
       destSchema: label,
+    },
+  ),
+  subscribers: many(
+    {
+      sourceField: ['id'],
+      destField: ['issueID'],
+      destSchema: issueSubscriber,
+    },
+    {
+      sourceField: ['userID'],
+      destField: ['id'],
+      destSchema: user,
     },
   ),
   comments: many({

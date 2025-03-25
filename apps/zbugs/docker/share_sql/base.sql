@@ -104,6 +104,14 @@ CREATE TABLE "userPref" (
     PRIMARY KEY ("userID", "key")
 );
 
+-- subscribers
+
+CREATE TABLE "issueSubscriber" (
+    "issueID" VARCHAR REFERENCES issue(id) ON DELETE CASCADE,
+    "userID" VARCHAR REFERENCES "user"(id) ON DELETE CASCADE,
+    PRIMARY KEY ("issueID", "userID")
+);
+
 -- zero.schemaVersions
 
 CREATE SCHEMA IF NOT EXISTS zero;
