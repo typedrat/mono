@@ -532,10 +532,13 @@ test('zero-cache --help', () => {
                                                                 to reduce the amount of heap memory used during initial sync (e.g. for tables                     
                                                                 with large rows).                                                                                 
                                                                                                                                                                   
-     --max-row-count number                                     optional                                                                                          
-       ZERO_MAX_ROW_COUNT env                                                                                                                                     
-                                                                The target number of rows to keep in the client side cache.                                       
-                                                                If unset, zero-cache will use the default value.                                                  
+     --target-client-row-count number                           optional                                                                                          
+       ZERO_TARGET_CLIENT_ROW_COUNT env                                                                                                                           
+                                                                The target number of rows to keep per client in the client side cache.                            
+                                                                This limit is a soft limit. When the number of rows in the cache exceeds                          
+                                                                this limit, zero-cache will evict inactive queries in order of ttl-based expiration.              
+                                                                Active queries, on the other hand, are never evicted and are allowed to use more                  
+                                                                rows than the limit.                                                                              
                                                                                                                                                                   
      --server-version string                                    optional                                                                                          
        ZERO_SERVER_VERSION env                                                                                                                                    
