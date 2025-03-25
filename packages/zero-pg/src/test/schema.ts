@@ -32,6 +32,15 @@ export const schema = createSchema({
         c: string().optional(),
       })
       .primaryKey('a', 'b'),
+    table('needsConversion')
+      .columns({
+        id: string(),
+        date: number(),
+        time: number(),
+        numeric: number(),
+        bigint: number(),
+      })
+      .primaryKey('id'),
   ],
   relationships: [],
 });
@@ -55,7 +64,16 @@ CREATE TABLE "compoundPk" (
   b INTEGER,
   c TEXT,
   PRIMARY KEY (a, b)
-);`;
+);
+
+CREATE TABLE "needsConversion" (
+  id TEXT PRIMARY KEY,
+  date DATE,
+  time TIME,
+  numeric NUMERIC,
+  bigint BIGINT
+);
+`;
 
 export const seedDataSql = `
 INSERT INTO basic (id, a, b, c) VALUES ('1', 2, 'foo', true);

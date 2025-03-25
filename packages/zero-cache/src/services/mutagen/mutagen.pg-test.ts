@@ -61,6 +61,13 @@ async function createTables(db: PostgresDB) {
         PRIMARY KEY(id),
         FOREIGN KEY(ref) REFERENCES idonly(id)
       );
+      CREATE TABLE "needsConversion" (
+        id TEXT PRIMARY KEY,
+        date DATE,
+        time TIME,
+        numeric NUMERIC,
+        bigint BIGINT
+      );
       ${zeroSchema(SHARD)}
     `);
 }
@@ -634,6 +641,57 @@ describe('processMutation', {timeout: 15000}, () => {
           clientID: '123',
           lastMutationID: 1n,
           userID: null,
+        },
+      ],
+    });
+  });
+
+  test('values are converted', async () => {
+    const result = await processMutation(
+      lc,
+      {},
+      db,
+      SHARD,
+      'abc',
+      {
+        type: MutationType.CRUD,
+        id: 1,
+        clientID: '123',
+        name: '_zero_crud',
+        args: [
+          {
+            ops: [
+              {
+                op: 'insert',
+                tableName: 'needsConversion',
+                primaryKey: ['id'],
+                value: {
+                  id: '1',
+                  date: new Date('2021-01-01').getTime(),
+                  time: new Date('1970-01-01T12:34:56Z').getTime(),
+                  numeric: 1.23,
+                  bigint: 123,
+                },
+              },
+            ],
+          },
+        ],
+        timestamp: Date.now(),
+      } satisfies CRUDMutation,
+      mockWriteAuthorizer,
+      TEST_SCHEMA_VERSION,
+    );
+
+    expect(result).toBeUndefined();
+
+    await expectTables(db, {
+      ['needsConversion']: [
+        {
+          id: '1',
+          date: '2021-01-01',
+          time: '12:34:56',
+          numeric: 1.23,
+          bigint: 123,
         },
       ],
     });

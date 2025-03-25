@@ -148,6 +148,29 @@ describe('makeSchemaCRUD', () => {
       ]);
     });
   });
+
+  test('convert types on write', async () => {
+    await pg.begin(async tx => {
+      const crud = crudProvider(new Transaction(tx));
+      await crud.needsConversion.insert({
+        id: '1',
+        date: new Date('2021-01-01').getTime(),
+        time: new Date('1970-01-01T12:34:56Z').getTime(),
+        numeric: 1.23,
+        bigint: 123,
+      });
+
+      await checkDb(tx, 'needsConversion', [
+        {
+          id: '1',
+          date: new Date('2021-01-01').getTime(),
+          time: new Date('1970-01-01T12:34:56Z').getTime(),
+          numeric: 1.23,
+          bigint: 123,
+        },
+      ]);
+    });
+  });
 });
 
 async function checkDb(pg: PostgresDB, table: string, expected: unknown[]) {
