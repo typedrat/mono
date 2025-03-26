@@ -1,5 +1,12 @@
-import * as sinon from 'sinon';
-import {beforeEach, describe, expect, expectTypeOf, test} from 'vitest';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  expectTypeOf,
+  test,
+  vi,
+} from 'vitest';
 import {schema} from '../../../zql/src/query/test/test-schemas.ts';
 import {
   TransactionImpl,
@@ -346,15 +353,19 @@ describe('rebasing custom mutators', () => {
 
     expect(mutationRun).toEqual(true);
   });
+});
+
+describe('server results and keeping read queries', () => {
+  beforeEach(() => {
+    vi.stubGlobal('WebSocket', MockSocket as unknown as typeof WebSocket);
+    vi.stubGlobal('fetch', () => Promise.resolve(new Response()));
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
 
   test('waiting for server results', async () => {
-    sinon.replace(
-      globalThis,
-      'WebSocket',
-      MockSocket as unknown as typeof WebSocket,
-    );
-    sinon.stub(globalThis, 'fetch').returns(Promise.resolve(new Response()));
-
     const z = zeroForTest({
       schema,
       mutators: {
@@ -380,20 +391,13 @@ describe('rebasing custom mutators', () => {
       ownerId: '',
     });
 
-    await z.triggerPushResponse({
-      mutations: [
-        {
-          id: {clientID: z.clientID, id: 1},
-          result: {
-            data: {
-              shortID: '1',
-            },
-          },
-        },
-      ],
+    await z.triggerPoke('1', '2', {
+      lastMutationIDChanges: {
+        [z.clientID]: 1,
+      },
     });
 
-    expect(await create.server).toEqual({data: {shortID: '1'}});
+    expect(await create.server).toEqual({});
 
     const close = await z.mutate.issue.close({});
 
@@ -408,20 +412,12 @@ describe('rebasing custom mutators', () => {
       ],
     });
 
-    sinon.restore();
     await z.close();
 
     await expect(close.server).rejects.toEqual({error: 'app'});
   });
 
   test('reads in a mutation are registered', async () => {
-    sinon.replace(
-      globalThis,
-      'WebSocket',
-      MockSocket as unknown as typeof WebSocket,
-    );
-    sinon.stub(globalThis, 'fetch').returns(Promise.resolve(new Response()));
-
     const z = zeroForTest({
       schema,
       mutators: {
@@ -453,11 +449,11 @@ describe('rebasing custom mutators', () => {
         expect(msg).toMatchInlineSnapshot(
           `"["changeDesiredQueries",{"desiredQueriesPatch":[{"op":"del","hash":"12hwg3ihkijhm"}]}]"`,
         );
-      } else if (onUpstreamCall === 2) {
+      } else if (onUpstreamCall === 3) {
         expect(msg).toMatchInlineSnapshot(
           `"["changeDesiredQueries",{"desiredQueriesPatch":[{"op":"put","hash":"1vsd9vcx6ynd4","ast":{"table":"issues","limit":1,"orderBy":[["id","asc"]]},"ttl":0}]}]"`,
         );
-      } else if (onUpstreamCall === 3) {
+      } else if (onUpstreamCall === 4) {
         expect(msg).toMatchInlineSnapshot(
           `"["changeDesiredQueries",{"desiredQueriesPatch":[{"op":"del","hash":"1vsd9vcx6ynd4"}]}]"`,
         );
@@ -478,19 +474,16 @@ describe('rebasing custom mutators', () => {
     });
     expect(onUpstreamCall).toEqual(1);
 
-    await z.triggerPushResponse({
-      mutations: [
-        {
-          id: {clientID: z.clientID, id: 1},
-          result: {},
-        },
-      ],
+    await z.triggerPoke('1', '2', {
+      lastMutationIDChanges: {
+        [z.clientID]: 1,
+      },
     });
     expect(onUpstreamCall).toEqual(2);
 
     // check the error case
     const close = await z.mutate.issue.close({});
-    expect(onUpstreamCall).toEqual(3);
+    expect(onUpstreamCall).toEqual(4);
 
     await z.triggerPushResponse({
       mutations: [
@@ -502,11 +495,9 @@ describe('rebasing custom mutators', () => {
         },
       ],
     });
-    expect(onUpstreamCall).toEqual(4);
-
-    sinon.restore();
-    await z.close();
-
+    expect(onUpstreamCall).toEqual(5);
     await expect(close.server).rejects.toEqual({error: 'app'});
+
+    await z.close();
   });
 });

@@ -1298,6 +1298,7 @@ export class Zero<
   #handlePokeEnd(_lc: LogContext, pokeMessage: PokeEndMessage): void {
     this.#abortPingTimeout();
     this.#pokeHandler.handlePokeEnd(pokeMessage[1]);
+    this.#mutationTracker.processPokeEnd(this.#lastMutationIDReceived);
   }
 
   #onPokeError(): void {

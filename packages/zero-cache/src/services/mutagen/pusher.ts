@@ -223,13 +223,23 @@ class PushWorker {
         if (!client) {
           continue;
         }
+        // We only send mutations with errors to the client through `push-response`.
+        // The reason is that if we send `success` mutations to the client
+        // then the client can see inconsistent state. As in, the mutation could be reported as a success
+        // before the client has received the poke which contains the effects of the mutation.
+        const errorMutations = mutations.filter(m => 'error' in m.result);
 
-        let failure: ErrorForClient | undefined;
+        if (errorMutations.length === 0) {
+          continue;
+        }
+
+        let fatalError: ErrorForClient | undefined;
         let i = 0;
-        for (; i < mutations.length; i++) {
-          const m = mutations[i];
+
+        for (; i < errorMutations.length; i++) {
+          const m = errorMutations[i];
           if ('error' in m.result && m.result.error === 'ooo-mutation') {
-            failure = new ErrorForClient({
+            fatalError = new ErrorForClient({
               kind: ErrorKind.InvalidPush,
               message: 'mutation was out of order',
             });
@@ -237,31 +247,33 @@ class PushWorker {
           }
         }
 
-        if (failure && i < mutations.length - 1) {
+        if (fatalError && i < errorMutations.length - 1) {
           this.#lc.error?.(
             'push-response contains mutations after a mutation which should fatal the connection',
           );
         }
 
-        // We do not resolve the mutation on the client if it
-        // fails for a reason that will cause it to be retried.
-        const successes = failure ? mutations.slice(0, i) : mutations;
+        const appErrors = fatalError
+          ? errorMutations.slice(0, i)
+          : errorMutations;
 
-        if (successes.length > 0) {
+        if (appErrors.length > 0) {
           responses.push(
-            client[1].push(['push-response', {mutations: successes}]).result,
+            client[1].push(['push-response', {mutations: appErrors}]).result,
           );
         }
 
-        if (failure) {
-          connectionTerminations.push(() => client[1].fail(failure));
+        if (fatalError) {
+          connectionTerminations.push(() => client[1].fail(fatalError));
         }
       }
     }
 
     try {
+      // await all the pending responses
       await Promise.allSettled(responses);
     } finally {
+      // then finally terminate the connection. Not awaiting first will prevent responses from being sent.
       connectionTerminations.forEach(cb => cb());
     }
   }

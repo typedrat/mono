@@ -6,6 +6,7 @@ import {createSilentLogContext} from '../../../shared/src/logging-test-utils.ts'
 import {createSchema} from '../../../zero-schema/src/builder/schema-builder.ts';
 import type {WriteTransaction} from './replicache-types.ts';
 import {zeroData} from '../../../replicache/src/transactions.ts';
+import {emptyObject} from '../../../shared/src/sentinels.ts';
 
 describe('MutationTracker', () => {
   const CLIENT_ID = 'test-client-1';
@@ -14,6 +15,22 @@ describe('MutationTracker', () => {
     const tracker = new MutationTracker();
     tracker.clientID = CLIENT_ID;
     const mutationPromise = tracker.trackMutation(1, []);
+    void tracker.trackMutation(2, []);
+    void tracker.trackMutation(3, []);
+
+    tracker.processPokeEnd(1);
+    const result = await mutationPromise;
+    expect(result).toEqual({});
+
+    expect(tracker.size).toBe(2);
+    tracker.processPokeEnd(4);
+    expect(tracker.size).toBe(0);
+  });
+
+  test('errors if a success response is received', () => {
+    const tracker = new MutationTracker();
+    tracker.clientID = CLIENT_ID;
+    void tracker.trackMutation(1, []);
 
     const response: PushResponse = {
       mutations: [
@@ -24,9 +41,9 @@ describe('MutationTracker', () => {
       ],
     };
 
-    tracker.processPushResponse(response);
-    const result = await mutationPromise;
-    expect(result).toEqual({});
+    expect(() => tracker.processPushResponse(response)).toThrow(
+      'Only mutation errors should be sent to the client through push-response',
+    );
   });
 
   test('tracks a mutation and rejects on error', async () => {
@@ -105,8 +122,30 @@ describe('MutationTracker', () => {
     const mutation1 = tracker.trackMutation(1, []);
     const mutation2 = tracker.trackMutation(2, []);
 
-    const r1 = {};
-    const r2 = {};
+    const r1 = emptyObject;
+    const r2 = emptyObject;
+
+    tracker.processPokeEnd(2);
+
+    const [result1, result2] = await Promise.all([mutation1, mutation2]);
+    expect(result1).toBe(r1);
+    expect(result2).toBe(r2);
+  });
+
+  test('handles multiple concurrent error mutations', async () => {
+    const tracker = new MutationTracker();
+    tracker.clientID = CLIENT_ID;
+    const mutation1 = tracker.trackMutation(1, []);
+    const mutation2 = tracker.trackMutation(2, []);
+
+    const r1 = {
+      error: 'app',
+      details: '1',
+    } as const;
+    const r2 = {
+      error: 'app',
+      details: '2',
+    } as const;
     const response: PushResponse = {
       mutations: [
         {
@@ -122,9 +161,21 @@ describe('MutationTracker', () => {
 
     tracker.processPushResponse(response);
 
-    const [result1, result2] = await Promise.all([mutation1, mutation2]);
-    expect(result1).toBe(r1);
-    expect(result2).toBe(r2);
+    const [result1, result2] = await Promise.allSettled([mutation1, mutation2]);
+    expect(result1).toEqual({
+      reason: {
+        details: '1',
+        error: 'app',
+      },
+      status: 'rejected',
+    });
+    expect(result2).toEqual({
+      reason: {
+        details: '2',
+        error: 'app',
+      },
+      status: 'rejected',
+    });
   });
 
   test('mutation tracker size goes down each time a mutation is resolved or rejected', () => {
@@ -138,10 +189,6 @@ describe('MutationTracker', () => {
     const response: PushResponse = {
       mutations: [
         {
-          id: {clientID: CLIENT_ID, id: 1},
-          result: {},
-        },
-        {
           id: {clientID: CLIENT_ID, id: 2},
           result: {
             error: 'app',
@@ -150,6 +197,8 @@ describe('MutationTracker', () => {
       ],
     };
 
+    tracker.processPokeEnd(1);
+    expect(tracker.size).toBe(1);
     tracker.processPushResponse(response);
     expect(tracker.size).toBe(0);
   });

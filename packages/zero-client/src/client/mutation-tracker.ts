@@ -2,7 +2,6 @@ import {resolver, type Resolver} from '@rocicorp/resolver';
 import type {
   MutationError,
   MutationID,
-  MutationOk,
   MutationResult,
   PushError,
   PushOk,
@@ -12,6 +11,7 @@ import {assert} from '../../../shared/src/asserts.ts';
 import type {AST} from '../../../zero-protocol/src/ast.ts';
 import type {QueryManager} from './query-manager.ts';
 import {must} from '../../../shared/src/must.ts';
+import {emptyObject} from '../../../shared/src/sentinels.ts';
 
 const transientPushErrorTypes: PushError['error'][] = [
   'zero-pusher',
@@ -82,6 +82,19 @@ export class MutationTracker {
     }
   }
 
+  processPokeEnd(lastMutationID: number) {
+    for (const [id, entry] of this.#outstandingMutations) {
+      if (id <= lastMutationID) {
+        entry.removeQueries();
+        entry.resolver.resolve(emptyObject);
+        this.#outstandingMutations.delete(id);
+      } else {
+        // this.#outstandingMutations is in order of insertion which is in order of mutationID
+        break;
+      }
+    }
+  }
+
   get size() {
     return this.#outstandingMutations.size;
   }
@@ -110,7 +123,11 @@ export class MutationTracker {
       if ('error' in mutation.result) {
         this.#processMutationError(mutation.id, mutation.result);
       } else {
-        this.#processMutationOk(mutation.result, mutation.id);
+        // A mutation success must come through the `poke` interface so it is transactional
+        // with the queries that were read.
+        throw new Error(
+          'Only mutation errors should be sent to the client through push-response',
+        );
       }
     }
   }
@@ -124,21 +141,15 @@ export class MutationTracker {
       'received mutation for the wrong client',
     );
     const entry = this.#outstandingMutations.get(mid.id);
-    assert(entry);
+    // TODO (mlaw):
+    // This can happen because transient mutation errors are skipped, causing the LMID to increment.
+    // If the `poke` is received before the `push-response`, the mutation will be resolved already :|
+    // It seems like the only way around this race is to write mutation results to the DB.
+    if (!entry) {
+      return;
+    }
     entry.removeQueries();
     entry.resolver.reject(error);
-    this.#outstandingMutations.delete(mid.id);
-  }
-
-  #processMutationOk(result: MutationOk, mid: MutationID): void {
-    assert(
-      mid.clientID === this.#clientID,
-      'received mutation for the wrong client',
-    );
-    const entry = this.#outstandingMutations.get(mid.id);
-    assert(entry);
-    entry.removeQueries();
-    entry.resolver.resolve(result);
     this.#outstandingMutations.delete(mid.id);
   }
 }
