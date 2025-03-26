@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1742468988417,
+  "lastUpdate": 1742996020596,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -52221,6 +52221,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/a3ed272780ce5a5f487a4aaf0a1747df8c6002fe"
         },
         "date": 1742468976314,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 299022,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53853,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 110122,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31423,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7b1c88ac4cb650865c129c0d7558777c9d69dd3b",
+          "message": "chore: Remove tsc-alias (#4104)\n\nIt was not needed any more.\n\nVerified by looking at the output files.",
+          "timestamp": "2025-03-26T13:32:40Z",
+          "tree_id": "eac74839bffb60d7355931213b20996830769ec5",
+          "url": "https://github.com/rocicorp/mono/commit/7b1c88ac4cb650865c129c0d7558777c9d69dd3b"
+        },
+        "date": 1742996009354,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
