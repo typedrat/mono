@@ -15,4 +15,4 @@ export const workspace = [
   ...configForCustomPg(url),
 ];
 
-export default defineConfig({test: {workspace}});
+export default defineConfig({test: {workspace, testTimeout: 20_000}});

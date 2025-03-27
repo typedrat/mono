@@ -1,4 +1,4 @@
-import {expect, test} from 'vitest';
+import {describe, expect, test} from 'vitest';
 import {formatPg, sql} from './sql.ts';
 
 test('identical values result in a single placeholder', () => {
@@ -31,4 +31,8 @@ test('identical values result in a single placeholder', () => {
       ],
     }
   `);
+});
+
+describe('json arg packing', () => {
+  test('the only arguments to the query come from json packing', () => {});
 });

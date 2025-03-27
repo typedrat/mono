@@ -4,6 +4,7 @@ import {
   escapePostgresIdentifier,
   escapeSQLiteIdentifier,
 } from '@databases/escape-identifier';
+import type {ValueType} from '../../zero-protocol/src/client-schema.ts';
 
 export function formatPg(sql: SQLQuery) {
   const format = new ReusingFormat(escapePostgresIdentifier);
@@ -15,8 +16,16 @@ export function formatSqlite(sql: SQLQuery) {
   return sql.format((items: readonly SQLItem[]) => formatFn(items, format));
 }
 
+export const extractFromJson = Symbol('fromJson');
+type ExtractFromJsonArg = {
+  [extractFromJson]: true;
+  type: ValueType;
+  value: unknown;
+};
+
 class ReusingFormat implements FormatConfig {
-  readonly #seen: Map<unknown, number> = new Map();
+  readonly #seen: Map<unknown, readonly [argIndex: number, packIndex: number]> =
+    new Map();
   readonly escapeIdentifier: (str: string) => string;
 
   constructor(escapeIdentifier: (str: string) => string) {
@@ -24,15 +33,51 @@ class ReusingFormat implements FormatConfig {
   }
 
   formatValue = (value: unknown) => {
-    if (this.#seen.has(value)) {
+    const mapKey = isJsonExtract(value) ? value.value : value;
+    if (this.#seen.has(mapKey)) {
       return {
-        placeholder: `$${this.#seen.get(value)}`,
+        placeholder: this.#createPlaceholder(this.#seen.get(mapKey)!, value),
         value: PREVIOUSLY_SEEN_VALUE,
       };
     }
-    this.#seen.set(value, this.#seen.size + 1);
-    return {placeholder: `$${this.#seen.size}`, value};
+    const indices = [this.#seen.size + 1, 0] as const;
+    this.#seen.set(mapKey, indices);
+    return {placeholder: this.#createPlaceholder(indices, value), value};
   };
+
+  #createPlaceholder(
+    indices: readonly [argIndex: number, packIndex: number],
+    value: unknown,
+  ) {
+    if (isJsonExtract(value)) {
+      return this.#createJsonExtractPlaceholder(indices, value);
+    }
+    return `$${indices[0]}`;
+  }
+
+  #createJsonExtractPlaceholder(
+    indices: readonly [argIndex: number, packIndex: number],
+    value: ExtractFromJsonArg,
+  ) {
+    switch (value.type) {
+      case 'json':
+        return `$${indices[0]}->${indices[1]}`;
+      case 'boolean':
+        return `($${indices[0]}->>${indices[1]})::boolean`;
+      case 'number':
+        return `($${indices[0]}->>${indices[1]})::numeric`;
+      case 'string':
+        return `$${indices[0]}->>${indices[1]}`;
+      case 'null':
+        throw new Error('unsupported type');
+    }
+  }
+}
+
+function isJsonExtract(value: unknown): value is ExtractFromJsonArg {
+  return (
+    value !== null && typeof value === 'object' && extractFromJson in value
+  );
 }
 
 export const sql = baseSql.default;
