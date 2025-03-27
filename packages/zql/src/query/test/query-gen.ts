@@ -98,8 +98,6 @@ const operatorsByType = {
   string: ['=', '!=', 'IS', 'IS NOT', 'LIKE', 'ILIKE'],
   boolean: ['=', '!=', 'IS', 'IS NOT'],
   number: ['=', '<', '>', '<=', '>=', '!=', 'IS', 'IS NOT'],
-  date: ['=', '<', '>', '<=', '>=', '!=', 'IS', 'IS NOT'],
-  timestamp: ['=', '<', '>', '<=', '>=', '!=', 'IS', 'IS NOT'],
   // not comparable in our system yet
   json: [],
   null: ['IS', 'IS NOT'],

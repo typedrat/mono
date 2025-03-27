@@ -34,7 +34,6 @@ function addData(queryDelegate: QueryDelegate) {
       description: 'Description 1',
       closed: false,
       ownerId: '001',
-      createdAt: 1,
     },
   });
   issueSource.push({
@@ -45,7 +44,6 @@ function addData(queryDelegate: QueryDelegate) {
       description: 'Description 2',
       closed: false,
       ownerId: '001',
-      createdAt: 2,
     },
   });
   issueSource.push({
@@ -56,7 +54,6 @@ function addData(queryDelegate: QueryDelegate) {
       description: 'Description 3',
       closed: false,
       ownerId: '001',
-      createdAt: 3,
     },
   });
 
@@ -68,7 +65,6 @@ function addData(queryDelegate: QueryDelegate) {
       description: 'Description 4',
       closed: false,
       ownerId: '002',
-      createdAt: 4,
     },
   });
   issueSource.push({
@@ -79,7 +75,6 @@ function addData(queryDelegate: QueryDelegate) {
       description: 'Description 5',
       closed: false,
       ownerId: '002',
-      createdAt: 5,
     },
   });
   issueSource.push({
@@ -90,7 +85,6 @@ function addData(queryDelegate: QueryDelegate) {
       description: 'Description 6',
       closed: true,
       ownerId: '002',
-      createdAt: 6,
     },
   });
   issueSource.push({
@@ -101,7 +95,6 @@ function addData(queryDelegate: QueryDelegate) {
       description: 'Description 7',
       closed: true,
       ownerId: '003',
-      createdAt: 7,
     },
   });
   issueSource.push({
@@ -112,7 +105,6 @@ function addData(queryDelegate: QueryDelegate) {
       description: 'Description 8',
       closed: true,
       ownerId: '003',
-      createdAt: 8,
     },
   });
   issueSource.push({
@@ -123,7 +115,6 @@ function addData(queryDelegate: QueryDelegate) {
       description: 'Description 9',
       closed: false,
       ownerId: '003',
-      createdAt: 9,
     },
   });
   issueSource.push({
@@ -134,7 +125,6 @@ function addData(queryDelegate: QueryDelegate) {
       description: 'Description 10',
       closed: false,
       ownerId: '004',
-      createdAt: 10,
     },
   });
 
@@ -554,7 +544,6 @@ describe('kitchen sink query', () => {
               Symbol(rc): 1,
             },
           ],
-          "createdAt": 2,
           "description": "Description 2",
           "id": "102",
           "labels": [
@@ -617,7 +606,6 @@ describe('kitchen sink query', () => {
               Symbol(rc): 1,
             },
           ],
-          "createdAt": 3,
           "description": "Description 3",
           "id": "103",
           "labels": [
@@ -640,7 +628,6 @@ describe('kitchen sink query', () => {
         {
           "closed": false,
           "comments": [],
-          "createdAt": 4,
           "description": "Description 4",
           "id": "104",
           "labels": [],
@@ -684,7 +671,6 @@ describe('kitchen sink query', () => {
               Symbol(rc): 1,
             },
           ],
-          "createdAt": 5,
           "description": "Description 5",
           "id": "105",
           "labels": [],
@@ -701,7 +687,6 @@ describe('kitchen sink query', () => {
         {
           "closed": false,
           "comments": [],
-          "createdAt": 9,
           "description": "Description 9",
           "id": "109",
           "labels": [],

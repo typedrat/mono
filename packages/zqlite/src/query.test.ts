@@ -99,7 +99,6 @@ test('row type', () => {
         readonly description: string;
         readonly closed: boolean;
         readonly ownerId: string | null;
-        readonly createdAt: number;
         readonly labels: readonly {
           readonly id: string;
           readonly name: string;
@@ -116,7 +115,6 @@ test('basic query', async () => {
     [
       {
         "closed": false,
-        "createdAt": null,
         "description": "description 1",
         "id": "0001",
         "ownerId": "0001",
@@ -124,7 +122,6 @@ test('basic query', async () => {
       },
       {
         "closed": false,
-        "createdAt": null,
         "description": "description 2",
         "id": "0002",
         "ownerId": "0002",
@@ -132,7 +129,6 @@ test('basic query', async () => {
       },
       {
         "closed": false,
-        "createdAt": null,
         "description": "description 3",
         "id": "0003",
         "ownerId": null,
@@ -151,7 +147,6 @@ test('null compare', async () => {
     [
       {
         "closed": false,
-        "createdAt": null,
         "description": "description 3",
         "id": "0003",
         "ownerId": null,
@@ -168,7 +163,6 @@ test('null compare', async () => {
     [
       {
         "closed": false,
-        "createdAt": null,
         "description": "description 1",
         "id": "0001",
         "owner_id": "0001",
@@ -177,7 +171,6 @@ test('null compare', async () => {
       },
       {
         "closed": false,
-        "createdAt": null,
         "description": "description 2",
         "id": "0002",
         "owner_id": "0002",
@@ -197,7 +190,6 @@ test('or', async () => {
     [
       {
         "closed": false,
-        "createdAt": null,
         "description": "description 1",
         "id": "0001",
         "ownerId": "0001",
@@ -205,7 +197,6 @@ test('or', async () => {
       },
       {
         "closed": false,
-        "createdAt": null,
         "description": "description 2",
         "id": "0002",
         "ownerId": "0002",
@@ -238,7 +229,6 @@ test('where exists retracts when an edit causes a row to no longer match', () =>
       [
         {
           "closed": false,
-          "createdAt": null,
           "description": "description 1",
           "id": "0001",
           "labels": [
@@ -341,7 +331,6 @@ test('schema applied `one`', async () => {
             "text": "comment 2",
           },
         ],
-        "createdAt": null,
         "description": "description 1",
         "id": "0001",
         "owner": {

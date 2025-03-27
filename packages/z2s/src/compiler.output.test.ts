@@ -7,7 +7,6 @@ import {
   number,
   string,
   table,
-  timestamp,
 } from '../../zero-schema/src/builder/table-builder.ts';
 import {createSchema} from '../../zero-schema/src/builder/schema-builder.ts';
 
@@ -31,7 +30,6 @@ const issue = table('issue')
     description: string(),
     closed: boolean(),
     ownerId: string().optional(),
-    created: timestamp(),
   })
   .primaryKey('id');
 
@@ -770,9 +768,9 @@ test('related thru junction edge', () => {
     ),
   ).toMatchInlineSnapshot(`
     {
-      "text": "SELECT COALESCE(json_agg(row_to_json("root")) , '[]'::json)::TEXT as "zql_result" FROM (SELECT (
-            SELECT COALESCE(json_agg(row_to_json("inner_labels")) , '[]'::json) FROM (SELECT "table_1"."id","table_1"."name" FROM "issue_label" as "issueLabel" JOIN "label" as "table_1" ON "issueLabel"."label_id" = "table_1"."id" WHERE ("issue"."id" = "issueLabel"."issue_id")    ) "inner_labels"
-          ) as "labels","issue"."id","issue"."title","issue"."description","issue"."closed","issue"."ownerId",EXTRACT(EPOCH FROM "issue"."created"::timestamp AT TIME ZONE 'UTC') * 1000 as "created" FROM "issue"    )"root"",
+      "text": "SELECT (
+            SELECT COALESCE(array_agg(row_to_json("inner_labels")) , ARRAY[]::json[]) FROM (SELECT "table_1"."id","table_1"."name" FROM "issue_label" as "issueLabel" JOIN "label" as "table_1" ON "issueLabel"."label_id" = "table_1"."id" WHERE ("issue"."id" = "issueLabel"."issue_id")    ) "inner_labels"
+          ) as "labels","issue"."id","issue"."title","issue"."description","issue"."closed","issue"."ownerId" FROM "issue"",
       "values": [],
     }
   `);
@@ -800,9 +798,9 @@ test('related w/o junction edge', () => {
     ),
   ).toMatchInlineSnapshot(`
     {
-      "text": "SELECT COALESCE(json_agg(row_to_json("root")) , '[]'::json)::TEXT as "zql_result" FROM (SELECT (
-          SELECT COALESCE(json_agg(row_to_json("inner_owner")) , '[]'::json) FROM (SELECT "user"."id","user"."name","user"."age" FROM "user"  WHERE ("issue"."ownerId" = "user"."id")  ) "inner_owner"
-        ) as "owner","issue"."id","issue"."title","issue"."description","issue"."closed","issue"."ownerId",EXTRACT(EPOCH FROM "issue"."created"::timestamp AT TIME ZONE 'UTC') * 1000 as "created" FROM "issue"    )"root"",
+      "text": "SELECT (
+          SELECT COALESCE(array_agg(row_to_json("inner_owner")) , ARRAY[]::json[]) FROM (SELECT "user"."id","user"."name","user"."age" FROM "user"  WHERE ("issue"."ownerId" = "user"."id")  ) "inner_owner"
+        ) as "owner","issue"."id","issue"."title","issue"."description","issue"."closed","issue"."ownerId" FROM "issue"",
       "values": [],
     }
   `);
