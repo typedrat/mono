@@ -21,12 +21,12 @@ import type {
   ValueType,
 } from '../../zero-schema/src/table-schema.ts';
 import type {Format} from '../../zql/src/ivm/view.ts';
-import {sql} from './sql.ts';
 import {
   type JSONValue as BigIntJSONValue,
   parse as parseBigIntJson,
 } from '../../zero-cache/src/types/bigint-json.ts';
 import {hasOwn} from '../../shared/src/has-own.ts';
+import {sql, sqlConvertArg, sqlConvertArgUnsafe} from './sql.ts';
 
 type Tables = Record<string, TableSchema>;
 
@@ -165,7 +165,7 @@ export class Compiler {
     if (!limit) {
       return sql``;
     }
-    return sql`LIMIT ${sql.value(limit)}`;
+    return sql`LIMIT ${sqlConvertArg('number', 1)}`;
   }
 
   related(
@@ -370,18 +370,23 @@ export class Compiler {
     } ${this.valuePosition(condition.right, table)}`;
   }
 
+  // array... need more value type info
   any(condition: SimpleCondition, table: string): SQLQuery {
     return sql`${this.valuePosition(condition.left, table)} ${
       condition.op === 'IN' ? sql`= ANY` : sql`!= ANY`
     } (${this.valuePosition(condition.right, table)})`;
   }
 
-  valuePosition(value: ValuePosition, table: string): SQLQuery {
+  valuePosition(
+    value: ValuePosition,
+    table: string,
+    dataType?: ValueType,
+  ): SQLQuery {
     switch (value.type) {
       case 'column':
         return this.#mapColumnNoAlias(table, value.name);
       case 'literal':
-        return sql.value(value.value);
+        return sqlConvertArgUnsafe(must(dataType), value.value);
       case 'static':
         throw new Error(
           'Static parameters must be bound to a value before compiling to SQL',
@@ -490,4 +495,8 @@ export class Compiler {
       singular ? sql`` : sql`, '[]'::json)`
     }`;
   }
+}
+
+export function sqlValue(schema: TableSchema, column: string, value: unknown) {
+  return sqlConvertArgUnsafe(must(schema.columns[column].type), value);
 }

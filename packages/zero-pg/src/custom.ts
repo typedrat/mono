@@ -8,12 +8,8 @@ import type {
   DBTransaction,
   Transaction,
 } from '../../zql/src/mutate/custom.ts';
-import {
-  formatPgInternalConvert,
-  sqlConvertArgUnsafe,
-  sql,
-} from '../../z2s/src/sql.ts';
-import {must} from '../../shared/src/must.ts';
+import {formatPgInternalConvert, sql} from '../../z2s/src/sql.ts';
+import {sqlValue} from '../../z2s/src/compiler.ts';
 
 interface ServerTransaction<S extends Schema, TWrappedTransaction>
   extends TransactionBase<S> {
@@ -204,8 +200,4 @@ function origAndServerNamesFor(
     const col = schema.columns[name];
     return [name, col.serverName ?? name] as const;
   });
-}
-
-function sqlValue(schema: TableSchema, column: string, value: unknown) {
-  return sqlConvertArgUnsafe(must(schema.columns[column].type), value);
 }
