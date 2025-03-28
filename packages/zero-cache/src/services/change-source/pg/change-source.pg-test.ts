@@ -354,7 +354,10 @@ describe('change-source/pg', {timeout: 30000}, () => {
     // Verify that the ACK was stored with the replication slot.
     const results = await upstream<{confirmed: string}[]>`
     SELECT confirmed_flush_lsn as confirmed FROM pg_replication_slots
-        WHERE slot_name = ${replicationSlot({appID: APP_ID, shardNum: SHARD_NUM})}`;
+        WHERE slot_name = ${replicationSlot({
+          appID: APP_ID,
+          shardNum: SHARD_NUM,
+        })}`;
     const expected = versionFromLexi(commit1[2].watermark) + 1n;
     expect(results).toEqual([
       {confirmed: fromLexiVersion(versionToLexi(expected))},
