@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1742996020596,
+  "lastUpdate": 1743354415011,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -52285,6 +52285,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31423,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f3455ea0adb3aa07a5b9945fa7fd85f8c966fb42",
+          "message": "chore: Remove sinon and use vitest instead (#4127)\n\nOur version of sinon was very old (v13 and sinon is at v20 now) and\nvitest provides the same functionality. This commit removes sinon and\nreplaces it with vitest's mocking and spying capabilities. This should\nmake our tests more consistent and easier to maintain.",
+          "timestamp": "2025-03-30T17:05:55Z",
+          "tree_id": "8a6867ad84414a418b449129eafe17323cb33f17",
+          "url": "https://github.com/rocicorp/mono/commit/f3455ea0adb3aa07a5b9945fa7fd85f8c966fb42"
+        },
+        "date": 1743354403004,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 299130,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 53873,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 110157,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31450,
             "unit": "bytes"
           }
         ]
