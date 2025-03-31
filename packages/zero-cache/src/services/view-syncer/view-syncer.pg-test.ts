@@ -2066,6 +2066,7 @@ describe('view-syncer/service', () => {
       }),
     );
     stateChanges.push({state: 'version-ready'});
+    await expectNoPokes(client);
 
     // Then, a relevant change should bump the client from '01' directly to '123'.
     replicator.processTransaction(
