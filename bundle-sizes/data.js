@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1743354415011,
+  "lastUpdate": 1743446373639,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -52329,6 +52329,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31450,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mlaw@roci.dev",
+            "name": "Matt Wonlaw",
+            "username": "tantaman"
+          },
+          "committer": {
+            "email": "matt.wonlaw@gmail.com",
+            "name": "Matt Wonlaw",
+            "username": "tantaman"
+          },
+          "distinct": true,
+          "id": "6a61276e26ef8bdaf9492c0dfdf42a92c37275b5",
+          "message": "chore(mutators): hook mutation tracking in a layer down",
+          "timestamp": "2025-03-31T14:38:22-04:00",
+          "tree_id": "16d2c17e8497a44e5b49fe21aa475eeaacf9178d",
+          "url": "https://github.com/rocicorp/mono/commit/6a61276e26ef8bdaf9492c0dfdf42a92c37275b5"
+        },
+        "date": 1743446360785,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 299939,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54016,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 110388,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31542,
             "unit": "bytes"
           }
         ]
