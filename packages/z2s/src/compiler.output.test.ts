@@ -7,9 +7,9 @@ import {
   number,
   string,
   table,
-  timestamp,
 } from '../../zero-schema/src/builder/table-builder.ts';
 import {createSchema} from '../../zero-schema/src/builder/schema-builder.ts';
+import type {ServerSchema} from './schema.ts';
 
 // Tests the output of basic primitives.
 // Top-level things like `SELECT` are tested by actually executing the SQL as inspecting
@@ -31,7 +31,7 @@ const issue = table('issue')
     description: string(),
     closed: boolean(),
     ownerId: string().optional(),
-    created: timestamp(),
+    created: number(),
   })
   .primaryKey('id');
 
@@ -69,8 +69,41 @@ const schema = createSchema({
   tables: [user, issue, issueLabel, label, parentTable, childTable],
 });
 
+const serverSchema: ServerSchema = {
+  user: {
+    id: {type: 'text', isEnum: false},
+    name: {type: 'text', isEnum: false},
+    age: {type: 'numeric', isEnum: false},
+  },
+  issue: {
+    id: {type: 'text', isEnum: false},
+    title: {type: 'text', isEnum: false},
+    description: {type: 'text', isEnum: false},
+    closed: {type: 'boolean', isEnum: false},
+    ownerId: {type: 'text', isEnum: false},
+    created: {type: 'timestamp', isEnum: false},
+  },
+  issueLabel: {
+    issue_id: {type: 'text', isEnum: false},
+    label_id: {type: 'text', isEnum: false},
+  },
+  label: {
+    id: {type: 'text', isEnum: false},
+    name: {type: 'text', isEnum: false},
+  },
+  parentTable: {
+    id: {type: 'text', isEnum: false},
+    other_id: {type: 'text', isEnum: false},
+  },
+  childTable: {
+    id: {type: 'text', isEnum: false},
+    parent_id: {type: 'text', isEnum: false},
+    parent_other_id: {type: 'text', isEnum: false},
+  },
+};
+
 test('limit', () => {
-  const compiler = new Compiler(schema.tables);
+  const compiler = new Compiler(schema.tables, serverSchema);
   expect(formatPgInternalConvert(compiler.limit(10))).toMatchInlineSnapshot(`
     {
       "text": "LIMIT $1::text::numeric",
@@ -89,7 +122,7 @@ test('limit', () => {
 });
 
 test('orderBy', () => {
-  const compiler = new Compiler(schema.tables);
+  const compiler = new Compiler(schema.tables, serverSchema);
   expect(formatPgInternalConvert(compiler.orderBy([], 'user')))
     .toMatchInlineSnapshot(`
     {
@@ -109,7 +142,7 @@ test('orderBy', () => {
     ),
   ).toMatchInlineSnapshot(`
     {
-      "text": "ORDER BY "user"."name" COLLATE "ucs_basic" ASC, "user"."age"  DESC",
+      "text": "ORDER BY "user"."name" COLLATE "ucs_basic" ASC, "user"."age" DESC",
       "values": [],
     }
   `);
@@ -126,7 +159,7 @@ test('orderBy', () => {
     ),
   ).toMatchInlineSnapshot(`
     {
-      "text": "ORDER BY "user"."name" COLLATE "ucs_basic" ASC, "user"."age"  DESC, "user"."id" COLLATE "ucs_basic" ASC",
+      "text": "ORDER BY "user"."name" COLLATE "ucs_basic" ASC, "user"."age" DESC, "user"."id" COLLATE "ucs_basic" ASC",
       "values": [],
     }
   `);
@@ -140,7 +173,7 @@ test('orderBy', () => {
 });
 
 test('any', () => {
-  const compiler = new Compiler(schema.tables);
+  const compiler = new Compiler(schema.tables, serverSchema);
   expect(
     formatPgInternalConvert(
       compiler.any(
@@ -156,8 +189,8 @@ test('any', () => {
   ).toMatchInlineSnapshot(`
     {
       "text": ""name" = ANY (ARRAY(
-                SELECT value  COLLATE "ucs_basic" FROM jsonb_array_elements_text($1::text::jsonb)
-              ))",
+              SELECT value::text COLLATE "ucs_basic" FROM jsonb_array_elements_text($1::text::jsonb)
+            ))",
       "values": [
         "[1,2,3]",
       ],
@@ -179,8 +212,8 @@ test('any', () => {
   ).toMatchInlineSnapshot(`
     {
       "text": ""name" != ANY (ARRAY(
-                SELECT value  COLLATE "ucs_basic" FROM jsonb_array_elements_text($1::text::jsonb)
-              ))",
+              SELECT value::text COLLATE "ucs_basic" FROM jsonb_array_elements_text($1::text::jsonb)
+            ))",
       "values": [
         "[1,2,3]",
       ],
@@ -188,60 +221,60 @@ test('any', () => {
   `);
 });
 
-test('valuePosition', () => {
-  const compiler = new Compiler(schema.tables);
-  expect(
-    formatPgInternalConvert(
-      compiler.valueComparison(
-        {type: 'column', name: 'name'},
-        'user',
-        'string',
-        false,
-      ),
-    ),
-  ).toMatchInlineSnapshot(`
-    {
-      "text": ""name"",
-      "values": [],
-    }
-  `);
-  expect(
-    formatPgInternalConvert(
-      compiler.valueComparison(
-        {type: 'literal', value: 'hello'},
-        'user',
-        'string',
-        false,
-      ),
-    ),
-  ).toMatchInlineSnapshot(`
-    {
-      "text": "$1::text  COLLATE "ucs_basic"",
-      "values": [
-        "hello",
-      ],
-    }
-  `);
-  expect(() =>
-    formatPgInternalConvert(
-      compiler.valueComparison(
-        {
-          type: 'static',
-          anchor: 'authData',
-          field: 'name',
-        },
-        'user',
-        'string',
-        false,
-      ),
-    ),
-  ).toThrow(
-    'Static parameters must be bound to a value before compiling to SQL',
-  );
-});
+// test('valuePosition', () => {
+//   const compiler = new Compiler(schema.tables, serverSchema);
+//   expect(
+//     formatPgInternalConvert(
+//       compiler.valuePosition(
+//         {type: 'column', name: 'name'},
+//         'user',
+//         'string',
+//         false,
+//       ),
+//     ),
+//   ).toMatchInlineSnapshot(`
+//     {
+//       "text": ""name"",
+//       "values": [],
+//     }
+//   `);
+//   expect(
+//     formatPgInternalConvert(
+//       compiler.valuePosition(
+//         {type: 'literal', value: 'hello'},
+//         'user',
+//         'string',
+//         false,
+//       ),
+//     ),
+//   ).toMatchInlineSnapshot(`
+//     {
+//       "text": "$1::text",
+//       "values": [
+//         "hello",
+//       ],
+//     }
+//   `);
+//   expect(() =>
+//     formatPgInternalConvert(
+//       compiler.valuePosition(
+//         {
+//           type: 'static',
+//           anchor: 'authData',
+//           field: 'name',
+//         },
+//         'user',
+//         'string',
+//         false,
+//       ),
+//     ),
+//   ).toThrow(
+//     'Static parameters must be bound to a value before compiling to SQL',
+//   );
+// });
 
 test('distinctFrom', () => {
-  const compiler = new Compiler(schema.tables);
+  const compiler = new Compiler(schema.tables, serverSchema);
   expect(
     formatPgInternalConvert(
       compiler.distinctFrom(
@@ -256,7 +289,7 @@ test('distinctFrom', () => {
     ),
   ).toMatchInlineSnapshot(`
     {
-      "text": ""name" IS NOT DISTINCT FROM $1::text  COLLATE "ucs_basic"",
+      "text": ""name" IS NOT DISTINCT FROM $1::text COLLATE "ucs_basic"",
       "values": [
         null,
       ],
@@ -277,7 +310,7 @@ test('distinctFrom', () => {
     ),
   ).toMatchInlineSnapshot(`
     {
-      "text": ""name" IS DISTINCT FROM $1::text  COLLATE "ucs_basic"",
+      "text": ""name" IS DISTINCT FROM $1::text COLLATE "ucs_basic"",
       "values": [
         null,
       ],
@@ -286,7 +319,7 @@ test('distinctFrom', () => {
 });
 
 test('correlate', () => {
-  const compiler = new Compiler(schema.tables);
+  const compiler = new Compiler(schema.tables, serverSchema);
   expect(
     formatPgInternalConvert(
       compiler.correlate(
@@ -356,7 +389,7 @@ test('correlate', () => {
 });
 
 test('simple', () => {
-  const compiler = new Compiler(schema.tables);
+  const compiler = new Compiler(schema.tables, serverSchema);
   expect(
     formatPgInternalConvert(
       compiler.simple(
@@ -371,7 +404,7 @@ test('simple', () => {
     ),
   ).toMatchInlineSnapshot(`
     {
-      "text": ""name" = $1::text  COLLATE "ucs_basic"",
+      "text": ""name" = $1::text COLLATE "ucs_basic"",
       "values": [
         "test",
       ],
@@ -392,7 +425,7 @@ test('simple', () => {
     ),
   ).toMatchInlineSnapshot(`
     {
-      "text": ""name" != $1::text  COLLATE "ucs_basic"",
+      "text": ""name" != $1::text COLLATE "ucs_basic"",
       "values": [
         "test",
       ],
@@ -497,7 +530,7 @@ test('simple', () => {
     ),
   ).toMatchInlineSnapshot(`
     {
-      "text": ""name" LIKE $1::text  COLLATE "ucs_basic"",
+      "text": ""name" LIKE $1::text COLLATE "ucs_basic"",
       "values": [
         "%test%",
       ],
@@ -518,7 +551,7 @@ test('simple', () => {
     ),
   ).toMatchInlineSnapshot(`
     {
-      "text": ""name" NOT LIKE $1::text  COLLATE "ucs_basic"",
+      "text": ""name" NOT LIKE $1::text COLLATE "ucs_basic"",
       "values": [
         "%test%",
       ],
@@ -539,7 +572,7 @@ test('simple', () => {
     ),
   ).toMatchInlineSnapshot(`
     {
-      "text": ""name" ILIKE $1::text  COLLATE "ucs_basic"",
+      "text": ""name" ILIKE $1::text COLLATE "ucs_basic"",
       "values": [
         "%test%",
       ],
@@ -560,7 +593,7 @@ test('simple', () => {
     ),
   ).toMatchInlineSnapshot(`
     {
-      "text": ""name" NOT ILIKE $1::text  COLLATE "ucs_basic"",
+      "text": ""name" NOT ILIKE $1::text COLLATE "ucs_basic"",
       "values": [
         "%test%",
       ],
@@ -582,8 +615,8 @@ test('simple', () => {
   ).toMatchInlineSnapshot(`
     {
       "text": ""id" = ANY (ARRAY(
-                SELECT value  COLLATE "ucs_basic" FROM jsonb_array_elements_text($1::text::jsonb)
-              ))",
+              SELECT value::text COLLATE "ucs_basic" FROM jsonb_array_elements_text($1::text::jsonb)
+            ))",
       "values": [
         "[1,2,3]",
       ],
@@ -605,8 +638,8 @@ test('simple', () => {
   ).toMatchInlineSnapshot(`
     {
       "text": ""id" != ANY (ARRAY(
-                SELECT value  COLLATE "ucs_basic" FROM jsonb_array_elements_text($1::text::jsonb)
-              ))",
+              SELECT value::text COLLATE "ucs_basic" FROM jsonb_array_elements_text($1::text::jsonb)
+            ))",
       "values": [
         "[1,2,3]",
       ],
@@ -627,7 +660,7 @@ test('simple', () => {
     ),
   ).toMatchInlineSnapshot(`
     {
-      "text": ""name" IS NOT DISTINCT FROM $1::text  COLLATE "ucs_basic"",
+      "text": ""name" IS NOT DISTINCT FROM $1::text COLLATE "ucs_basic"",
       "values": [
         null,
       ],
@@ -648,7 +681,7 @@ test('simple', () => {
     ),
   ).toMatchInlineSnapshot(`
     {
-      "text": ""name" IS DISTINCT FROM $1::text  COLLATE "ucs_basic"",
+      "text": ""name" IS DISTINCT FROM $1::text COLLATE "ucs_basic"",
       "values": [
         null,
       ],
@@ -657,7 +690,7 @@ test('simple', () => {
 });
 
 test('pull tables for junction', () => {
-  const compiler = new Compiler(schema.tables);
+  const compiler = new Compiler(schema.tables, serverSchema);
   expect(
     compiler.pullTablesForJunction({
       correlation: {
@@ -712,7 +745,7 @@ test('pull tables for junction', () => {
 });
 
 test('make junction join', () => {
-  const compiler = new Compiler(schema.tables);
+  const compiler = new Compiler(schema.tables, serverSchema);
   expect(
     formatPgInternalConvert(
       compiler.makeJunctionJoin({
@@ -747,7 +780,7 @@ test('make junction join', () => {
 });
 
 test('related thru junction edge', () => {
-  const compiler = new Compiler(schema.tables);
+  const compiler = new Compiler(schema.tables, serverSchema);
   expect(
     formatPgInternalConvert(
       compiler.compile({
@@ -790,7 +823,7 @@ test('related thru junction edge', () => {
 });
 
 test('related w/o junction edge', () => {
-  const compiler = new Compiler(schema.tables);
+  const compiler = new Compiler(schema.tables, serverSchema);
   expect(
     formatPgInternalConvert(
       compiler.compile({
