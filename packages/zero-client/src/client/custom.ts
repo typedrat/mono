@@ -25,7 +25,7 @@ import {ZeroContext} from './context.ts';
 import {deleteImpl, insertImpl, updateImpl, upsertImpl} from './crud.ts';
 import type {IVMSourceBranch} from './ivm-branch.ts';
 import type {WriteTransaction} from './replicache-types.ts';
-import type {MutationResult} from '../../../zero-protocol/src/push.ts';
+import type {MutationOk} from '../../../zero-protocol/src/push.ts';
 import {emptyFunction} from '../../../shared/src/sentinels.ts';
 
 /**
@@ -40,7 +40,7 @@ export type CustomMutatorDefs<S extends Schema> = {
 };
 
 export type PromiseWithServerResult = Promise<void> & {
-  server: Promise<MutationResult>;
+  server: Promise<MutationOk>;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
