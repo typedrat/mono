@@ -67,6 +67,9 @@ export class ZPGQuery<
   readonly #dbTransaction: DBTransaction<unknown>;
   readonly #schema: TSchema;
   readonly #serverSchema: ServerSchema;
+  readonly #tableName: TTable;
+  readonly #ast: AST;
+
   #query:
     | {
         text: string;
@@ -86,6 +89,19 @@ export class ZPGQuery<
     this.#dbTransaction = dbTransaction;
     this.#schema = schema;
     this.#serverSchema = serverSchema;
+    this.#tableName = tableName;
+    this.#ast = ast;
+  }
+
+  transaction(tx: DBTransaction<unknown>): ZPGQuery<TSchema, TTable, TReturn> {
+    return new ZPGQuery(
+      this.#schema,
+      this.#serverSchema,
+      this.#tableName,
+      tx,
+      this.#ast,
+      this.format,
+    );
   }
 
   protected readonly _system = 'permissions';
