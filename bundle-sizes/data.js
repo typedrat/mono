@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1743446373639,
+  "lastUpdate": 1744199334044,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -52353,6 +52353,50 @@ window.BENCHMARK_DATA = {
           "url": "https://github.com/rocicorp/mono/commit/6a61276e26ef8bdaf9492c0dfdf42a92c37275b5"
         },
         "date": 1743446360785,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 299939,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54016,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 110388,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31542,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "12ed45abeb7fd1a4ee55e8750b41cf9dc52e08ed",
+          "message": "chore(zero-client): Doc dev server and JSDoc for zero (#4188)\n\nThis started as adding JSDoc to zero-client Query but ended up adding a\nsimple doc server generated with Co-Pilot.\n\nUsage\n\ncd packages/zero-client\nnpm run docs:server\n\nThen go ahead and open http://localhost:3000 in your browser.\n\nEdit your JSDoc and see changes on save.",
+          "timestamp": "2025-04-09T13:47:51+02:00",
+          "tree_id": "e9b26e0db0920b58a2e9ee7cba2b2304dcc53d07",
+          "url": "https://github.com/rocicorp/mono/commit/12ed45abeb7fd1a4ee55e8750b41cf9dc52e08ed"
+        },
+        "date": 1744199321471,
         "tool": "customSmallerIsBetter",
         "benches": [
           {
