@@ -38,6 +38,7 @@ import type {DBTransaction} from '../../../zql/src/mutate/custom.ts';
 import {initialSync} from '../../../zero-cache/src/services/change-source/pg/initial-sync.ts';
 import type {Row} from '../../../zero-protocol/src/data.ts';
 import {expect} from 'vitest';
+import {clientToServer} from '../../../zero-schema/src/name-mapper.ts';
 
 const lc = createSilentLogContext();
 
@@ -71,9 +72,28 @@ async function makeDatabases<TSchema extends Schema>(
   suiteName: string,
   schema: TSchema,
   pgContent: string,
+  testData?: Record<string, Row[]> | undefined,
 ): Promise<DBs<TSchema>> {
   const pg = await testDBs.create(suiteName, undefined, false);
   await pg.unsafe(pgContent);
+
+  const mapper = clientToServer(schema.tables);
+  if (testData) {
+    for (const [table, rows] of Object.entries(testData)) {
+      const columns = Object.keys(rows[0]);
+      const forPg = rows.map(row =>
+        columns.reduce(
+          (acc, c) => ({
+            ...acc,
+            [mapper.columnName(table, c)]: row[c as keyof typeof row],
+          }),
+          {} as Record<string, unknown>,
+        ),
+      );
+      await pg`INSERT INTO ${pg(mapper.tableName(table))} ${pg(forPg)}`;
+    }
+  }
+
   const sqlite = new Database(lc, ':memory:');
 
   await initialSync(
@@ -169,16 +189,24 @@ function makeQueries<TSchema extends Schema>(
   return ret as QueriesBySource<TSchema>;
 }
 
+type Options<TSchema extends Schema> = {
+  suiteName: string;
+  zqlSchema: TSchema;
+  // pg schema and, optionally, data to insert.
+  pgContent: string;
+  // Optional test data to insert (using client names).
+  // You may also run insert statements in `pgContent`.
+  testData?: Record<string, Row[]>;
+};
+
 export async function createVitests<TSchema extends Schema>(
-  suiteName: string,
-  zqlSchema: TSchema,
-  pgContent: string,
+  {suiteName, zqlSchema, pgContent, testData}: Options<TSchema>,
   testSpecs: readonly {
     name: string;
     createQuery: (q: Queries<TSchema>) => Query<TSchema, string>;
   }[],
 ) {
-  const dbs = await makeDatabases(suiteName, zqlSchema, pgContent);
+  const dbs = await makeDatabases(suiteName, zqlSchema, pgContent, testData);
   const delegates = await makeDelegates(dbs, zqlSchema);
   const queryBuilders = makeQueries(zqlSchema, delegates);
 

@@ -1,7 +1,7 @@
 import type {Faker} from '@faker-js/faker';
 import type {Schema} from '../../../../zero-schema/src/builder/schema-builder.ts';
 import {staticQuery} from '../static-query.ts';
-import type {Dataset} from './data-gen.ts';
+import type {Dataset} from '../../../../zql-integration-tests/src/helpers/data-gen.ts';
 import {
   ast,
   randomValueForType,
