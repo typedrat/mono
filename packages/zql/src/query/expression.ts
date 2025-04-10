@@ -6,7 +6,10 @@ import {
   type LiteralValue,
   type Parameter,
 } from '../../../zero-protocol/src/ast.ts';
-import type {Schema} from '../../../zero-schema/src/builder/schema-builder.ts';
+import type {
+  Schema,
+  TableNames,
+} from '../../../zero-schema/src/builder/schema-builder.ts';
 import type {
   AvailableRelationships,
   DestTableName,
@@ -39,14 +42,14 @@ export type ParameterReference = {
  */
 export interface ExpressionFactory<
   TSchema extends Schema,
-  TTable extends keyof TSchema['tables'] & string,
+  TTable extends TableNames<TSchema>,
 > {
   (eb: ExpressionBuilder<TSchema, TTable>): Condition;
 }
 
 export class ExpressionBuilder<
   TSchema extends Schema,
-  TTable extends keyof TSchema['tables'] & string,
+  TTable extends TableNames<TSchema>,
 > {
   readonly #exists: (
     relationship: string,

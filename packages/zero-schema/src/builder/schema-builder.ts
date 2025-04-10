@@ -18,6 +18,9 @@ export type Schema = {
   readonly relationships: {readonly [table: string]: RelationshipsSchema};
 };
 
+export type TableNames<TSchema extends Schema> = keyof TSchema['tables'] &
+  string;
+
 /**
  * Note: the keys of the `tables` and `relationships` parameters do not matter.
  * You can assign them to any value you like. E.g.,

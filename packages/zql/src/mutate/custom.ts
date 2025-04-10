@@ -1,12 +1,15 @@
 import {assert} from '../../../shared/src/asserts.ts';
 import type {Expand} from '../../../shared/src/expand.ts';
-import type {Schema} from '../../../zero-schema/src/builder/schema-builder.ts';
+import type {MaybePromise} from '../../../shared/src/types.ts';
+import type {
+  Schema,
+  TableNames,
+} from '../../../zero-schema/src/builder/schema-builder.ts';
 import type {
   SchemaValueToTSType,
   TableSchema,
 } from '../../../zero-schema/src/table-schema.ts';
 import type {Query} from '../query/query.ts';
-import type {MaybePromise} from '../../../shared/src/types.ts';
 
 type ClientID = string;
 
@@ -114,7 +117,7 @@ export type TableCRUD<S extends TableSchema> = {
 };
 
 export type SchemaQuery<S extends Schema> = {
-  readonly [K in keyof S['tables'] & string]: Query<S, K>;
+  readonly [K in TableNames<S>]: Query<S, K>;
 };
 
 export type DeleteID<S extends TableSchema> = Expand<PrimaryKeyFields<S>>;

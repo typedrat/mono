@@ -68,6 +68,7 @@ import type {NullableVersion} from '../../../zero-protocol/src/version.ts';
 import {nullableVersionSchema} from '../../../zero-protocol/src/version.ts';
 import {
   type Schema,
+  type TableNames,
   clientSchemaFrom,
 } from '../../../zero-schema/src/builder/schema-builder.ts';
 import {
@@ -141,7 +142,7 @@ type PingResult = Enum<typeof PingResult>;
 export type NoRelations = Record<string, never>;
 
 export type MakeEntityQueriesFromSchema<S extends Schema> = {
-  readonly [K in keyof S['tables'] & string]: Query<S, K>;
+  readonly [K in TableNames<S>]: Query<S, K>;
 };
 
 declare const TESTING: boolean;

@@ -9,7 +9,7 @@ import type {ExpressionBuilder} from '../../zql/src/query/expression.ts';
 import {defaultFormat, staticParam} from '../../zql/src/query/query-impl.ts';
 import type {Query} from '../../zql/src/query/query.ts';
 import {StaticQuery} from '../../zql/src/query/static-query.ts';
-import type {Schema} from './builder/schema-builder.ts';
+import type {Schema, TableNames} from './builder/schema-builder.ts';
 import type {
   AssetPermissions as CompiledAssetPermissions,
   PermissionsConfig as CompiledPermissionsConfig,
@@ -35,13 +35,13 @@ export const NOBODY_CAN = [];
 export type Anchor = 'authData' | 'preMutationRow';
 
 export type Queries<TSchema extends Schema> = {
-  [K in keyof TSchema['tables']]: Query<Schema, K & string>;
+  [K in TableNames<TSchema>]: Query<Schema, K>;
 };
 
 export type PermissionRule<
   TAuthDataShape,
   TSchema extends Schema,
-  TTable extends keyof TSchema['tables'] & string,
+  TTable extends TableNames<TSchema>,
 > = (
   authData: TAuthDataShape,
   eb: ExpressionBuilder<TSchema, TTable>,
@@ -50,7 +50,7 @@ export type PermissionRule<
 export type AssetPermissions<
   TAuthDataShape,
   TSchema extends Schema,
-  TTable extends keyof TSchema['tables'] & string,
+  TTable extends TableNames<TSchema>,
 > = {
   // Why an array of rules?: https://github.com/rocicorp/mono/pull/3184/files#r1869680716
   select?: PermissionRule<TAuthDataShape, TSchema, TTable>[] | undefined;
@@ -65,12 +65,12 @@ export type AssetPermissions<
 };
 
 export type PermissionsConfig<TAuthDataShape, TSchema extends Schema> = {
-  [K in keyof TSchema['tables']]?: {
-    row?: AssetPermissions<TAuthDataShape, TSchema, K & string> | undefined;
+  [K in TableNames<TSchema>]?: {
+    row?: AssetPermissions<TAuthDataShape, TSchema, K> | undefined;
     cell?:
       | {
           [C in keyof TSchema['tables'][K]['columns']]?: Omit<
-            AssetPermissions<TAuthDataShape, TSchema, K & string>,
+            AssetPermissions<TAuthDataShape, TSchema, K>,
             'cell'
           >;
         }
@@ -135,7 +135,7 @@ function compilePermissions<TAuthDataShape, TSchema extends Schema>(
 function compileRowConfig<
   TAuthDataShape,
   TSchema extends Schema,
-  TTable extends keyof TSchema['tables'] & string,
+  TTable extends TableNames<TSchema>,
 >(
   clientToServer: NameMapper,
   tableName: TTable,
@@ -189,7 +189,7 @@ function compileRowConfig<
 function compileRules<
   TAuthDataShape,
   TSchema extends Schema,
-  TTable extends keyof TSchema['tables'] & string,
+  TTable extends TableNames<TSchema>,
 >(
   clientToServer: NameMapper,
   tableName: TTable,
@@ -209,7 +209,7 @@ function compileRules<
 function compileCellConfig<
   TAuthDataShape,
   TSchema extends Schema,
-  TTable extends keyof TSchema['tables'] & string,
+  TTable extends TableNames<TSchema>,
 >(
   clientToServer: NameMapper,
   tableName: TTable,

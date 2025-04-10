@@ -2,7 +2,10 @@ import {compile, extractZqlResult} from '../../z2s/src/compiler.ts';
 import type {ServerSchema} from '../../z2s/src/schema.ts';
 import {formatPgInternalConvert} from '../../z2s/src/sql.ts';
 import type {AST} from '../../zero-protocol/src/ast.ts';
-import type {Schema} from '../../zero-schema/src/builder/schema-builder.ts';
+import type {
+  Schema,
+  TableNames,
+} from '../../zero-schema/src/builder/schema-builder.ts';
 import type {Format} from '../../zql/src/ivm/view.ts';
 import type {DBTransaction, SchemaQuery} from '../../zql/src/mutate/custom.ts';
 import {AbstractQuery, defaultFormat} from '../../zql/src/query/query-impl.ts';
@@ -60,8 +63,8 @@ export function makeSchemaQuery<S extends Schema>(
 
 export class ZPGQuery<
   TSchema extends Schema,
-  TTable extends keyof TSchema['tables'] & string,
-  TReturn = PullRow<TTable, TSchema>,
+  TTable extends TableNames<TSchema>,
+  TReturn = PullRow<TSchema, TTable>,
 > extends AbstractQuery<TSchema, TTable, TReturn> {
   readonly #dbTransaction: DBTransaction<unknown>;
   readonly #schema: TSchema;
@@ -92,7 +95,7 @@ export class ZPGQuery<
 
   protected _newQuery<
     TSchema extends Schema,
-    TTable extends keyof TSchema['tables'] & string,
+    TTable extends TableNames<TSchema>,
     TReturn,
   >(
     schema: TSchema,

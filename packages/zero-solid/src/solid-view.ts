@@ -212,7 +212,7 @@ function isEmptyRoot(entry: Entry) {
 
 export function solidViewFactory<
   TSchema extends Schema,
-  TTable extends keyof TSchema['tables'] & string,
+  TTable extends TableNameFromSchema<TSchema>,
   TReturn,
 >(
   _query: Query<TSchema, TTable, TReturn>,

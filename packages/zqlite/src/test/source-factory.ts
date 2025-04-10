@@ -1,8 +1,20 @@
 import type {LogContext} from '@rocicorp/logger';
 import type {LogConfig} from '../../../otel/src/log-options.ts';
 import {createSilentLogContext} from '../../../shared/src/logging-test-utils.ts';
+import {
+  mapAST,
+  type AST,
+  type CompoundKey,
+} from '../../../zero-protocol/src/ast.ts';
 import type {PrimaryKey} from '../../../zero-protocol/src/primary-key.ts';
-import type {Schema} from '../../../zero-schema/src/builder/schema-builder.ts';
+import type {
+  Schema,
+  TableNames,
+} from '../../../zero-schema/src/builder/schema-builder.ts';
+import {
+  clientToServer,
+  serverToClient,
+} from '../../../zero-schema/src/name-mapper.ts';
 import type {SchemaValue} from '../../../zero-schema/src/table-schema.ts';
 import {MemoryStorage} from '../../../zql/src/ivm/memory-storage.ts';
 import type {Input} from '../../../zql/src/ivm/operator.ts';
@@ -12,15 +24,6 @@ import type {QueryDelegate} from '../../../zql/src/query/query-impl.ts';
 import {Database} from '../db.ts';
 import {compile, sql} from '../internal/sql.ts';
 import {TableSource, toSQLiteTypeName} from '../table-source.ts';
-import {
-  clientToServer,
-  serverToClient,
-} from '../../../zero-schema/src/name-mapper.ts';
-import {
-  mapAST,
-  type AST,
-  type CompoundKey,
-} from '../../../zero-protocol/src/ast.ts';
 
 export const createSource: SourceFactory = (
   lc: LogContext,
@@ -55,7 +58,7 @@ export const createSource: SourceFactory = (
 export function mapResultToClientNames<T, S extends Schema>(
   result: unknown,
   schema: S,
-  rootTable: keyof S['tables'] & string,
+  rootTable: TableNames<S>,
 ): T {
   const serverToClientMapper = serverToClient(schema.tables);
   const clientToServerMapper = clientToServer(schema.tables);

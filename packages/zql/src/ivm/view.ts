@@ -1,5 +1,8 @@
 import type {Value} from '../../../zero-protocol/src/data.ts';
-import type {Schema} from '../../../zero-schema/src/builder/schema-builder.ts';
+import type {
+  Schema,
+  TableNames,
+} from '../../../zero-schema/src/builder/schema-builder.ts';
 import type {Query} from '../query/query.ts';
 import type {TTL} from '../query/ttl.ts';
 import type {Input} from './operator.ts';
@@ -15,7 +18,7 @@ export type Format = {
 
 export type ViewFactory<
   TSchema extends Schema,
-  TTable extends keyof TSchema['tables'] & string,
+  TTable extends TableNames<TSchema>,
   TReturn,
   T,
 > = (

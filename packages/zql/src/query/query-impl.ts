@@ -13,7 +13,10 @@ import type {
   System,
 } from '../../../zero-protocol/src/ast.ts';
 import type {Row as IVMRow} from '../../../zero-protocol/src/data.ts';
-import type {Schema} from '../../../zero-schema/src/builder/schema-builder.ts';
+import type {
+  Schema,
+  TableNames,
+} from '../../../zero-schema/src/builder/schema-builder.ts';
 import {
   isOneHop,
   isTwoHop,
@@ -51,7 +54,7 @@ export function ast(query: Query<Schema, string, any>): AST {
 
 export function newQuery<
   TSchema extends Schema,
-  TTable extends keyof TSchema['tables'] & string,
+  TTable extends TableNames<TSchema>,
 >(
   delegate: QueryDelegate,
   schema: TSchema,
@@ -62,7 +65,7 @@ export function newQuery<
 
 function newQueryWithDetails<
   TSchema extends Schema,
-  TTable extends keyof TSchema['tables'] & string,
+  TTable extends TableNames<TSchema>,
   TReturn,
 >(
   delegate: QueryDelegate,
@@ -106,7 +109,7 @@ export const defaultFormat = {singular: false, relationships: {}} as const;
 
 export abstract class AbstractQuery<
   TSchema extends Schema,
-  TTable extends keyof TSchema['tables'] & string,
+  TTable extends TableNames<TSchema>,
   TReturn = PullRow<TSchema, TTable>,
 > implements Query<TSchema, TTable, TReturn>
 {
@@ -138,7 +141,7 @@ export abstract class AbstractQuery<
 
   protected abstract _newQuery<
     TSchema extends Schema,
-    TTable extends keyof TSchema['tables'] & string,
+    TTable extends TableNames<TSchema>,
     TReturn,
   >(
     schema: TSchema,
@@ -566,7 +569,7 @@ export function completedAST(q: Query<Schema, string, any>) {
 
 export class QueryImpl<
   TSchema extends Schema,
-  TTable extends keyof TSchema['tables'] & string,
+  TTable extends TableNames<TSchema>,
   TReturn = PullRow<TSchema, TTable>,
 > extends AbstractQuery<TSchema, TTable, TReturn> {
   readonly #delegate: QueryDelegate;
@@ -588,7 +591,11 @@ export class QueryImpl<
     return this._completeAst();
   }
 
-  protected _newQuery<TSchema extends Schema, TTable extends string, TReturn>(
+  protected _newQuery<
+    TSchema extends Schema,
+    TTable extends TableNames<TSchema>,
+    TReturn,
+  >(
     schema: TSchema,
     tableName: TTable,
     ast: AST,
@@ -710,7 +717,7 @@ function addPrimaryKeysToAst(schema: TableSchema, ast: AST): AST {
 
 function arrayViewFactory<
   TSchema extends Schema,
-  TTable extends string,
+  TTable extends TableNames<TSchema>,
   TReturn,
 >(
   _query: AbstractQuery<TSchema, TTable, TReturn>,

@@ -31,7 +31,7 @@ export type UseQueryOptions = {
 
 export function useQuery<
   TSchema extends Schema,
-  TTable extends keyof TSchema['tables'] & string,
+  TTable extends TableNameFromSchema<TSchema>,
   TReturn,
 >(
   query: Query<TSchema, TTable, TReturn>,
@@ -179,7 +179,7 @@ export class ViewStore {
 
   getView<
     TSchema extends Schema,
-    TTable extends keyof TSchema['tables'] & string,
+    TTable extends TableNameFromSchema<TSchema>,
     TReturn,
   >(
     clientID: string,
@@ -258,7 +258,7 @@ const viewStore = new ViewStore();
  */
 class ViewWrapper<
   TSchema extends Schema,
-  TTable extends keyof TSchema['tables'] & string,
+  TTable extends TableNameFromSchema<TSchema>,
   TReturn,
 > {
   #view: TypedView<HumanReadable<TReturn>> | undefined;

@@ -1,6 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type {Expand, ExpandRecursive} from '../../../shared/src/expand.ts';
-import type {Schema as ZeroSchema} from '../../../zero-schema/src/builder/schema-builder.ts';
+import type {
+  TableNames,
+  Schema as ZeroSchema,
+} from '../../../zero-schema/src/builder/schema-builder.ts';
 import type {
   LastInTuple,
   SchemaValueToTSType,
@@ -139,7 +142,7 @@ export type Row<T extends TableSchema | Query<ZeroSchema, string, any>> =
  */
 export interface Query<
   TSchema extends ZeroSchema,
-  TTable extends keyof TSchema['tables'] & string,
+  TTable extends TableNames<TSchema>,
   TReturn = PullRow<TSchema, TTable>,
 > extends PromiseLike<HumanReadable<TReturn>> {
   /**

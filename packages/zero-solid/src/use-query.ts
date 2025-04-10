@@ -24,7 +24,7 @@ export type UseQueryOptions = {
 
 export function useQuery<
   TSchema extends Schema,
-  TTable extends keyof TSchema['tables'] & string,
+  TTable extends TableNameFromSchema<TSchema>,
   TReturn,
 >(
   querySignal: () => Query<TSchema, TTable, TReturn>,
@@ -53,7 +53,7 @@ const viewRefCount = new RefCount<UnknownSolidView>();
 
 function getView<
   TSchema extends Schema,
-  TTable extends keyof TSchema['tables'] & string,
+  TTable extends TableNameFromSchema<TSchema>,
   TReturn,
 >(
   query: Query<TSchema, TTable, TReturn>,

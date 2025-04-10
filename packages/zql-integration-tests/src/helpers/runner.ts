@@ -13,7 +13,10 @@ import {ZPGQuery} from '../../../zero-pg/src/query.ts';
 import {getServerSchema} from '../../../zero-pg/src/schema.ts';
 import {Transaction} from '../../../zero-pg/src/test/util.ts';
 import type {Row} from '../../../zero-protocol/src/data.ts';
-import type {Schema} from '../../../zero-schema/src/builder/schema-builder.ts';
+import type {
+  Schema,
+  TableNames,
+} from '../../../zero-schema/src/builder/schema-builder.ts';
 import {MemorySource} from '../../../zql/src/ivm/memory-source.ts';
 import type {DBTransaction} from '../../../zql/src/mutate/custom.ts';
 import {
@@ -50,7 +53,7 @@ type Delegates = {
 };
 
 type Queries<TSchema extends Schema> = {
-  [K in keyof TSchema['tables'] & string]: Query<TSchema, K>;
+  [K in TableNames<TSchema>]: Query<TSchema, K>;
 };
 
 type QueriesBySource<TSchema extends Schema> = {
