@@ -25,7 +25,7 @@ export function staticQuery<
 export class StaticQuery<
   TSchema extends Schema,
   TTable extends keyof TSchema['tables'] & string,
-  TReturn = PullRow<TTable, TSchema>,
+  TReturn = PullRow<TSchema, TTable>,
 > extends AbstractQuery<TSchema, TTable, TReturn> {
   expressionBuilder() {
     return new ExpressionBuilder(this._exists);

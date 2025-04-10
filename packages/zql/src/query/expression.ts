@@ -68,19 +68,19 @@ export class ExpressionBuilder<
   }
 
   cmp<
-    TSelector extends NoJsonSelector<PullTableSchema<TTable, TSchema>>,
+    TSelector extends NoJsonSelector<PullTableSchema<TSchema, TTable>>,
     TOperator extends Operator,
   >(
     field: TSelector,
     op: TOperator,
     value:
-      | GetFilterType<PullTableSchema<TTable, TSchema>, TSelector, TOperator>
+      | GetFilterType<PullTableSchema<TSchema, TTable>, TSelector, TOperator>
       | ParameterReference,
   ): Condition;
-  cmp<TSelector extends NoJsonSelector<PullTableSchema<TTable, TSchema>>>(
+  cmp<TSelector extends NoJsonSelector<PullTableSchema<TSchema, TTable>>>(
     field: TSelector,
     value:
-      | GetFilterType<PullTableSchema<TTable, TSchema>, TSelector, '='>
+      | GetFilterType<PullTableSchema<TSchema, TTable>, TSelector, '='>
       | ParameterReference,
   ): Condition;
   cmp(
@@ -112,10 +112,10 @@ export class ExpressionBuilder<
   or = or;
   not = not;
 
-  exists = <TRelationship extends AvailableRelationships<TTable, TSchema>>(
+  exists = <TRelationship extends AvailableRelationships<TSchema, TTable>>(
     relationship: TRelationship,
     cb?: (
-      query: Query<TSchema, DestTableName<TTable, TSchema, TRelationship>>,
+      query: Query<TSchema, DestTableName<TSchema, TTable, TRelationship>>,
     ) => Query<TSchema, any>,
   ): Condition => this.#exists(relationship, cb);
 }

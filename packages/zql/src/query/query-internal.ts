@@ -5,5 +5,5 @@ import type {PullRow, Query} from './query.ts';
 export interface AdvancedQuery<
   TSchema extends Schema,
   TTable extends keyof TSchema['tables'] & string,
-  TReturn = PullRow<TTable, TSchema>,
+  TReturn = PullRow<TSchema, TTable>,
 > extends Query<TSchema, TTable, TReturn> {}

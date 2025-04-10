@@ -107,7 +107,7 @@ export const defaultFormat = {singular: false, relationships: {}} as const;
 export abstract class AbstractQuery<
   TSchema extends Schema,
   TTable extends keyof TSchema['tables'] & string,
-  TReturn = PullRow<TTable, TSchema>,
+  TReturn = PullRow<TSchema, TTable>,
 > implements Query<TSchema, TTable, TReturn>
 {
   readonly #schema: TSchema;
@@ -350,7 +350,7 @@ export abstract class AbstractQuery<
   }
 
   start(
-    row: Partial<PullRow<TTable, TSchema>>,
+    row: Partial<PullRow<TSchema, TTable>>,
     opts?: {inclusive: boolean} | undefined,
   ): Query<TSchema, TTable, TReturn> {
     return this._newQuery(
@@ -567,7 +567,7 @@ export function completedAST(q: Query<Schema, string, any>) {
 export class QueryImpl<
   TSchema extends Schema,
   TTable extends keyof TSchema['tables'] & string,
-  TReturn = PullRow<TTable, TSchema>,
+  TReturn = PullRow<TSchema, TTable>,
 > extends AbstractQuery<TSchema, TTable, TReturn> {
   readonly #delegate: QueryDelegate;
 

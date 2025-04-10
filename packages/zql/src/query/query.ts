@@ -51,23 +51,23 @@ export type GetFilterType<
     : Exclude<SchemaValueToTSType<TSchema['columns'][TColumn]>, null>;
 
 export type AvailableRelationships<
-  TTable extends string,
   TSchema extends ZeroSchema,
+  TTable extends string,
 > = keyof TSchema['relationships'][TTable] & string;
 
 export type DestTableName<
-  TTable extends string,
   TSchema extends ZeroSchema,
+  TTable extends string,
   TRelationship extends string,
 > = LastInTuple<TSchema['relationships'][TTable][TRelationship]>['destSchema'];
 
 type DestRow<
-  TTable extends string,
   TSchema extends ZeroSchema,
+  TTable extends string,
   TRelationship extends string,
 > = TSchema['relationships'][TTable][TRelationship][0]['cardinality'] extends 'many'
-  ? PullRow<DestTableName<TTable, TSchema, TRelationship>, TSchema>
-  : PullRow<DestTableName<TTable, TSchema, TRelationship>, TSchema> | undefined;
+  ? PullRow<TSchema, DestTableName<TSchema, TTable, TRelationship>>
+  : PullRow<TSchema, DestTableName<TSchema, TTable, TRelationship>> | undefined;
 
 type AddSubreturn<TExistingReturn, TSubselectReturn, TAs extends string> = {
   readonly [K in TAs]: undefined extends TSubselectReturn
@@ -80,16 +80,16 @@ type AddSubreturn<TExistingReturn, TSubselectReturn, TAs extends string> = {
   : never;
 
 export type PullTableSchema<
-  TTable extends string,
   TSchemas extends ZeroSchema,
+  TTable extends string,
 > = TSchemas['tables'][TTable];
 
-export type PullRow<TTable extends string, TSchema extends ZeroSchema> = {
+export type PullRow<TSchema extends ZeroSchema, TTable extends string> = {
   readonly [K in keyof PullTableSchema<
-    TTable,
-    TSchema
+    TSchema,
+    TTable
   >['columns']]: SchemaValueToTSType<
-    PullTableSchema<TTable, TSchema>['columns'][K]
+    PullTableSchema<TSchema, TTable>['columns'][K]
   >;
 };
 
@@ -134,13 +134,13 @@ export type Row<T extends TableSchema | Query<ZeroSchema, string, any>> =
  *
  * @typeParam TSchema The database schema type extending ZeroSchema
  * @typeParam TTable The name of the table being queried, must be a key of TSchema['tables']
- * @typeParam TReturn The return type of the query, defaults to PullRow<TTable, TSchema>
+ * @typeParam TReturn The return type of the query, defaults to PullRow<TSchema,TTable>
  *
  */
 export interface Query<
   TSchema extends ZeroSchema,
   TTable extends keyof TSchema['tables'] & string,
-  TReturn = PullRow<TTable, TSchema>,
+  TReturn = PullRow<TSchema, TTable>,
 > extends PromiseLike<HumanReadable<TReturn>> {
   /**
    * Format is used to specify the shape of the query results. This is used by
@@ -188,27 +188,27 @@ export interface Query<
    *
    * @param relationship The name of the relationship
    */
-  related<TRelationship extends AvailableRelationships<TTable, TSchema>>(
+  related<TRelationship extends AvailableRelationships<TSchema, TTable>>(
     relationship: TRelationship,
   ): Query<
     TSchema,
     TTable,
     AddSubreturn<
       TReturn,
-      DestRow<TTable, TSchema, TRelationship>,
+      DestRow<TSchema, TTable, TRelationship>,
       TRelationship
     >
   >;
   related<
-    TRelationship extends AvailableRelationships<TTable, TSchema>,
+    TRelationship extends AvailableRelationships<TSchema, TTable>,
     TSub extends Query<TSchema, string, any>,
   >(
     relationship: TRelationship,
     cb: (
       q: Query<
         TSchema,
-        DestTableName<TTable, TSchema, TRelationship>,
-        DestRow<TTable, TSchema, TRelationship>
+        DestTableName<TSchema, TTable, TRelationship>,
+        DestRow<TSchema, TTable, TRelationship>
       >,
     ) => TSub,
   ): Query<
@@ -241,13 +241,13 @@ export interface Query<
    * ```
    */
   where<
-    TSelector extends NoJsonSelector<PullTableSchema<TTable, TSchema>>,
+    TSelector extends NoJsonSelector<PullTableSchema<TSchema, TTable>>,
     TOperator extends Operator,
   >(
     field: TSelector,
     op: TOperator,
     value:
-      | GetFilterType<PullTableSchema<TTable, TSchema>, TSelector, TOperator>
+      | GetFilterType<PullTableSchema<TSchema, TTable>, TSelector, TOperator>
       | ParameterReference,
   ): Query<TSchema, TTable, TReturn>;
   /**
@@ -266,10 +266,10 @@ export interface Query<
    *  .where('age', 18)
    * ```
    */
-  where<TSelector extends NoJsonSelector<PullTableSchema<TTable, TSchema>>>(
+  where<TSelector extends NoJsonSelector<PullTableSchema<TSchema, TTable>>>(
     field: TSelector,
     value:
-      | GetFilterType<PullTableSchema<TTable, TSchema>, TSelector, '='>
+      | GetFilterType<PullTableSchema<TSchema, TTable>, TSelector, '='>
       | ParameterReference,
   ): Query<TSchema, TTable, TReturn>;
 
@@ -291,12 +291,12 @@ export interface Query<
   ): Query<TSchema, TTable, TReturn>;
 
   whereExists(
-    relationship: AvailableRelationships<TTable, TSchema>,
+    relationship: AvailableRelationships<TSchema, TTable>,
   ): Query<TSchema, TTable, TReturn>;
-  whereExists<TRelationship extends AvailableRelationships<TTable, TSchema>>(
+  whereExists<TRelationship extends AvailableRelationships<TSchema, TTable>>(
     relationship: TRelationship,
     cb: (
-      q: Query<TSchema, DestTableName<TTable, TSchema, TRelationship>>,
+      q: Query<TSchema, DestTableName<TSchema, TTable, TRelationship>>,
     ) => Query<TSchema, string>,
   ): Query<TSchema, TTable, TReturn>;
 
@@ -314,7 +314,7 @@ export interface Query<
    * @returns A new query instance with the applied start condition.
    */
   start(
-    row: Partial<PullRow<TTable, TSchema>>,
+    row: Partial<PullRow<TSchema, TTable>>,
     opts?: {inclusive: boolean} | undefined,
   ): Query<TSchema, TTable, TReturn>;
 
@@ -336,7 +336,7 @@ export interface Query<
    *
    * @returns A new query instance with the applied order.
    */
-  orderBy<TSelector extends Selector<PullTableSchema<TTable, TSchema>>>(
+  orderBy<TSelector extends Selector<PullTableSchema<TSchema, TTable>>>(
     field: TSelector,
     direction: 'asc' | 'desc',
   ): Query<TSchema, TTable, TReturn>;
