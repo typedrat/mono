@@ -40,16 +40,16 @@ import {
   type PreloadOptions,
   type PullRow,
   type Query,
+  type StartRow,
 } from './query.ts';
 import {DEFAULT_TTL, type TTL} from './ttl.ts';
 import type {TypedView} from './typed-view.ts';
 
-type AnyQuery = Query<Schema, string, any>;
-
 const astSymbol = Symbol();
 
 export function ast(query: Query<Schema, string, any>): AST {
-  return (query as AbstractQuery<Schema, string>)[astSymbol];
+  assert(astSymbol in query);
+  return query[astSymbol] as AST;
 }
 
 export function newQuery<
@@ -78,7 +78,9 @@ function newQueryWithDetails<
 }
 
 export type CommitListener = () => void;
+
 export type GotCallback = (got: boolean) => void;
+
 export interface QueryDelegate extends BuilderDelegate {
   addServerQuery(
     ast: AST,
@@ -106,6 +108,8 @@ export function staticParam(
 export const SUBQ_PREFIX = 'zsubq_';
 
 export const defaultFormat = {singular: false, relationships: {}} as const;
+
+type AnyQuery = Query<Schema, string, any>;
 
 export abstract class AbstractQuery<
   TSchema extends Schema,
@@ -148,7 +152,7 @@ export abstract class AbstractQuery<
     table: TTable,
     ast: AST,
     format: Format,
-  ): AbstractQuery<TSchema, TTable, TReturn>;
+  ): Query<TSchema, TTable, TReturn>;
 
   one(): Query<TSchema, TTable, TReturn | undefined> {
     return this._newQuery(
@@ -166,12 +170,12 @@ export abstract class AbstractQuery<
   }
   whereExists(
     relationship: string,
-    cb?: (q: AnyQuery) => AnyQuery,
+    cb?: (q: any) => any,
   ): Query<TSchema, TTable, TReturn> {
     return this.where(({exists}) => exists(relationship, cb));
   }
 
-  related(relationship: string, cb?: (q: AnyQuery) => AnyQuery): AnyQuery {
+  related(relationship: string, cb?: (q: any) => any): any {
     if (relationship.startsWith(SUBQ_PREFIX)) {
       throw new Error(
         `Relationship names may not start with "${SUBQ_PREFIX}". That is a reserved prefix.`,
@@ -183,7 +187,7 @@ export abstract class AbstractQuery<
     assert(related, 'Invalid relationship');
     if (isOneHop(related)) {
       const {destSchema, destField, sourceField, cardinality} = related[0];
-      let q: AnyQuery = this._newQuery(
+      let q = this._newQuery(
         this.#schema,
         destSchema,
         {
@@ -198,7 +202,7 @@ export abstract class AbstractQuery<
       if (cardinality === 'one') {
         q = q.one();
       }
-      const sq = cb(q) as AbstractQuery<Schema, string>;
+      const sq = cb(q); // as AbstractQuery<Schema, string>;
       assert(
         isCompoundKey(sourceField),
         'The source of a relationship must specify at last 1 field',
@@ -259,7 +263,7 @@ export abstract class AbstractQuery<
             singular: secondRelation.cardinality === 'one',
           },
         ),
-      ) as unknown as QueryImpl<Schema, string>;
+      );
 
       assert(isCompoundKey(firstRelation.sourceField), 'Invalid relationship');
       assert(isCompoundKey(firstRelation.destField), 'Invalid relationship');
@@ -353,7 +357,7 @@ export abstract class AbstractQuery<
   }
 
   start(
-    row: Partial<PullRow<TSchema, TTable>>,
+    row: StartRow<TSchema, TTable>,
     opts?: {inclusive: boolean} | undefined,
   ): Query<TSchema, TTable, TReturn> {
     return this._newQuery(
@@ -406,7 +410,7 @@ export abstract class AbstractQuery<
 
   protected _exists = (
     relationship: string,
-    cb: (query: AnyQuery) => AnyQuery = q => q,
+    cb: (query: any) => AnyQuery = q => q,
   ): Condition => {
     const related = this.#schema.relationships[this.#tableName][relationship];
     assert(related, 'Invalid relationship');
@@ -568,10 +572,13 @@ export function completedAST(q: Query<Schema, string, any>) {
 }
 
 export class QueryImpl<
-  TSchema extends Schema,
-  TTable extends TableNames<TSchema>,
-  TReturn = PullRow<TSchema, TTable>,
-> extends AbstractQuery<TSchema, TTable, TReturn> {
+    TSchema extends Schema,
+    TTable extends TableNames<TSchema>,
+    TReturn = PullRow<TSchema, TTable>,
+  >
+  extends AbstractQuery<TSchema, TTable, TReturn>
+  implements Query<TSchema, TTable, TReturn>
+{
   readonly #delegate: QueryDelegate;
 
   constructor(
@@ -720,7 +727,7 @@ function arrayViewFactory<
   TTable extends TableNames<TSchema>,
   TReturn,
 >(
-  _query: AbstractQuery<TSchema, TTable, TReturn>,
+  _query: Query<TSchema, TTable, TReturn>,
   input: Input,
   format: Format,
   onDestroy: () => void,

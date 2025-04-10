@@ -64,7 +64,7 @@ export type DestTableName<
   TRelationship extends string,
 > = LastInTuple<TSchema['relationships'][TTable][TRelationship]>['destSchema'];
 
-type DestRow<
+export type DestRow<
   TSchema extends ZeroSchema,
   TTable extends string,
   TRelationship extends string,
@@ -72,7 +72,11 @@ type DestRow<
   ? PullRow<TSchema, DestTableName<TSchema, TTable, TRelationship>>
   : PullRow<TSchema, DestTableName<TSchema, TTable, TRelationship>> | undefined;
 
-type AddSubreturn<TExistingReturn, TSubselectReturn, TAs extends string> = {
+export type AddSubreturn<
+  TExistingReturn,
+  TSubselectReturn,
+  TAs extends string,
+> = {
   readonly [K in TAs]: undefined extends TSubselectReturn
     ? TSubselectReturn
     : readonly TSubselectReturn[];
@@ -107,6 +111,23 @@ export type Row<T extends TableSchema | Query<ZeroSchema, string, any>> =
       ? TReturn
       : never;
 
+export type StartRow<
+  TSchema extends ZeroSchema,
+  TTable extends TableNames<TSchema>,
+  // > = Pick<PullRow<TSchema, TTable>, PKs<TSchema, TTable>>;
+> = Partial<PullRow<TSchema, TTable>> &
+  Pick<PullRow<TSchema, TTable>, PKs<TSchema, TTable>>;
+
+type PKs<
+  TSchema extends ZeroSchema,
+  TTable extends TableNames<TSchema>,
+> = TSchema['tables'][TTable]['primaryKey'][number];
+
+// export type StartRow<
+//   TSchema extends ZeroSchema,
+//   TTable extends TableNames<TSchema>,
+// > = Partial<PullRow<TSchema, TTable>>;
+
 /**
  * A hybrid query that runs on both client and server.
  * Results are returned immediately from the client followed by authoritative
@@ -138,7 +159,6 @@ export type Row<T extends TableSchema | Query<ZeroSchema, string, any>> =
  * @typeParam TSchema The database schema type extending ZeroSchema
  * @typeParam TTable The name of the table being queried, must be a key of TSchema['tables']
  * @typeParam TReturn The return type of the query, defaults to PullRow<TSchema,TTable>
- *
  */
 export interface Query<
   TSchema extends ZeroSchema,
@@ -317,7 +337,7 @@ export interface Query<
    * @returns A new query instance with the applied start condition.
    */
   start(
-    row: Partial<PullRow<TSchema, TTable>>,
+    row: StartRow<TSchema, TTable>,
     opts?: {inclusive: boolean} | undefined,
   ): Query<TSchema, TTable, TReturn>;
 
