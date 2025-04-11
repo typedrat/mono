@@ -31,6 +31,10 @@ describe('auth/load-permissions', () => {
       .run(permissions, h128(permissions).toString(16));
   }
 
+  function dropPermissions() {
+    replica.prepare(`DELETE FROM "zero_app.permissions"`).run();
+  }
+
   test('loads supported permissions', () => {
     setPermissions({tables: {}});
     expect(loadPermissions(lc, db, 'zero_app')).toMatchInlineSnapshot(`
@@ -77,5 +81,15 @@ describe('auth/load-permissions', () => {
       This may happen if Permissions with a new internal format are deployed before the supporting server has been fully rolled out.]
     `,
     );
+  });
+
+  test('no permissions', () => {
+    dropPermissions();
+    expect(loadPermissions(lc, db, 'zero_app')).toMatchInlineSnapshot(`
+      {
+        "hash": null,
+        "permissions": null,
+      }
+    `);
   });
 });

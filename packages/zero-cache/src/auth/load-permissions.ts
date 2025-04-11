@@ -21,9 +21,11 @@ export function loadPermissions(
   replica: StatementRunner,
   appID: string,
 ): LoadedPermissions {
-  const {permissions, hash} = replica.get(
+  const maybeRow = replica.get(
     `SELECT permissions, hash FROM "${appID}.permissions"`,
   );
+  const permissions = maybeRow?.permissions ?? null;
+  const hash = maybeRow?.hash ?? null;
   if (permissions === null) {
     const appIDFlag = appID === 'zero' ? '' : ` --app-id=${appID}`;
     lc.warn?.(
