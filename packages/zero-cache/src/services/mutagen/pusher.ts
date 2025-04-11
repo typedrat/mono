@@ -7,9 +7,9 @@ import type {Downstream} from '../../../../zero-protocol/src/down.ts';
 import * as ErrorKind from '../../../../zero-protocol/src/error-kind-enum.ts';
 import {
   pushResponseSchema,
-  type PushBody,
   type PushBodyWithUserParams,
   type PushResponse,
+  type UserPushParams,
 } from '../../../../zero-protocol/src/push.ts';
 import {type ZeroConfig} from '../../config/zero-config.ts';
 import {ErrorForClient} from '../../types/error-for-client.ts';
@@ -17,12 +17,13 @@ import {upstreamSchema} from '../../types/shards.ts';
 import {Subscription, type Result} from '../../types/subscription.ts';
 import type {HandlerResult} from '../../workers/connection.ts';
 import type {Service} from '../service.ts';
+import {assert} from '../../../../shared/src/asserts.ts';
 
 export interface Pusher {
   enqueuePush(
     clientID: string,
     wsID: string,
-    push: PushBody,
+    push: PushBodyWithUserParams,
     jwt: string | undefined,
   ): HandlerResult;
 }
@@ -63,13 +64,13 @@ export class PusherService implements Service, Pusher {
   enqueuePush(
     clientID: string,
     wsID: string,
-    push: PushBody,
+    push: PushBodyWithUserParams,
     jwt: string | undefined,
   ): HandlerResult {
     const downstream: Subscription<Downstream> | undefined =
-      this.#pusher.maybeInitConnection(clientID, wsID);
+      this.#pusher.maybeInitConnection(clientID, wsID, push);
 
-    this.#queue.enqueue({push, jwt});
+    this.#queue.enqueue({push, jwt, clientID});
 
     if (downstream) {
       return {
@@ -98,8 +99,11 @@ export class PusherService implements Service, Pusher {
 type PusherEntry = {
   push: PushBodyWithUserParams;
   jwt: string | undefined;
+  clientID: string;
 };
 type PusherEntryOrStop = PusherEntry | 'stop';
+
+const reservedParams = ['schema', 'appID'];
 
 /**
  * Awaits items in the queue then drains and sends them all
@@ -111,7 +115,14 @@ class PushWorker {
   readonly #queue: Queue<PusherEntryOrStop>;
   readonly #lc: LogContext;
   readonly #config: Config;
-  readonly #clients: Map<string, [wsID: string, Subscription<Downstream>]>;
+  readonly #clients: Map<
+    string,
+    {
+      wsID: string;
+      userParams?: UserPushParams | undefined;
+      downstream: Subscription<Downstream>;
+    }
+  >;
 
   constructor(
     config: Config,
@@ -132,16 +143,24 @@ class PushWorker {
    * Returns a new downstream stream if the clientID,wsID pair has not been seen before.
    * If a clientID already exists with a different wsID, that client's downstream is cancelled.
    */
-  maybeInitConnection(clientID: string, wsID: string) {
+  maybeInitConnection(
+    clientID: string,
+    wsID: string,
+    pushBody: PushBodyWithUserParams,
+  ) {
     const existing = this.#clients.get(clientID);
-    if (existing && existing[0] === wsID) {
+    if (existing && existing.wsID === wsID) {
+      assert(
+        pushBody.userParams === undefined,
+        'userParams must only be set on the first push',
+      );
       // already initialized for this socket
       return undefined;
     }
 
     // client is back on a new connection
     if (existing) {
-      existing[1].cancel();
+      existing.downstream.cancel();
     }
 
     const downstream = Subscription.create<Downstream>({
@@ -149,7 +168,11 @@ class PushWorker {
         this.#clients.delete(clientID);
       },
     });
-    this.#clients.set(clientID, [wsID, downstream]);
+    this.#clients.set(clientID, {
+      wsID,
+      downstream,
+      userParams: pushBody.userParams,
+    });
     return downstream;
   }
 
@@ -203,7 +226,7 @@ class PushWorker {
           response.error === 'unsupportedPushVersion' ||
           response.error === 'unsupportedSchemaVersion'
         ) {
-          client[1].fail(
+          client.downstream.fail(
             new ErrorForClient({
               kind: ErrorKind.InvalidPush,
               message: response.error,
@@ -211,7 +234,7 @@ class PushWorker {
           );
         } else {
           responses.push(
-            client[1].push([
+            client.downstream.push([
               'pushResponse',
               {
                 ...response,
@@ -260,12 +283,13 @@ class PushWorker {
 
         if (successes.length > 0) {
           responses.push(
-            client[1].push(['pushResponse', {mutations: successes}]).result,
+            client.downstream.push(['pushResponse', {mutations: successes}])
+              .result,
           );
         }
 
         if (failure) {
-          connectionTerminations.push(() => client[1].fail(failure));
+          connectionTerminations.push(() => client.downstream.fail(failure));
         }
       }
     }
@@ -281,6 +305,15 @@ class PushWorker {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
+
+    const userParams = this.#clients.get(entry.clientID)?.userParams;
+
+    if (userParams?.headers) {
+      for (const [key, value] of Object.entries(userParams.headers)) {
+        headers[key] = value;
+      }
+    }
+
     if (this.#apiKey) {
       headers['X-Api-Key'] = this.#apiKey;
     }
@@ -290,6 +323,13 @@ class PushWorker {
 
     try {
       const params = new URLSearchParams();
+      if (userParams?.queryParams) {
+        for (const [key, value] of Object.entries(userParams.queryParams)) {
+          if (!reservedParams.includes(key)) {
+            params.append(key, value);
+          }
+        }
+      }
       params.append(
         'schema',
         upstreamSchema({

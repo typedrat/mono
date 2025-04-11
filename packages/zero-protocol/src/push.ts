@@ -202,6 +202,7 @@ export type PushBody = v.Infer<typeof pushBodySchema>;
 export type PushBodyWithUserParams = v.Infer<
   typeof pushBodyWithUserParamsSchema
 >;
+export type UserPushParams = v.Infer<typeof userPushParamsSchema>;
 export type PushMessage = v.Infer<typeof pushMessageSchema>;
 export type PushResponse = v.Infer<typeof pushResponseSchema>;
 export type PushResponseMessage = v.Infer<typeof pushResponseMessageSchema>;
