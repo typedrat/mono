@@ -86,7 +86,7 @@ export const customMutationSchema = v.object({
 
 export const mutationSchema = v.union(crudMutationSchema, customMutationSchema);
 
-export const pushBodySchema = v.object({
+const pushBodyFields = {
   clientGroupID: v.string(),
   mutations: v.array(mutationSchema),
   pushVersion: v.number(),
@@ -96,6 +96,17 @@ export const pushBodySchema = v.object({
   schemaVersion: v.number().optional(),
   timestamp: v.number(),
   requestID: v.string(),
+} as const;
+export const pushBodySchema = v.object(pushBodyFields);
+
+export const userPushParamsSchema = v.object({
+  headers: v.record(v.string()).optional(),
+  queryParams: v.record(v.string()).optional(),
+});
+
+export const pushBodyWithUserParamsSchema = v.object({
+  ...pushBodyFields,
+  userParams: userPushParamsSchema.optional(),
 });
 
 export const pushMessageSchema = v.tuple([v.literal('push'), pushBodySchema]);
@@ -188,6 +199,9 @@ export type CRUDMutation = v.Infer<typeof crudMutationSchema>;
 export type CustomMutation = v.Infer<typeof customMutationSchema>;
 export type Mutation = v.Infer<typeof mutationSchema>;
 export type PushBody = v.Infer<typeof pushBodySchema>;
+export type PushBodyWithUserParams = v.Infer<
+  typeof pushBodyWithUserParamsSchema
+>;
 export type PushMessage = v.Infer<typeof pushMessageSchema>;
 export type PushResponse = v.Infer<typeof pushResponseSchema>;
 export type PushResponseMessage = v.Infer<typeof pushResponseMessageSchema>;

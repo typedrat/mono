@@ -8,6 +8,7 @@ import * as ErrorKind from '../../../../zero-protocol/src/error-kind-enum.ts';
 import {
   pushResponseSchema,
   type PushBody,
+  type PushBodyWithUserParams,
   type PushResponse,
 } from '../../../../zero-protocol/src/push.ts';
 import {type ZeroConfig} from '../../config/zero-config.ts';
@@ -95,7 +96,7 @@ export class PusherService implements Service, Pusher {
 }
 
 type PusherEntry = {
-  push: PushBody;
+  push: PushBodyWithUserParams;
   jwt: string | undefined;
 };
 type PusherEntryOrStop = PusherEntry | 'stop';
@@ -297,10 +298,15 @@ class PushWorker {
         }),
       );
       params.append('appID', this.#config.app.id);
+
       const response = await fetch(`${this.#pushURL}?${params.toString()}`, {
         method: 'POST',
         headers,
-        body: JSON.stringify(entry.push),
+        // we do not put the user params in the body of the request
+        // as they will be assigned to headers or the query string.
+        body: JSON.stringify(entry.push, (key: string, value) =>
+          key === 'userParams' ? undefined : value,
+        ),
       });
       if (!response.ok) {
         return {
