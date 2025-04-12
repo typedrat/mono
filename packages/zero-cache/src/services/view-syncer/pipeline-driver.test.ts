@@ -16,6 +16,7 @@ import {
 import {CREATE_STORAGE_TABLE, DatabaseStorage} from './database-storage.ts';
 import {PipelineDriver} from './pipeline-driver.ts';
 import {ResetPipelinesSignal, Snapshotter} from './snapshotter.ts';
+import {Timer} from './view-syncer.ts';
 
 describe('view-syncer/pipeline-driver', () => {
   let dbFile: DbFile;
@@ -300,6 +301,10 @@ describe('view-syncer/pipeline-driver', () => {
     'zeroz',
   );
 
+  function changes() {
+    return [...pipelines.advance(new Timer().start()).changes];
+  }
+
   test('replica version', () => {
     pipelines.init(null);
     expect(pipelines.replicaVersion).toBe('123');
@@ -430,7 +435,7 @@ describe('view-syncer/pipeline-driver', () => {
       messages.insert('issues', {id: '4', closed: 0}),
     );
 
-    expect([...pipelines.advance().changes]).toMatchInlineSnapshot(`
+    expect(changes()).toMatchInlineSnapshot(`
       [
         {
           "queryHash": "hash1",
@@ -487,7 +492,7 @@ describe('view-syncer/pipeline-driver', () => {
       messages.delete('comments', {id: '21'}),
     );
 
-    expect([...pipelines.advance().changes]).toMatchInlineSnapshot(`
+    expect(changes()).toMatchInlineSnapshot(`
       [
         {
           "queryHash": "hash1",
@@ -526,9 +531,7 @@ describe('view-syncer/pipeline-driver', () => {
 
     replicator.processTransaction('134', messages.truncate('comments'));
 
-    expect(() => [...pipelines.advance().changes]).toThrowError(
-      ResetPipelinesSignal,
-    );
+    expect(() => changes()).toThrowError(ResetPipelinesSignal);
   });
 
   test('update', () => {
@@ -540,7 +543,7 @@ describe('view-syncer/pipeline-driver', () => {
       messages.update('comments', {id: '22', issueID: '3', upvotes: 20000}),
     );
 
-    expect([...pipelines.advance().changes]).toMatchInlineSnapshot(`
+    expect(changes()).toMatchInlineSnapshot(`
       [
         {
           "queryHash": "hash1",
@@ -573,7 +576,7 @@ describe('view-syncer/pipeline-driver', () => {
       messages.update('comments', {id: '22', issueID: '3', upvotes: 10}),
     );
 
-    expect([...pipelines.advance().changes]).toMatchInlineSnapshot(`
+    expect(changes()).toMatchInlineSnapshot(`
       [
         {
           "queryHash": "hash1",
@@ -591,6 +594,25 @@ describe('view-syncer/pipeline-driver', () => {
         },
       ]
     `);
+  });
+
+  test('timeout on slow advancement', () => {
+    pipelines.init(null);
+    [...pipelines.addQuery('hash1', ISSUES_AND_COMMENTS)];
+    pipelines.setHydrationTime('hash1', 10);
+
+    replicator.processTransaction(
+      '134',
+      // Timeout only kicks in at 20 changes.
+      ...Array.from({length: 20}, (_, i) =>
+        messages.insert('issues', {id: String(30 + i)}),
+      ),
+    );
+
+    // 6ms is larger than half of the hydration time.
+    expect(() => [
+      ...pipelines.advance({totalElapsed: () => 6}).changes,
+    ]).toThrow(ResetPipelinesSignal);
   });
 
   test('reset', () => {
@@ -760,7 +782,7 @@ describe('view-syncer/pipeline-driver', () => {
     // in which case this update must be represented as:
     // - `remove{id: 'boo', name: 'dar'}`
     // - `add{id: 'boo', name: 'far'}`
-    expect([...pipelines.advance().changes]).toMatchInlineSnapshot(`
+    expect(changes()).toMatchInlineSnapshot(`
       [
         {
           "queryHash": "hash1",
@@ -803,7 +825,7 @@ describe('view-syncer/pipeline-driver', () => {
       }),
     );
 
-    expect([...pipelines.advance().changes]).toMatchInlineSnapshot(`
+    expect(changes()).toMatchInlineSnapshot(`
       [
         {
           "queryHash": "hash1",
@@ -1014,7 +1036,7 @@ describe('view-syncer/pipeline-driver', () => {
       }),
     );
 
-    expect([...pipelines.advance().changes]).toMatchInlineSnapshot(`
+    expect(changes()).toMatchInlineSnapshot(`
       [
         {
           "queryHash": "hash1",
@@ -1099,7 +1121,7 @@ describe('view-syncer/pipeline-driver', () => {
       }),
     );
 
-    expect([...pipelines.advance().changes]).toMatchInlineSnapshot(`
+    expect(changes()).toMatchInlineSnapshot(`
       [
         {
           "queryHash": "hash1",
@@ -1177,7 +1199,7 @@ describe('view-syncer/pipeline-driver', () => {
       '134',
       messages.update('comments', {id: '22', issueID: '3', upvotes: 20000}),
     );
-    [...pipelines.advance().changes];
+    changes();
 
     // Post-advancement
     expect(pipelines.getRow('comments', {id: '22'})).toEqual({
@@ -1226,7 +1248,7 @@ describe('view-syncer/pipeline-driver', () => {
       maxSupportedVersion: 1,
     });
 
-    expect([...pipelines.advance().changes]).toMatchInlineSnapshot(`
+    expect(changes()).toMatchInlineSnapshot(`
       [
         {
           "queryHash": "hash1",
@@ -1259,7 +1281,7 @@ describe('view-syncer/pipeline-driver', () => {
       messages.insert('issues', {id: '4', closed: 0}),
     );
 
-    expect([...pipelines.advance().changes]).toMatchInlineSnapshot(`
+    expect(changes()).toMatchInlineSnapshot(`
       [
         {
           "queryHash": "hash1",
@@ -1282,7 +1304,7 @@ describe('view-syncer/pipeline-driver', () => {
       messages.insert('comments', {id: '41', issueID: '4', upvotes: 10}),
     );
 
-    expect([...pipelines.advance().changes]).toMatchInlineSnapshot(`
+    expect(changes()).toMatchInlineSnapshot(`
       [
         {
           "queryHash": "hash1",
@@ -1303,7 +1325,7 @@ describe('view-syncer/pipeline-driver', () => {
 
     replicator.processTransaction('189', messages.delete('issues', {id: '4'}));
 
-    expect([...pipelines.advance().changes]).toMatchInlineSnapshot(`
+    expect(changes()).toMatchInlineSnapshot(`
       [
         {
           "queryHash": "hash1",
@@ -1343,7 +1365,7 @@ describe('view-syncer/pipeline-driver', () => {
     );
 
     expect(pipelines.currentVersion()).toBe('123');
-    expect([...pipelines.advance().changes]).toHaveLength(0);
+    expect(changes()).toHaveLength(0);
     expect(pipelines.currentVersion()).toBe('134');
   });
 
@@ -1360,6 +1382,6 @@ describe('view-syncer/pipeline-driver', () => {
       }),
     );
 
-    expect(() => [...pipelines.advance().changes]).toThrowError();
+    expect(() => changes()).toThrowError();
   });
 });
