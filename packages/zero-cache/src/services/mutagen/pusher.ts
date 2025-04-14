@@ -215,6 +215,7 @@ class PushWorker {
     const responses: Promise<Result>[] = [];
     const connectionTerminations: (() => void)[] = [];
     if ('error' in response) {
+      this.#advanceAllLmids(response);
       this.#lc.warn?.(
         'The server behind ZERO_PUSH_URL returned a push error.',
         response,
@@ -272,14 +273,17 @@ class PushWorker {
               'The server behind ZERO_PUSH_URL returned a mutation error.',
               m.result,
             );
+
+            if (m.result.error === 'oooMutation') {
+              failure = new ErrorForClient({
+                kind: ErrorKind.InvalidPush,
+                message: 'mutation was out of order',
+              });
+              break;
+            }
           }
-          if ('error' in m.result && m.result.error === 'oooMutation') {
-            failure = new ErrorForClient({
-              kind: ErrorKind.InvalidPush,
-              message: 'mutation was out of order',
-            });
-            break;
-          }
+
+          this.#advanceLmid();
         }
 
         if (failure && i < mutations.length - 1) {
@@ -415,6 +419,10 @@ class PushWorker {
         mutationIDs,
       };
     }
+  }
+
+  #advanceLmids() {
+    // advance all the lmids for each client?
   }
 }
 
