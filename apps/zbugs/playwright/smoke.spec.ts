@@ -40,6 +40,7 @@ test('loadtest', async ({page, browser, context}) => {
         httpOnly: false,
       }
     ]);
+    console.log(AWS_BATCH_JOB_ARRAY_INDEX, `${userCookies.length} JWT cookie set`);
   } else {
     await page.context().addCookies([
       {
@@ -73,17 +74,6 @@ test('loadtest', async ({page, browser, context}) => {
     await page.getByLabel('VISITOR PASSWORD').click();
     await page.getByLabel('VISITOR PASSWORD').fill('zql');
     await page.getByLabel('VISITOR PASSWORD').press('Enter');
-  }
-  // Handle onboarding modal if it exists
-  try {
-    const onboardingButton = await page.locator(
-      'button.onboarding-modal-accept',
-    );
-    if (await onboardingButton.isVisible()) {
-      await onboardingButton.click();
-    }
-  } catch (error) {
-    console.log('No onboarding modal present, continuing...');
   }
 
   let cgID = '';
