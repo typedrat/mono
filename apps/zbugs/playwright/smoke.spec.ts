@@ -12,11 +12,7 @@ const ISSUE_ID = process.env.ISSUE_ID ?? '3020';
 const DIRECT_URL = process.env.DIRECT_URL ?? `${SITE_URL}/issue/${ISSUE_ID}`;
 const PERCENT_DIRECT = parseFloat(process.env.PERCENT_DIRECT ?? '0.10');
 const AWS_BATCH_JOB_ARRAY_INDEX = process.env.AWS_BATCH_JOB_ARRAY_INDEX ?? '-1';
-const ENTER_PASSWORD = process.env.ENTER_PASSWORD === '0';
-let NO_JWT = process.env.NO_JWT === '1';
-if (userCookies.length === 0) {
-  NO_JWT = true;
-}
+const NO_JWT = userCookies.length === 0;
 const ADD_COMMENTS_AND_EMOJI =
   (process.env.ADD_COMMENTS_AND_EMOJI ?? '1') === '1';
 test('loadtest', async ({page, browser, context}) => {
@@ -40,7 +36,6 @@ test('loadtest', async ({page, browser, context}) => {
         httpOnly: false,
       }
     ]);
-    console.log(AWS_BATCH_JOB_ARRAY_INDEX, `${userCookies.length} JWT cookie set`);
   } else {
     await page.context().addCookies([
       {
@@ -70,10 +65,17 @@ test('loadtest', async ({page, browser, context}) => {
     console.log('Opening main page:', SITE_URL);
     await page.goto(SITE_URL);
   }
-  if (ENTER_PASSWORD) {
-    await page.getByLabel('VISITOR PASSWORD').click();
-    await page.getByLabel('VISITOR PASSWORD').fill('zql');
-    await page.getByLabel('VISITOR PASSWORD').press('Enter');
+
+  // Handle onboarding modal if it exists
+  try {
+    const onboardingButton = await page.locator(
+      'button.onboarding-modal-accept',
+    );
+    if (await onboardingButton.isVisible()) {
+      await onboardingButton.click();
+    }
+  } catch (error) {
+    console.log('No onboarding modal present, continuing...');
   }
 
   let cgID = '';
