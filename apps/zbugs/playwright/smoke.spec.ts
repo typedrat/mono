@@ -12,7 +12,7 @@ const ISSUE_ID = process.env.ISSUE_ID ?? '3020';
 const DIRECT_URL = process.env.DIRECT_URL ?? `${SITE_URL}/issue/${ISSUE_ID}`;
 const PERCENT_DIRECT = parseFloat(process.env.PERCENT_DIRECT ?? '0.10');
 const AWS_BATCH_JOB_ARRAY_INDEX = process.env.AWS_BATCH_JOB_ARRAY_INDEX ?? '-1';
-const ENTER_PASSWORD = process.env.ENTER_PASSWORD === '1';
+const ENTER_PASSWORD = process.env.ENTER_PASSWORD === '0';
 let NO_JWT = process.env.NO_JWT === '1';
 if (userCookies.length === 0) {
   NO_JWT = true;
@@ -20,8 +20,6 @@ if (userCookies.length === 0) {
 const ADD_COMMENTS_AND_EMOJI =
   (process.env.ADD_COMMENTS_AND_EMOJI ?? '1') === '1';
 test('loadtest', async ({page, browser, context}) => {
-  // print environment variables
-  console.log(process.env);
   test.setTimeout(700000);
   if (!NO_JWT) {
     await page.context().addCookies([
