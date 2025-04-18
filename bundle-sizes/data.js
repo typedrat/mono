@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1744199334044,
+  "lastUpdate": 1745015610555,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -52417,6 +52417,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31542,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "arv@roci.dev",
+            "name": "Erik Arvidsson",
+            "username": "arv"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d042cb8bd40c41e38614d46ea21b46574fd73160",
+          "message": "feat(zero-client): Add onError to Zero options (#4238)\n\nKey Changes\n---\n\n1. **Add `onError` Option to Zero**\n   - `ZeroOptions` now accepts an `onError` callback.\n   - This callback is called for error-level log messages instead of\n     logging to the console, if provided.\n   - The first argument passed to `onError` is an `OnErrorKind`, which\n     is a structured representation of the error kind.\n   - The rest of the arguments are of type `unknown` and are at this\n     point not type-checked. This allows for flexibility in passing\n     additional context or error messages.\n\n2. **ZeroLogContext and Error Kinds**\n   - Introduced `ZeroLogContext` (a typed version of `LogContext`) that\n     uses a tuple of error kind and arguments.\n   - Added `OnErrorKind` and related enums/types for structured error\n     handling.\n\n3. **Error Handling in Zero**\n   - In the Zero constructor, a custom log sink is created that calls\n     `onError` for error-level logs.\n   - All internal logging and error reporting now uses `ZeroLogContext`\n     and the new error kind system.\n\n4. **Test Coverage**\n   - Tests were updated and added to verify that `onError` is called as\n     expected.\n   - Snapshots and assertions now expect the new error handling\n     behavior.\n\n5. **Refactoring ErrorKind**\n   - Moved from importing `* as ErrorKind` from the enum file to using a\n     new error-kind.ts that exports a type-safe enum.\n\n6. **Propagated Changes**\n   - All files that previously used `LogContext` or `ErrorKind` were\n     updated to use the new types.\n   - This includes metrics, mutation tracker, context, custom,\n     delete-clients-manager, zero-poke-handler, and more.\n\n7. **Exports**\n   - Updated mod.ts to export the new error types and handlers.\n\n8. **Dependency Updates**\n   - Updated `@rocicorp/logger` to `^5.4.0` in all relevant package.json\n     files to pick up the new type parameters on the log types.\n\nExample of the New Usage\n---\n\n```ts\nconst zero = new Zero({\n  ...,\n  onError: (kind, ...args) => {\n    // Custom error handling logic\n    // kind is an OnErrorKind\n    // args are the error message and any additional context\n  }\n});\n```\n\nWhy This Matters\n---\n\n- This change allows applications using Zero to intercept and handle\n  errors in a structured way, rather than just logging to the console.\n- It improves testability and flexibility for error handling in client\n  applications.",
+          "timestamp": "2025-04-18T22:32:32Z",
+          "tree_id": "370a40806e008199d867fc728b08d6fdecd59890",
+          "url": "https://github.com/rocicorp/mono/commit/d042cb8bd40c41e38614d46ea21b46574fd73160"
+        },
+        "date": 1745015598876,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 299964,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54053,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 110395,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31533,
             "unit": "bytes"
           }
         ]
