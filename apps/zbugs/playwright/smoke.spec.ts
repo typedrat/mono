@@ -1,5 +1,4 @@
 import {test} from '@playwright/test';
-
 const userCookies = process.env.USER_COOKIES
   ? JSON.parse(process.env.USER_COOKIES)
   : [];
@@ -193,7 +192,7 @@ test('loadtest', async ({page, browser, context}) => {
   console.log(AWS_BATCH_JOB_ARRAY_INDEX, cgID, `Done`);
 });
 
-async function waitForIssueList(page) {
+async function waitForIssueList(page: any) {
   await page.waitForFunction(() => {
     const issues = document.querySelectorAll('.issue-list .row');
     return issues.length > 1;
@@ -217,7 +216,7 @@ async function waitForIssueList(page) {
 //   await navigateToAll(page);
 // }
 
-async function selectRandomEmoji(page, cgID: string) {
+async function selectRandomEmoji(page: any, cgID: string) {
   try {
     // Wait for the emoji menu to be visible
     await page.waitForSelector('div.emoji-menu button.emoji', {
@@ -232,7 +231,7 @@ async function selectRandomEmoji(page, cgID: string) {
     // Select a random emoji
     const randomIndex = Math.floor(Math.random() * count);
     await emojiButtons.nth(randomIndex).click({timeout: 2000});
-  } catch (error) {
+  } catch (error: any) {
     console.log(
       AWS_BATCH_JOB_ARRAY_INDEX,
       cgID,
@@ -243,7 +242,7 @@ async function selectRandomEmoji(page, cgID: string) {
   }
 }
 
-async function commentOnNewIssue(page, comment: string, cgID: string) {
+async function commentOnNewIssue(page: any, comment: string, cgID: string) {
   try {
     await page.waitForSelector('[class^="_commentItem"]', {
       state: 'visible',
@@ -255,7 +254,7 @@ async function commentOnNewIssue(page, comment: string, cgID: string) {
       //add emoji first title
       await page.locator('.add-emoji-button').first().click();
       await selectRandomEmoji(page, cgID);
-    } catch (error) {
+    } catch (error: any) {
       console.log(
         AWS_BATCH_JOB_ARRAY_INDEX,
         cgID,
@@ -274,7 +273,7 @@ async function commentOnNewIssue(page, comment: string, cgID: string) {
       await page
         .getByRole('button', {name: 'Add comment'})
         .click({timeout: 2000});
-    } catch (error) {
+    } catch (error: any) {
       console.log(
         AWS_BATCH_JOB_ARRAY_INDEX,
         cgID,
@@ -299,7 +298,7 @@ async function commentOnNewIssue(page, comment: string, cgID: string) {
         .click({timeout: 2000});
 
       await selectRandomEmoji(page, cgID);
-    } catch (error) {
+    } catch (error: any) {
       console.log(
         AWS_BATCH_JOB_ARRAY_INDEX,
         cgID,
@@ -307,7 +306,7 @@ async function commentOnNewIssue(page, comment: string, cgID: string) {
         error.message,
       );
     }
-  } catch (error) {
+  } catch (error: any) {
     console.log(
       AWS_BATCH_JOB_ARRAY_INDEX,
       cgID,
@@ -318,7 +317,7 @@ async function commentOnNewIssue(page, comment: string, cgID: string) {
 }
 
 async function openIssueByID(
-  page,
+  page: any,
   issueID: string,
   cgID: string,
 ): Promise<boolean> {
@@ -342,7 +341,7 @@ async function openIssueByID(
         `Successfully opened issue: ${issueID}`,
       );
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.log(
         AWS_BATCH_JOB_ARRAY_INDEX,
         cgID,
@@ -351,7 +350,7 @@ async function openIssueByID(
       );
       return false;
     }
-  } catch (error) {
+  } catch (error: any) {
     console.log(
       AWS_BATCH_JOB_ARRAY_INDEX,
       cgID,
