@@ -50,6 +50,12 @@ export class TransactionImpl<S extends Schema, TWrappedTransaction>
   readonly mutationID: number;
   readonly mutate: SchemaCRUD<S>;
   readonly query: SchemaQuery<S>;
+  readonly updateClientMutationID: (input: {
+    schema: string;
+    clientGroupID: string;
+    clientID: string;
+    mutationID: number;
+  }) => Promise<{lastMutationID: number | bigint}>;
 
   constructor(
     dbTransaction: DBTransaction<TWrappedTransaction>,
@@ -57,12 +63,19 @@ export class TransactionImpl<S extends Schema, TWrappedTransaction>
     mutationID: number,
     mutate: SchemaCRUD<S>,
     query: SchemaQuery<S>,
+    updateClientMutationID: (input: {
+      schema: string;
+      clientGroupID: string;
+      clientID: string;
+      mutationID: number;
+    }) => Promise<{lastMutationID: number | bigint}>,
   ) {
     this.dbTransaction = dbTransaction;
     this.clientID = clientID;
     this.mutationID = mutationID;
     this.mutate = mutate;
     this.query = query;
+    this.updateClientMutationID = updateClientMutationID;
   }
 }
 
