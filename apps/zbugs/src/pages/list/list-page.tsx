@@ -27,7 +27,7 @@ import {useZero} from '../../hooks/use-zero.ts';
 import {recordPageLoad} from '../../page-load-stats.ts';
 import {mark} from '../../perf-log.ts';
 import type {ListContext} from '../../routes.ts';
-import {preload} from '../../zero-setup.ts';
+// import {preload} from '../../zero-setup.ts';
 import {CACHE_AWHILE, CACHE_NONE} from '../../query-cache-policy.ts';
 
 let firstRowRendered = false;
@@ -96,10 +96,7 @@ export function ListPage({onReady}: {onReady: () => void}) {
 
   // We don't want to cache every single keystroke. We already debounce
   // keystrokes for the URL, so we just reuse that.
-  const [issues, issuesResult] = useQuery(
-    q,
-    textFilterQuery === textFilter ? CACHE_AWHILE : CACHE_NONE,
-  );
+  const [issues, issuesResult] = useQuery(q, CACHE_NONE);
 
   useEffect(() => {
     if (issues.length > 0 || issuesResult.type === 'complete') {
@@ -110,7 +107,7 @@ export function ListPage({onReady}: {onReady: () => void}) {
   useEffect(() => {
     if (issuesResult.type === 'complete') {
       recordPageLoad('list-page');
-      preload(z);
+      // preload(z);
     }
   }, [issuesResult.type, z]);
 

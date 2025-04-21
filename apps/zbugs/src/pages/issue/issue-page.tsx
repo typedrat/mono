@@ -59,7 +59,6 @@ import {LRUCache} from '../../lru-cache.ts';
 import {recordPageLoad} from '../../page-load-stats.ts';
 import {CACHE_AWHILE} from '../../query-cache-policy.ts';
 import {links, type ListContext, type ZbugsHistoryState} from '../../routes.ts';
-import {preload} from '../../zero-setup.ts';
 import {CommentComposer} from './comment-composer.tsx';
 import {Comment} from './comment.tsx';
 import {isCtrlEnter} from './is-ctrl-enter.ts';
@@ -152,7 +151,7 @@ export function IssuePage({onReady}: {onReady: () => void}) {
   useEffect(() => {
     if (issueResult.type === 'complete') {
       recordPageLoad('issue-page');
-      preload(z);
+      // preload(z);
     }
   }, [issueResult.type, z]);
 

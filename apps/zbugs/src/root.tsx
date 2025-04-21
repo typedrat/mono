@@ -42,14 +42,15 @@ export function Root() {
             <Route path={routes.home}>
               <ListPage onReady={() => setContentReady(true)} />
             </Route>
-            <Route path={routes.issue}>
-              {params => (
+            <Route
+              path={routes.issue}
+              component={({params}) => (
                 <IssuePage
                   key={params.id}
                   onReady={() => setContentReady(true)}
                 />
               )}
-            </Route>
+            ></Route>
             <Route component={ErrorPage} />
           </Switch>
         </div>

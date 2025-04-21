@@ -4,7 +4,7 @@ import {createMutators, type Mutators} from '../shared/mutators.ts';
 import {Atom} from './atom.ts';
 import {clearJwt, getJwt, getRawJwt} from './jwt.ts';
 import {mark} from './perf-log.ts';
-import {CACHE_FOREVER} from './query-cache-policy.ts';
+// import {CACHE_FOREVER} from './query-cache-policy.ts';
 import type {AuthData} from '../shared/auth.ts';
 
 export type LoginState = {
@@ -49,34 +49,34 @@ authAtom.onChange(auth => {
   exposeDevHooks(z);
 });
 
-let didPreload = false;
+// let didPreload = false;
 
-export function preload(z: Zero<Schema, Mutators>) {
-  if (didPreload) {
-    return;
-  }
+// export function preload(z: Zero<Schema, Mutators>) {
+//   if (didPreload) {
+//     return;
+//   }
 
-  didPreload = true;
+//   didPreload = true;
 
-  // Preload all issues and first 10 comments from each.
-  z.query.issue
-    .related('labels')
-    .related('viewState', q => q.where('userID', z.userID))
-    .related('creator')
-    .related('assignee')
-    .related('emoji', emoji => emoji.related('creator'))
-    .related('comments', comments =>
-      comments
-        .related('creator')
-        .related('emoji', emoji => emoji.related('creator'))
-        .limit(10)
-        .orderBy('created', 'desc'),
-    )
-    .preload(CACHE_FOREVER);
+//   // Preload all issues and first 10 comments from each.
+//   z.query.issue
+//     .related('labels')
+//     .related('viewState', q => q.where('userID', z.userID))
+//     .related('creator')
+//     .related('assignee')
+//     .related('emoji', emoji => emoji.related('creator'))
+//     .related('comments', comments =>
+//       comments
+//         .related('creator')
+//         .related('emoji', emoji => emoji.related('creator'))
+//         .limit(10)
+//         .orderBy('created', 'desc'),
+//     )
+//     .preload(CACHE_FOREVER);
 
-  z.query.user.preload(CACHE_FOREVER);
-  z.query.label.preload(CACHE_FOREVER);
-}
+//   z.query.user.preload(CACHE_FOREVER);
+//   z.query.label.preload(CACHE_FOREVER);
+// }
 
 // To enable accessing zero in the devtools easily.
 function exposeDevHooks(z: Zero<Schema, Mutators>) {
