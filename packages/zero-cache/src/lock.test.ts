@@ -1,6 +1,8 @@
-import {expect} from 'chai';
-import {RWLock} from './lock.js';
+import {expect} from 'vitest';
+import {Lock, RWLock} from './lock.js';
 import {afterEach, beforeEach, test, vi} from 'vitest';
+import {TestLogSink} from '../../shared/src/logging-test-utils.ts';
+import {LogContext} from '@rocicorp/logger';
 
 /**
  * Creates a promise that resolves after [[ms]] milliseconds. Note that if you
@@ -274,4 +276,40 @@ test('Reads then writes (withRead)', async () => {
     'w4a',
     'w4b',
   ]);
+});
+
+test('poll status', async () => {
+  const testLogSink = new TestLogSink();
+  const lc = new LogContext('debug', undefined, testLogSink);
+  const lock = new Lock(lc);
+
+  void lock.withLock(() => sleep(2_400));
+  const lockPromise = lock.withLock(() => {});
+
+  await vi.runAllTimersAsync();
+  await lockPromise;
+  expect(testLogSink.messages).toMatchInlineSnapshot(`
+    [
+      [
+        "warn",
+        {
+          "component": "lock",
+          "id": 0,
+        },
+        [
+          "Lock is taking too long to resolve. It may be stuck.",
+        ],
+      ],
+      [
+        "warn",
+        {
+          "component": "lock",
+          "id": 0,
+        },
+        [
+          "Lock is taking too long to resolve. It may be stuck.",
+        ],
+      ],
+    ]
+  `);
 });

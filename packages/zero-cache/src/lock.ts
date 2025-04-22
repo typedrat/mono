@@ -1,13 +1,41 @@
+import type {LogContext} from '@rocicorp/logger';
 import {resolver} from '@rocicorp/resolver';
 
+let id = 0;
 export class Lock {
-  private _lockP: Promise<void> | null = null;
+  #lockP: Promise<void> | null = null;
+  readonly #lc: LogContext | undefined;
+  readonly #id: number;
+
+  constructor(lc?: LogContext | undefined) {
+    this.#id = id++;
+    this.#lc = lc
+      ?.withContext('component', 'lock')
+      ?.withContext('id', this.#id);
+  }
 
   async lock(): Promise<() => void> {
-    const previous = this._lockP;
+    const previous = this.#lockP;
     const {promise, resolve} = resolver();
-    this._lockP = promise;
+    this.#lockP = promise;
+
+    let waiting = true;
+
+    const pollStatus = () => {
+      setTimeout(() => {
+        if (waiting) {
+          this.#lc?.warn?.(
+            'Lock is taking too long to resolve. It may be stuck.',
+          );
+          pollStatus();
+        }
+      }, 1000);
+    };
+    pollStatus();
+
     await previous;
+    waiting = false;
+
     return resolve;
   }
 
