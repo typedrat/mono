@@ -294,20 +294,42 @@ test('poll status', async () => {
         "warn",
         {
           "component": "lock",
-          "id": 0,
+          "id": 6,
         },
         [
           "Lock is taking too long to resolve. It may be stuck.",
+          "Error: Lock acquisition stack
+        at Lock.lock (/Users/mlaw/workspace/mono/packages/zero-cache/src/lock.ts:25:30)
+        at Lock.withLock (/Users/mlaw/workspace/mono/packages/zero-cache/src/lock.ts:47:21)
+        at /Users/mlaw/workspace/mono/packages/zero-cache/src/lock.test.ts:287:28
+        at file:///Users/mlaw/workspace/mono/node_modules/@vitest/runner/dist/index.js:174:14
+        at file:///Users/mlaw/workspace/mono/node_modules/@vitest/runner/dist/index.js:563:28
+        at file:///Users/mlaw/workspace/mono/node_modules/@vitest/runner/dist/index.js:61:24
+        at new Promise (<anonymous>)
+        at runWithTimeout (file:///Users/mlaw/workspace/mono/node_modules/@vitest/runner/dist/index.js:41:12)
+        at runTest (file:///Users/mlaw/workspace/mono/node_modules/@vitest/runner/dist/index.js:1149:17)
+        at runSuite (file:///Users/mlaw/workspace/mono/node_modules/@vitest/runner/dist/index.js:1303:15)",
         ],
       ],
       [
         "warn",
         {
           "component": "lock",
-          "id": 0,
+          "id": 6,
         },
         [
           "Lock is taking too long to resolve. It may be stuck.",
+          "Error: Lock acquisition stack
+        at Lock.lock (/Users/mlaw/workspace/mono/packages/zero-cache/src/lock.ts:25:30)
+        at Lock.withLock (/Users/mlaw/workspace/mono/packages/zero-cache/src/lock.ts:47:21)
+        at /Users/mlaw/workspace/mono/packages/zero-cache/src/lock.test.ts:287:28
+        at file:///Users/mlaw/workspace/mono/node_modules/@vitest/runner/dist/index.js:174:14
+        at file:///Users/mlaw/workspace/mono/node_modules/@vitest/runner/dist/index.js:563:28
+        at file:///Users/mlaw/workspace/mono/node_modules/@vitest/runner/dist/index.js:61:24
+        at new Promise (<anonymous>)
+        at runWithTimeout (file:///Users/mlaw/workspace/mono/node_modules/@vitest/runner/dist/index.js:41:12)
+        at runTest (file:///Users/mlaw/workspace/mono/node_modules/@vitest/runner/dist/index.js:1149:17)
+        at runSuite (file:///Users/mlaw/workspace/mono/node_modules/@vitest/runner/dist/index.js:1303:15)",
         ],
       ],
     ]

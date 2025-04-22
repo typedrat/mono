@@ -6,9 +6,11 @@ export class Lock {
   #lockP: Promise<void> | null = null;
   readonly #lc: LogContext | undefined;
   readonly #id: number;
+  readonly #pollInterval: number;
 
-  constructor(lc?: LogContext | undefined) {
+  constructor(lc?: LogContext | undefined, pollInterval: number = 1000) {
     this.#id = id++;
+    this.#pollInterval = pollInterval;
     this.#lc = lc
       ?.withContext('component', 'lock')
       ?.withContext('id', this.#id);
@@ -20,16 +22,18 @@ export class Lock {
     this.#lockP = promise;
 
     let waiting = true;
+    const acquisitionStack = new Error('Lock acquisition stack');
 
     const pollStatus = () => {
       setTimeout(() => {
         if (waiting) {
           this.#lc?.warn?.(
             'Lock is taking too long to resolve. It may be stuck.',
+            acquisitionStack.stack,
           );
           pollStatus();
         }
-      }, 1000);
+      }, this.#pollInterval);
     };
     pollStatus();
 
