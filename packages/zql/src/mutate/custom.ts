@@ -1,12 +1,11 @@
-import {assert} from '../../../shared/src/asserts.ts';
-import type {Expand} from '../../../shared/src/expand.ts';
-import type {Schema} from '../../../zero-schema/src/builder/schema-builder.ts';
+import { assert } from '../../../shared/src/asserts.ts'
+import type { Expand } from '../../../shared/src/expand.ts'
+import type { Schema } from '../../../zero-schema/src/builder/schema-builder.ts'
 import type {
   SchemaValueToTSType,
   TableSchema,
-} from '../../../zero-schema/src/table-schema.ts';
-import type {Query} from '../query/query.ts';
-import type {MaybePromise} from '../../../shared/src/types.ts';
+} from '../../../zero-schema/src/table-schema.ts'
+import type { Query } from '../query/query.ts'
 
 type ClientID = string;
 
@@ -54,20 +53,6 @@ export interface ClientTransaction<S extends Schema>
 
 export interface Row {
   [column: string]: unknown;
-}
-
-/**
- * A function that returns a connection to the database which
- * will be used by custom mutators.
- */
-export type ConnectionProvider<TWrappedTransaction> = () => MaybePromise<
-  DBConnection<TWrappedTransaction>
->;
-
-export interface DBConnection<TWrappedTransaction> extends Queryable {
-  transaction: <T>(
-    cb: (tx: DBTransaction<TWrappedTransaction>) => Promise<T>,
-  ) => Promise<T>;
 }
 
 export interface DBTransaction<T> extends Queryable {

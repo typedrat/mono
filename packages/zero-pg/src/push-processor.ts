@@ -13,45 +13,30 @@ import {
 } from '../../zero-protocol/src/push.ts';
 import {splitMutatorKey} from '../../zql/src/mutate/custom.ts';
 import {createLogContext} from './logging.ts';
+import type {CustomMutatorDefs} from './custom.ts';
 
 export type Params = v.Infer<typeof pushParamsSchema>;
 
-export interface TransactionProvider {
-  updateClientMutationID: (input: {
-    schema: string;
-    clientGroupID: string;
-    clientID: string;
-    mutationID: number;
-  }) => Promise<{lastMutationID: number | bigint}>;
+export interface TransactionProviderHooks {
+  updateClientMutationID: () => Promise<{lastMutationID: number | bigint}>;
 }
 
-export interface DatabaseProvider<T extends TransactionProvider> {
+export interface TransactionProviderInput {
+  upstreamSchema: string;
+  clientGroupID: string;
+  clientID: string;
+  mutationID: number;
+}
+
+export interface DatabaseProvider<T> {
   transaction: <R>(
-    cb: (tx: T) => Promise<R>,
-    transactionInput: {
-      clientGroupID: string;
-      clientID: string;
-      mutationID: number;
-    },
+    callback: (tx: T, transactionHooks: TransactionProviderHooks) => Promise<R>,
+    transactionInput: TransactionProviderInput,
   ) => Promise<R>;
 }
 
-export type CustomMutatorDefs<T> = {
-  [namespaceOrKey: string]:
-    | {
-        [key: string]: CustomMutatorImpl<T>;
-      }
-    | CustomMutatorImpl<T>;
-};
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type CustomMutatorImpl<TTransaction, TArgs = any> = (
-  tx: TTransaction,
-  args: TArgs,
-) => Promise<void>;
-
 export class PushProcessor<
-  T extends TransactionProvider,
+  T,
   D extends DatabaseProvider<T>,
   MD extends CustomMutatorDefs<T>,
 > {
@@ -203,12 +188,10 @@ export class PushProcessor<
     }
 
     return this.#dbProvider.transaction(
-      async (dbTx): Promise<MutationResponse> => {
+      async (dbTx, transactionHooks): Promise<MutationResponse> => {
         await this.#checkAndIncrementLastMutationID(
           this.#lc,
-          dbTx,
-          params.schema,
-          req.clientGroupID,
+          transactionHooks,
           m.clientID,
           m.id,
         );
@@ -226,6 +209,7 @@ export class PushProcessor<
         };
       },
       {
+        upstreamSchema: params.schema,
         clientGroupID: req.clientGroupID,
         clientID: m.clientID,
         mutationID: m.id,
@@ -259,20 +243,13 @@ export class PushProcessor<
 
   async #checkAndIncrementLastMutationID(
     lc: LogContext,
-    tx: T,
-    schema: string,
-    clientGroupID: string,
+    transactionHooks: TransactionProviderHooks,
     clientID: string,
     receivedMutationID: number,
   ) {
     lc.debug?.(`Incrementing LMID. Received: ${receivedMutationID}`);
 
-    const {lastMutationID} = await tx.updateClientMutationID({
-      schema,
-      clientGroupID,
-      clientID,
-      mutationID: receivedMutationID,
-    });
+    const {lastMutationID} = await transactionHooks.updateClientMutationID();
 
     if (receivedMutationID < lastMutationID) {
       throw new MutationAlreadyProcessedError(

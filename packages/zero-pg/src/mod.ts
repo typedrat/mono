@@ -1,16 +1,19 @@
-export type {CustomMutatorDefs, CustomMutatorImpl} from './custom.ts';
+export {
+  makeServerTransaction,
+  makeSchemaCRUD,
+  type CustomMutatorDefs,
+  type CustomMutatorImpl,
+} from './custom.ts';
+export {makeSchemaQuery} from './query.ts';
 export type {
   Transaction,
   ServerTransaction,
-  DBConnection,
   DBTransaction,
-  ConnectionProvider,
   Row,
 } from '../../zql/src/mutate/custom.ts';
 export {
-  connectionProvider,
-  Connection,
+  ZQLPGDatabaseProvider,
   type PostgresSQL,
   type PostgresTransaction,
-} from './postgres-connection.ts';
-export {PushProcessor} from './web.ts';
+} from './zql-pg-provider.ts';
+export {PushProcessor} from './push-processor.ts';

@@ -6,7 +6,6 @@ import type {
   TableCRUD,
   TransactionBase,
   DBTransaction,
-  Transaction,
 } from '../../zql/src/mutate/custom.ts';
 import {
   formatPgInternalConvert,
@@ -18,6 +17,7 @@ import type {
   ServerSchema,
   ServerTableSchema,
 } from '../../z2s/src/schema.ts';
+import {getServerSchema} from './schema.ts';
 
 interface ServerTransaction<S extends Schema, TWrappedTransaction>
   extends TransactionBase<S> {
@@ -26,17 +26,17 @@ interface ServerTransaction<S extends Schema, TWrappedTransaction>
   readonly dbTransaction: DBTransaction<TWrappedTransaction>;
 }
 
-export type CustomMutatorDefs<S extends Schema, TDBTransaction> = {
+export type CustomMutatorDefs<TDBTransaction> = {
   [namespaceOrKey: string]:
     | {
-        [key: string]: CustomMutatorImpl<S, TDBTransaction>;
+        [key: string]: CustomMutatorImpl<TDBTransaction>;
       }
-    | CustomMutatorImpl<S, TDBTransaction>;
+    | CustomMutatorImpl<TDBTransaction>;
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type CustomMutatorImpl<S extends Schema, TDBTransaction, TArgs = any> = (
-  tx: Transaction<S, TDBTransaction>,
+export type CustomMutatorImpl<TDBTransaction, TArgs = any> = (
+  tx: TDBTransaction,
   args: TArgs,
 ) => Promise<void>;
 
@@ -50,12 +50,6 @@ export class TransactionImpl<S extends Schema, TWrappedTransaction>
   readonly mutationID: number;
   readonly mutate: SchemaCRUD<S>;
   readonly query: SchemaQuery<S>;
-  readonly updateClientMutationID: (input: {
-    schema: string;
-    clientGroupID: string;
-    clientID: string;
-    mutationID: number;
-  }) => Promise<{lastMutationID: number | bigint}>;
 
   constructor(
     dbTransaction: DBTransaction<TWrappedTransaction>,
@@ -63,19 +57,12 @@ export class TransactionImpl<S extends Schema, TWrappedTransaction>
     mutationID: number,
     mutate: SchemaCRUD<S>,
     query: SchemaQuery<S>,
-    updateClientMutationID: (input: {
-      schema: string;
-      clientGroupID: string;
-      clientID: string;
-      mutationID: number;
-    }) => Promise<{lastMutationID: number | bigint}>,
   ) {
     this.dbTransaction = dbTransaction;
     this.clientID = clientID;
     this.mutationID = mutationID;
     this.mutate = mutate;
     this.query = query;
-    this.updateClientMutationID = updateClientMutationID;
   }
 }
 
@@ -85,6 +72,33 @@ type WithHiddenTxAndSchema = {
   [dbTxSymbol]: DBTransaction<unknown>;
   [serverSchemaSymbol]: ServerSchema;
 };
+
+export async function makeServerTransaction<
+  S extends Schema,
+  TWrappedTransaction,
+>(
+  dbTransaction: DBTransaction<TWrappedTransaction>,
+  clientID: string,
+  mutationID: number,
+  schema: S,
+  mutate: (
+    dbTransaction: DBTransaction<TWrappedTransaction>,
+    serverSchema: ServerSchema,
+  ) => SchemaCRUD<S>,
+  query: (
+    dbTransaction: DBTransaction<TWrappedTransaction>,
+    serverSchema: ServerSchema,
+  ) => SchemaQuery<S>,
+) {
+  const serverSchema = await getServerSchema(dbTransaction, schema);
+  return new TransactionImpl(
+    dbTransaction,
+    clientID,
+    mutationID,
+    mutate(dbTransaction, serverSchema),
+    query(dbTransaction, serverSchema),
+  );
+}
 
 export function makeSchemaCRUD<S extends Schema>(
   schema: S,
