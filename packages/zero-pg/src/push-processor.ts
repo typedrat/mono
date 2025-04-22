@@ -35,10 +35,12 @@ export interface DatabaseProvider<T> {
   ) => Promise<R>;
 }
 
+type ExtractTransactionType<D> =
+  D extends DatabaseProvider<infer T> ? T : never;
+
 export class PushProcessor<
-  T,
-  D extends DatabaseProvider<T>,
-  MD extends CustomMutatorDefs<T>,
+  D extends DatabaseProvider<ExtractTransactionType<D>>,
+  MD extends CustomMutatorDefs<ExtractTransactionType<D>>,
 > {
   readonly #dbProvider: D;
   readonly #lc: LogContext;
@@ -217,7 +219,11 @@ export class PushProcessor<
     );
   }
 
-  #dispatchMutation(dbTx: T, mutators: MD, m: Mutation): Promise<void> {
+  #dispatchMutation(
+    dbTx: ExtractTransactionType<D>,
+    mutators: MD,
+    m: Mutation,
+  ): Promise<void> {
     const [namespace, name] = splitMutatorKey(m.name);
     if (name === undefined) {
       const mutator = mutators[namespace];

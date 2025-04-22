@@ -16,4 +16,9 @@ export {
   type PostgresSQL,
   type PostgresTransaction,
 } from './zql-pg-provider.ts';
-export {PushProcessor} from './push-processor.ts';
+export {
+  PushProcessor,
+  type DatabaseProvider,
+  type TransactionProviderInput,
+  type TransactionProviderHooks,
+} from './push-processor.ts';

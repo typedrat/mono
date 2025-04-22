@@ -51,11 +51,11 @@ export class ZQLPGDatabaseProvider<S extends Schema>
   readonly #pg: PostgresSQL<PostgresTransaction>;
 
   readonly #mutate: (
-    dbTransaction: DBTransaction<unknown>,
+    dbTransaction: DBTransaction<PostgresTransaction>,
     serverSchema: ServerSchema,
   ) => SchemaCRUD<S>;
   readonly #query: (
-    dbTransaction: DBTransaction<unknown>,
+    dbTransaction: DBTransaction<PostgresTransaction>,
     serverSchema: ServerSchema,
   ) => SchemaQuery<S>;
   readonly #schema: S;
