@@ -17,16 +17,6 @@ import type {
 import {OnErrorKind} from './on-error-kind.ts';
 import type {ZeroLogContext} from './zero-log-context.ts';
 
-const transientPushErrorTypes: PushError['error'][] = [
-  'zeroPusher',
-  'http',
-
-  // These should never actually be received as they cause the websocket
-  // connection to be closed.
-  'unsupportedPushVersion',
-  'unsupportedSchemaVersion',
-];
-
 let currentEphemeralID = 0;
 function nextEphemeralID(): EphemeralID {
   return ++currentEphemeralID as EphemeralID;
@@ -147,12 +137,6 @@ export class MutationTracker {
   }
 
   #processPushError(error: PushError): void {
-    // Mutations suffering from transient errors are not removed from the
-    // outstanding mutations list. The client will retry.
-    if (transientPushErrorTypes.includes(error.error)) {
-      return;
-    }
-
     const mids = error.mutationIDs;
 
     // TODO: remove this check once the server always sends mutationIDs

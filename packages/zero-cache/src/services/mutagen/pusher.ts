@@ -20,6 +20,7 @@ import type {Source} from '../../types/streams.ts';
 import {Subscription, type Result} from '../../types/subscription.ts';
 import type {HandlerResult, StreamResult} from '../../workers/connection.ts';
 import type {Service} from '../service.ts';
+import type {PostgresDB} from '../../types/pg.ts';
 
 type Fatal = {
   error: 'forClient';
@@ -70,9 +71,17 @@ export class PusherService implements Service, Pusher {
     clientGroupID: string,
     pushURL: string,
     apiKey: string | undefined,
+    upstreamDB: PostgresDB,
   ) {
     this.#queue = new Queue();
-    this.#pusher = new PushWorker(config, lc, pushURL, apiKey, this.#queue);
+    this.#pusher = new PushWorker(
+      config,
+      lc,
+      pushURL,
+      apiKey,
+      this.#queue,
+      upstreamDB,
+    );
     this.id = clientGroupID;
   }
 
@@ -136,6 +145,7 @@ class PushWorker {
       downstream: Subscription<Downstream>;
     }
   >;
+  readonly #upstreamDB: PostgresDB;
 
   constructor(
     config: Config,
@@ -143,6 +153,7 @@ class PushWorker {
     pushURL: string,
     apiKey: string | undefined,
     queue: Queue<PusherEntryOrStop>,
+    upstreamDB: PostgresDB,
   ) {
     this.#pushURL = pushURL;
     this.#apiKey = apiKey;
@@ -150,6 +161,7 @@ class PushWorker {
     this.#lc = lc.withContext('component', 'pusher');
     this.#config = config;
     this.#clients = new Map();
+    this.#upstreamDB = upstreamDB;
   }
 
   get pushURL() {
@@ -324,6 +336,11 @@ class PushWorker {
       headers['Authorization'] = `Bearer ${entry.jwt}`;
     }
 
+    const schema = upstreamSchema({
+      appID: this.#config.app.id,
+      shardNum: this.#config.shard.num,
+    });
+
     try {
       const params = new URLSearchParams(this.#pushURL.split('?')[1]);
       for (const [key, value] of Object.entries(
@@ -339,13 +356,7 @@ class PushWorker {
         );
       }
 
-      params.append(
-        'schema',
-        upstreamSchema({
-          appID: this.#config.app.id,
-          shardNum: this.#config.shard.num,
-        }),
-      );
+      params.append('schema', schema);
       params.append('appID', this.#config.app.id);
 
       const response = await fetch(`${this.#pushURL}?${params.toString()}`, {
@@ -353,6 +364,7 @@ class PushWorker {
         headers,
         body: JSON.stringify(entry.push),
       });
+
       if (!response.ok) {
         const details = await response.text();
 
@@ -385,19 +397,31 @@ class PushWorker {
       }
 
       const json = await response.json();
-      try {
-        return v.parse(json, pushResponseSchema);
-      } catch (e) {
-        this.#lc.error?.('failed to parse push response', JSON.stringify(json));
-        throw e;
-      }
+      const ret = v.parse(json, pushResponseSchema);
+
+      await ensureMutationIDsAdvanced(
+        this.#lc,
+        this.#upstreamDB,
+        schema,
+        entry,
+      );
+
+      return ret;
     } catch (e) {
+      this.#lc.error?.('failed to push', e);
+
+      await ensureMutationIDsAdvanced(
+        this.#lc,
+        this.#upstreamDB,
+        schema,
+        entry,
+      );
+
       const mutationIDs = entry.push.mutations.map(m => ({
         id: m.id,
         clientID: m.clientID,
       }));
 
-      this.#lc.error?.('failed to push', e);
       if (e instanceof ErrorForClient) {
         return {
           error: 'forClient',
@@ -406,15 +430,45 @@ class PushWorker {
         };
       }
 
-      // We do not kill the pusher on error.
-      // If the user's API server is down, the mutations will never be acknowledged
-      // and the client will eventually retry.
       return {
         error: 'zeroPusher',
         details: String(e),
         mutationIDs,
       };
     }
+  }
+}
+
+/**
+ * We do not retry failed mutations for any reason.
+ * Given that, we need to ensure that the mutation IDs are
+ * moved forward so the client does not retry them.
+ *
+ * This function gets the max mutation ID from the push
+ * and ensures that the clients table is already greater
+ * than that value or equal to it.
+ *
+ * Exceptions are swallowed and logged intentionally
+ * since an error from this function should not
+ * displace the responses from the API server.
+ */
+async function ensureMutationIDsAdvanced(
+  lc: LogContext,
+  upstream: PostgresDB,
+  schema: string,
+  entry: PusherEntry,
+) {
+  const {push, clientID} = entry;
+  try {
+    const maxLmid = Math.max(...push.mutations.map(m => m.id));
+    await upstream.begin(sql => {
+      sql`INSERT INTO ${sql(schema)} AS current ("clientGroupID", "clientID", "lastMutationID")
+        VALUES (${push.clientGroupID}, ${clientID}, ${maxLmid})
+        ON CONFLICT ("clientGroupID", "clientID") DO UPDATE
+        SET "lastMutationID" = GREATEST(current."lastMutationID", ${maxLmid})`;
+    });
+  } catch (e) {
+    lc.error?.(e);
   }
 }
 

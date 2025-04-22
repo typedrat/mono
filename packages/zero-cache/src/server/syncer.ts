@@ -154,6 +154,7 @@ export default function runWorker(
             id,
             must(config.push.url),
             config.push.apiKey,
+            upstreamDB,
           );
 
   const syncer = new Syncer(
