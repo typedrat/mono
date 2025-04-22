@@ -45,6 +45,11 @@ export class HttpService implements Service {
       this.#heartbeatMonitor.onHeartbeat(headers);
       return res.send('OK');
     });
+    this.#fastify.get('/stats/cache', async ({headers}, res) => {
+      // get token from headers
+      // gather stats
+      // send response
+    });
     await this.#init(this.#fastify);
     const address = await this.#fastify.listen({
       host: '::',
