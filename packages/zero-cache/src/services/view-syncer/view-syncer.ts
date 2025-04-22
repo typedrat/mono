@@ -1,5 +1,5 @@
 import {trace} from '@opentelemetry/api';
-import {Lock} from '@rocicorp/lock';
+import {Lock} from '../../lock.ts';
 import type {LogContext} from '@rocicorp/logger';
 import {resolver} from '@rocicorp/resolver';
 import type {JWTPayload} from 'jose';
@@ -143,7 +143,7 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
   // Serialize on this lock for:
   // (1) storage or database-dependent operations
   // (2) updating member variables.
-  readonly #lock = new Lock();
+  readonly #lock;
   readonly #cvrStore: CVRStore;
   readonly #stopped = resolver();
 
@@ -181,6 +181,7 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
     maxRowCount = DEFAULT_MAX_ROW_COUNT,
     setTimeoutFn: SetTimeout = setTimeout.bind(globalThis),
   ) {
+    this.#lock = new Lock(lc);
     this.id = clientGroupID;
     this.#shard = shard;
     this.#lc = lc;
@@ -207,6 +208,7 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
   }
 
   #runInLockWithCVR(
+    taskName: string,
     fn: (lc: LogContext, cvr: CVRSnapshot) => Promise<void> | void,
   ): Promise<void> {
     const rid = randomID();
@@ -236,7 +238,7 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
         this.#cvr = undefined;
         throw e;
       }
-    });
+    }, taskName);
   }
 
   async run(): Promise<void> {
@@ -248,47 +250,53 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
         }
         assert(state === 'version-ready'); // This is the only state change used.
 
-        await this.#runInLockWithCVR(async (lc, cvr) => {
-          if (!this.#pipelines.initialized()) {
-            // On the first version-ready signal, connect to the replica.
-            this.#pipelines.init(cvr.clientSchema);
-          }
-          if (
-            cvr.replicaVersion !== null &&
-            cvr.version.stateVersion !== '00' &&
-            this.#pipelines.replicaVersion < cvr.replicaVersion
-          ) {
-            const message = `Cannot sync from older replica: CVR=${
-              cvr.replicaVersion
-            }, DB=${this.#pipelines.replicaVersion}`;
-            lc.info?.(`resetting CVR: ${message}`);
-            throw new ErrorForClient({kind: ErrorKind.ClientNotFound, message});
-          }
-
-          if (this.#pipelinesSynced) {
-            const result = await this.#advancePipelines(lc, cvr);
-            if (result === 'success') {
-              return;
+        await this.#runInLockWithCVR(
+          `view-syncer.run ${this.id}`,
+          async (lc, cvr) => {
+            if (!this.#pipelines.initialized()) {
+              // On the first version-ready signal, connect to the replica.
+              this.#pipelines.init(cvr.clientSchema);
             }
-            lc.info?.(`resetting pipelines: ${result.message}`);
-            this.#pipelines.reset(cvr.clientSchema);
-          }
+            if (
+              cvr.replicaVersion !== null &&
+              cvr.version.stateVersion !== '00' &&
+              this.#pipelines.replicaVersion < cvr.replicaVersion
+            ) {
+              const message = `Cannot sync from older replica: CVR=${
+                cvr.replicaVersion
+              }, DB=${this.#pipelines.replicaVersion}`;
+              lc.info?.(`resetting CVR: ${message}`);
+              throw new ErrorForClient({
+                kind: ErrorKind.ClientNotFound,
+                message,
+              });
+            }
 
-          // Advance the snapshot to the current version.
-          const version = this.#pipelines.advanceWithoutDiff();
-          const cvrVer = versionString(cvr.version);
+            if (this.#pipelinesSynced) {
+              const result = await this.#advancePipelines(lc, cvr);
+              if (result === 'success') {
+                return;
+              }
+              lc.info?.(`resetting pipelines: ${result.message}`);
+              this.#pipelines.reset(cvr.clientSchema);
+            }
 
-          if (version < cvr.version.stateVersion) {
-            lc.debug?.(`replica@${version} is behind cvr@${cvrVer}`);
-            return; // Wait for the next advancement.
-          }
+            // Advance the snapshot to the current version.
+            const version = this.#pipelines.advanceWithoutDiff();
+            const cvrVer = versionString(cvr.version);
 
-          // stateVersion is at or beyond CVR version for the first time.
-          lc.info?.(`init pipelines@${version} (cvr@${cvrVer})`);
-          await this.#hydrateUnchangedQueries(lc, cvr);
-          await this.#syncQueryPipelineSet(lc, cvr);
-          this.#pipelinesSynced = true;
-        });
+            if (version < cvr.version.stateVersion) {
+              lc.debug?.(`replica@${version} is behind cvr@${cvrVer}`);
+              return; // Wait for the next advancement.
+            }
+
+            // stateVersion is at or beyond CVR version for the first time.
+            lc.info?.(`init pipelines@${version} (cvr@${cvrVer})`);
+            await this.#hydrateUnchangedQueries(lc, cvr);
+            await this.#syncQueryPipelineSet(lc, cvr);
+            this.#pipelinesSynced = true;
+          },
+        );
       }
 
       // If this view-syncer exited due to an elective or forced drain,
@@ -358,7 +366,7 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
       // All lock tasks check for shutdown so that queued work is immediately
       // canceled when clients disconnect. Queue an empty task to ensure that
       // this check happens.
-      void this.#runInLockWithCVR(() => {}).catch(e =>
+      void this.#runInLockWithCVR(`shutdown ${this.id}`, () => {}).catch(e =>
         // If an error occurs (e.g. ownership change), propagate the error
         // to the main run() loop via the #stateChanges Subscription.
         this.#stateChanges.fail(e),
@@ -554,31 +562,36 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
       async () => {
         let client: ClientHandler | undefined;
         try {
-          await this.#runInLockWithCVR((lc, cvr) => {
-            lc = lc
-              .withContext('clientID', clientID)
-              .withContext('wsID', wsID)
-              .withContext('cmd', cmd);
-            lc.debug?.('acquired lock for cvr');
+          await this.#runInLockWithCVR(
+            `view-syncer.runInLockForClient ${this.id} ${clientID}`,
+            (lc, cvr) => {
+              lc = lc
+                .withContext('clientID', clientID)
+                .withContext('wsID', wsID)
+                .withContext('cmd', cmd);
+              lc.debug?.('acquired lock for cvr');
 
-            client = this.#clients.get(clientID);
-            if (client?.wsID !== wsID) {
-              lc.debug?.('mismatched wsID', client?.wsID, wsID);
-              // Only respond to messages of the currently connected client.
-              // Connections may have been drained or dropped due to an error.
-              return;
-            }
+              client = this.#clients.get(clientID);
+              if (client?.wsID !== wsID) {
+                lc.debug?.('mismatched wsID', client?.wsID, wsID);
+                // Only respond to messages of the currently connected client.
+                // Connections may have been drained or dropped due to an error.
+                return;
+              }
 
-            if (newClient) {
-              assert(newClient === client);
-              checkClientAndCVRVersions(client.version(), cvr.version);
-            } else if (!this.#clients.has(clientID)) {
-              lc.warn?.(`Processing ${cmd} before initConnection was received`);
-            }
+              if (newClient) {
+                assert(newClient === client);
+                checkClientAndCVRVersions(client.version(), cvr.version);
+              } else if (!this.#clients.has(clientID)) {
+                lc.warn?.(
+                  `Processing ${cmd} before initConnection was received`,
+                );
+              }
 
-            lc.debug?.(cmd, body);
-            return fn(lc, clientID, cmd, body, cvr);
-          });
+              lc.debug?.(cmd, body);
+              return fn(lc, clientID, cmd, body, cvr);
+            },
+          );
         } catch (e) {
           const lc = this.#lc
             .withContext('clientID', clientID)
@@ -720,7 +733,11 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
     const now = Date.now();
     lc.debug?.('Scheduling eviction timer to run in ', next - now, 'ms');
     this.#expiredQueriesTimer = this.#setTimeout(
-      () => this.#runInLockWithCVR(this.#removeExpiredQueries),
+      () =>
+        this.#runInLockWithCVR(
+          `view-syncer.scheduleExpireEviction ${this.id}`,
+          this.#removeExpiredQueries,
+        ),
       // If the expire time is too far in the future we will run it in an hour.
       // At that point in time it will be rescheduled as needed again.
       Math.min(next - now, 60 * 60 * 1000), // 1 hour

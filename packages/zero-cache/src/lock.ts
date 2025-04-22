@@ -3,7 +3,7 @@ import {resolver} from '@rocicorp/resolver';
 
 let id = 0;
 export class Lock {
-  #lockP: Promise<void> | null = null;
+  #lockP: {promise: Promise<void>; name: string} | null = null;
   readonly #lc: LogContext | undefined;
   readonly #id: number;
   readonly #pollInterval: number;
@@ -16,10 +16,10 @@ export class Lock {
       ?.withContext('id', this.#id);
   }
 
-  async lock(): Promise<() => void> {
+  async lock(taskName: string): Promise<() => void> {
     const previous = this.#lockP;
     const {promise, resolve} = resolver();
-    this.#lockP = promise;
+    this.#lockP = {promise, name: taskName};
 
     let waiting = true;
     const acquisitionStack = new Error('Lock acquisition stack');
@@ -28,7 +28,8 @@ export class Lock {
       setTimeout(() => {
         if (waiting) {
           this.#lc?.warn?.(
-            'Lock is taking too long to resolve. It may be stuck.',
+            'Lock is taking too long to resolve. It may be stuck. Waiting on:',
+            previous?.name,
             acquisitionStack.stack,
           );
           pollStatus();
@@ -37,14 +38,14 @@ export class Lock {
     };
     pollStatus();
 
-    await previous;
+    await previous?.promise;
     waiting = false;
 
     return resolve;
   }
 
-  withLock<R>(f: () => R | Promise<R>): Promise<R> {
-    return run(this.lock(), f);
+  withLock<R>(f: () => R | Promise<R>, taskName: string = ''): Promise<R> {
+    return run(this.lock(taskName), f);
   }
 }
 
