@@ -5,10 +5,11 @@ import type {Schema} from '../../zero-schema/src/builder/schema-builder.ts';
 import type {CustomMutatorDefs} from './custom.ts';
 import {PushProcessor} from './push-processor.ts';
 import {
-  makeZQLPostgresJSDatabaseProvider,
+  ZQLPostgresJSAdapter,
   type PostgresJSTransaction,
   type PostgresJSClient,
 } from './zql-postgresjs-provider.ts';
+import {ZQLDatabaseProvider} from './zql-provider.ts';
 describe('PushProcessor', () => {
   const body = {
     pushVersion: 1,
@@ -31,7 +32,10 @@ describe('PushProcessor', () => {
 
   test('should accept Record<string, string> as params', async () => {
     const processor = new PushProcessor(
-      makeZQLPostgresJSDatabaseProvider(mockPgClient, mockSchema),
+      new ZQLDatabaseProvider(
+        new ZQLPostgresJSAdapter(mockPgClient),
+        mockSchema,
+      ),
     );
 
     const params: Record<string, string> = {
@@ -52,7 +56,10 @@ describe('PushProcessor', () => {
 
   test('should accept URLSearchParams as params', async () => {
     const processor = new PushProcessor(
-      makeZQLPostgresJSDatabaseProvider(mockPgClient, mockSchema),
+      new ZQLDatabaseProvider(
+        new ZQLPostgresJSAdapter(mockPgClient),
+        mockSchema,
+      ),
     );
 
     const urlParams = new URLSearchParams();
@@ -72,7 +79,10 @@ describe('PushProcessor', () => {
 
   test('should accept Request as a param', async () => {
     const processor = new PushProcessor(
-      makeZQLPostgresJSDatabaseProvider(mockPgClient, mockSchema),
+      new ZQLDatabaseProvider(
+        new ZQLPostgresJSAdapter(mockPgClient),
+        mockSchema,
+      ),
     );
 
     const req = new Request(
@@ -96,7 +106,10 @@ describe('PushProcessor', () => {
 
   test('invalid params throw', async () => {
     const processor = new PushProcessor(
-      makeZQLPostgresJSDatabaseProvider(mockPgClient, mockSchema),
+      new ZQLDatabaseProvider(
+        new ZQLPostgresJSAdapter(mockPgClient),
+        mockSchema,
+      ),
     );
 
     const invalidParams: Record<string, string> = {

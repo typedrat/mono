@@ -14,7 +14,7 @@ export type {
 } from '../../zql/src/mutate/custom.ts';
 export {ZQLDatabaseProvider} from './zql-provider.ts';
 export {
-  makeZQLPostgresJSDatabaseProvider,
+  ZQLPostgresJSAdapter,
   type PostgresJSClient,
   type PostgresJSTransaction,
 } from './zql-postgresjs-provider.ts';

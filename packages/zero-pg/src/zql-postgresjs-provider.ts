@@ -4,8 +4,6 @@ import type {
   DBTransaction,
   Row,
 } from '../../zql/src/mutate/custom.ts';
-import type {Schema} from '../../zero-schema/src/builder/schema-builder.ts';
-import {ZQLDatabaseProvider} from './zql-provider.ts';
 
 /**
  * Subset of the postgres lib's `Transaction` interface that we use.
@@ -22,7 +20,20 @@ export type PostgresJSClient<Transaction extends PostgresJSTransaction> = {
   begin<T>(fn: (tx: Transaction) => Promise<T>): Promise<T>;
 };
 
-class Connection<
+class Transaction<WrappedTransaction extends PostgresJSTransaction>
+  implements DBTransaction<WrappedTransaction>
+{
+  readonly wrappedTransaction: WrappedTransaction;
+  constructor(pgTx: WrappedTransaction) {
+    this.wrappedTransaction = pgTx;
+  }
+
+  query(sql: string, params: unknown[]): Promise<Row[]> {
+    return this.wrappedTransaction.unsafe(sql, params as JSONValue[]);
+  }
+}
+
+export class ZQLPostgresJSAdapter<
   WrappedTransaction extends PostgresJSTransaction,
   WrappedPostgres extends PostgresJSClient<WrappedTransaction>,
 > implements DBConnection<WrappedTransaction>
@@ -41,24 +52,4 @@ class Connection<
   ): Promise<T> {
     return this.#pg.begin(pgTx => fn(new Transaction(pgTx))) as Promise<T>;
   }
-}
-
-class Transaction<WrappedTransaction extends PostgresJSTransaction>
-  implements DBTransaction<WrappedTransaction>
-{
-  readonly wrappedTransaction: WrappedTransaction;
-  constructor(pgTx: WrappedTransaction) {
-    this.wrappedTransaction = pgTx;
-  }
-
-  query(sql: string, params: unknown[]): Promise<Row[]> {
-    return this.wrappedTransaction.unsafe(sql, params as JSONValue[]);
-  }
-}
-
-export function makeZQLPostgresJSDatabaseProvider<S extends Schema>(
-  pg: PostgresJSClient<PostgresJSTransaction>,
-  schema: S,
-) {
-  return new ZQLDatabaseProvider(new Connection(pg), schema);
 }
