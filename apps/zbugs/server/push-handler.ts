@@ -1,12 +1,12 @@
-import {PushProcessor, ZQLPGDatabaseProvider} from '@rocicorp/zero/pg';
-import postgres from 'postgres';
-import {schema} from '../shared/schema.ts';
-import {createServerMutators, type PostCommitTask} from './server-mutators.ts';
-import type {AuthData} from '../shared/auth.ts';
-import type {ReadonlyJSONValue} from '@rocicorp/zero';
+import { PushProcessor, makeZQLPostgresJSDatabaseProvider } from '@rocicorp/zero/pg'
+import postgres from 'postgres'
+import { schema } from '../shared/schema.ts'
+import { createServerMutators, type PostCommitTask } from './server-mutators.ts'
+import type { AuthData } from '../shared/auth.ts'
+import type { ReadonlyJSONValue } from '@rocicorp/zero'
 
 const processor = new PushProcessor(
-  new ZQLPGDatabaseProvider(
+  makeZQLPostgresJSDatabaseProvider(
     postgres(process.env.ZERO_UPSTREAM_DB as string),
     schema,
   ),

@@ -9,13 +9,15 @@ export type {
   Transaction,
   ServerTransaction,
   DBTransaction,
+  DBConnection,
   Row,
 } from '../../zql/src/mutate/custom.ts';
+export {ZQLDatabaseProvider} from './zql-provider.ts';
 export {
-  ZQLPGDatabaseProvider,
-  type PostgresSQL,
-  type PostgresTransaction,
-} from './zql-pg-provider.ts';
+  makeZQLPostgresJSDatabaseProvider,
+  type PostgresJSClient,
+  type PostgresJSTransaction,
+} from './zql-postgresjs-provider.ts';
 export {
   PushProcessor,
   type DatabaseProvider,

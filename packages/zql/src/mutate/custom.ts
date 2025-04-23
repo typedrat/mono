@@ -55,6 +55,12 @@ export interface Row {
   [column: string]: unknown;
 }
 
+export interface DBConnection<TWrappedTransaction> extends Queryable {
+  transaction: <T>(
+    cb: (tx: DBTransaction<TWrappedTransaction>) => Promise<T>,
+  ) => Promise<T>;
+}
+
 export interface DBTransaction<T> extends Queryable {
   readonly wrappedTransaction: T;
 }

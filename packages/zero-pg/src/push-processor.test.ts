@@ -5,10 +5,10 @@ import type {Schema} from '../../zero-schema/src/builder/schema-builder.ts';
 import type {CustomMutatorDefs} from './custom.ts';
 import {PushProcessor} from './push-processor.ts';
 import {
-  ZQLPGDatabaseProvider,
-  type PostgresSQL,
-  type PostgresTransaction,
-} from './zql-pg-provider.ts';
+  makeZQLPostgresJSDatabaseProvider,
+  type PostgresJSTransaction,
+  type PostgresJSClient,
+} from './zql-postgresjs-provider.ts';
 describe('PushProcessor', () => {
   const body = {
     pushVersion: 1,
@@ -24,14 +24,14 @@ describe('PushProcessor', () => {
     relationships: {},
   } satisfies Schema;
 
-  const mockPgClient = {} as PostgresSQL<PostgresTransaction>;
+  const mockPgClient = {} as PostgresJSClient<PostgresJSTransaction>;
 
   // Mock mutators
   const mockMutators = {} as CustomMutatorDefs<unknown>;
 
   test('should accept Record<string, string> as params', async () => {
     const processor = new PushProcessor(
-      new ZQLPGDatabaseProvider(mockPgClient, mockSchema),
+      makeZQLPostgresJSDatabaseProvider(mockPgClient, mockSchema),
     );
 
     const params: Record<string, string> = {
@@ -52,7 +52,7 @@ describe('PushProcessor', () => {
 
   test('should accept URLSearchParams as params', async () => {
     const processor = new PushProcessor(
-      new ZQLPGDatabaseProvider(mockPgClient, mockSchema),
+      makeZQLPostgresJSDatabaseProvider(mockPgClient, mockSchema),
     );
 
     const urlParams = new URLSearchParams();
@@ -72,7 +72,7 @@ describe('PushProcessor', () => {
 
   test('should accept Request as a param', async () => {
     const processor = new PushProcessor(
-      new ZQLPGDatabaseProvider(mockPgClient, mockSchema),
+      makeZQLPostgresJSDatabaseProvider(mockPgClient, mockSchema),
     );
 
     const req = new Request(
@@ -96,7 +96,7 @@ describe('PushProcessor', () => {
 
   test('invalid params throw', async () => {
     const processor = new PushProcessor(
-      new ZQLPGDatabaseProvider(mockPgClient, mockSchema),
+      makeZQLPostgresJSDatabaseProvider(mockPgClient, mockSchema),
     );
 
     const invalidParams: Record<string, string> = {

@@ -3,10 +3,9 @@ import type {
   TransactionProviderHooks,
   TransactionProviderInput,
 } from './push-processor.ts';
-import type {JSONValue} from '../../shared/src/json.ts';
 import type {
+  DBConnection,
   DBTransaction,
-  Row,
   SchemaCRUD,
   SchemaQuery,
 } from '../../zql/src/mutate/custom.ts';
@@ -17,51 +16,23 @@ import {makeSchemaCRUD, TransactionImpl} from './custom.ts';
 import type {Schema} from '../../zero-schema/src/builder/schema-builder.ts';
 import {makeServerTransaction} from './custom.ts';
 
-/**
- * Subset of the postgres lib's `Transaction` interface that we use.
- */
-export type PostgresTransaction = {
-  unsafe(sql: string, params: JSONValue[]): Promise<Row[]>;
-};
-
-/**
- * Subset of the postgres lib's `SQL` interface that we use.
- */
-export type PostgresSQL<Transaction extends PostgresTransaction> = {
-  unsafe(sql: string, params: JSONValue[]): Promise<Row[]>;
-  begin<T>(fn: (tx: Transaction) => Promise<T>): Promise<T>;
-};
-
-class Transaction<WrappedTransaction extends PostgresTransaction>
-  implements DBTransaction<WrappedTransaction>
+export class ZQLDatabaseProvider<S extends Schema, WrappedTransaction>
+  implements DatabaseProvider<TransactionImpl<S, WrappedTransaction>>
 {
-  readonly wrappedTransaction: WrappedTransaction;
-  constructor(pgTx: WrappedTransaction) {
-    this.wrappedTransaction = pgTx;
-  }
-
-  query(sql: string, params: unknown[]): Promise<Row[]> {
-    return this.wrappedTransaction.unsafe(sql, params as JSONValue[]);
-  }
-}
-
-export class ZQLPGDatabaseProvider<S extends Schema>
-  implements DatabaseProvider<TransactionImpl<S, PostgresTransaction>>
-{
-  readonly #pg: PostgresSQL<PostgresTransaction>;
+  readonly #connection: DBConnection<WrappedTransaction>;
 
   readonly #mutate: (
-    dbTransaction: DBTransaction<PostgresTransaction>,
+    dbTransaction: DBTransaction<WrappedTransaction>,
     serverSchema: ServerSchema,
   ) => SchemaCRUD<S>;
   readonly #query: (
-    dbTransaction: DBTransaction<PostgresTransaction>,
+    dbTransaction: DBTransaction<WrappedTransaction>,
     serverSchema: ServerSchema,
   ) => SchemaQuery<S>;
   readonly #schema: S;
 
-  constructor(pg: PostgresSQL<PostgresTransaction>, schema: S) {
-    this.#pg = pg;
+  constructor(connection: DBConnection<WrappedTransaction>, schema: S) {
+    this.#connection = connection;
     this.#mutate = makeSchemaCRUD(schema);
     this.#query = makeSchemaQuery(schema);
     this.#schema = schema;
@@ -69,14 +40,12 @@ export class ZQLPGDatabaseProvider<S extends Schema>
 
   transaction<R>(
     callback: (
-      tx: TransactionImpl<S, PostgresTransaction>,
+      tx: TransactionImpl<S, WrappedTransaction>,
       transactionHooks: TransactionProviderHooks,
     ) => Promise<R>,
     transactionInput: TransactionProviderInput,
   ): Promise<R> {
-    return this.#pg.begin(async pgTx => {
-      const dbTx = new Transaction(pgTx);
-
+    return this.#connection.transaction(async dbTx => {
       const zeroTx = await makeServerTransaction(
         dbTx,
         transactionInput.clientID,
