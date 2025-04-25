@@ -146,7 +146,10 @@ export class PushProcessor<
             clientID: m.clientID,
             id: m.id,
           },
-          result: {},
+          result: {
+            error: 'alreadyProcessed',
+            details: e.message,
+          },
         };
       }
 
