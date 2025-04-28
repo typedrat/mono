@@ -3,7 +3,6 @@ import {
   boolean,
   createSchema,
   definePermissions,
-  enumeration,
   number,
   relationships,
   string,
@@ -19,22 +18,24 @@ const user = table('user')
     id: string(),
     login: string(),
     name: string().optional(),
-    avatar: string(),
-    role: enumeration<'user' | 'crew'>(),
+    avatar: string().optional(),
+    role: string(),
+    // TODO(arv): Change to enum
+    // role: enumeration<'user' | 'crew'>(),
   })
   .primaryKey('id');
 
 const issue = table('issue')
   .columns({
     id: string(),
-    shortID: number().optional(),
+    shortID: number(),
     title: string(),
     open: boolean(),
-    modified: number(),
-    created: number(),
+    modified: number().optional(),
+    created: number().optional(),
     creatorID: string(),
     assigneeID: string().optional(),
-    description: string(),
+    description: string().optional(),
     visibility: string(),
   })
   .primaryKey('id');
@@ -43,17 +44,17 @@ const viewState = table('viewState')
   .columns({
     issueID: string(),
     userID: string(),
-    viewed: number(),
+    viewed: number().optional(),
   })
   .primaryKey('userID', 'issueID');
 
 const comment = table('comment')
   .columns({
     id: string(),
-    issueID: string(),
-    created: number(),
+    issueID: string().optional(),
+    created: number().optional(),
     body: string(),
-    creatorID: string(),
+    creatorID: string().optional(),
   })
   .primaryKey('id');
 
@@ -75,10 +76,10 @@ const emoji = table('emoji')
   .columns({
     id: string(),
     value: string(),
-    annotation: string(),
+    annotation: string().optional(),
     subjectID: string(),
-    creatorID: string(),
-    created: number(),
+    creatorID: string().optional(),
+    created: number().optional(),
   })
   .primaryKey('id');
 
