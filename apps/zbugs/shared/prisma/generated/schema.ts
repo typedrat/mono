@@ -38,7 +38,7 @@ export const emojiTable = table('emoji')
 export const issueTable = table('issue')
   .columns({
     id: string(),
-    shortID: number(),
+    shortID: number().optional(),
     title: string(),
     open: boolean(),
     modified: number().optional(),
@@ -162,6 +162,17 @@ export const issueTableRelationships = relationships(
   }),
 );
 
+export const issueLabelTableRelationships = relationships(
+  issueLabelTable,
+  ({one}) => ({
+    issue: one({
+      sourceField: ['issueID'],
+      destField: ['id'],
+      destSchema: issueTable,
+    }),
+  }),
+);
+
 export const userTableRelationships = relationships(userTable, ({many}) => ({
   createdIssues: many({
     sourceField: ['id'],
@@ -198,6 +209,7 @@ export const schema = createSchema({
     commentTableRelationships,
     emojiTableRelationships,
     issueTableRelationships,
+    issueLabelTableRelationships,
     userTableRelationships,
     viewStateTableRelationships,
   ],
