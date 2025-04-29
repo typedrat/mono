@@ -1,6 +1,6 @@
 generator zero {
-  // provider     = "prisma-client-js"
   provider     = "prisma-generator-zero"
+  output = "../shared/prisma/generated/"
   relationMode = "prisma"
   enumAsUnion  = true
   prettier     = true
@@ -62,9 +62,8 @@ model Issue {
   creator     User         @relation("issue_creatorIDToUser", fields: [creatorID], references: [id], onDelete: NoAction, onUpdate: NoAction)
   emoji       Emoji[]
   viewState   ViewState[]
-  issueLabels IssueLabel[] @ignore
 
-  labels Label[] @relation("IssueLabel")
+  // labels is manually done due to limitations in the Prisma ORM
 
   @@index([created])
   @@index([modified])
@@ -75,7 +74,9 @@ model Issue {
 model IssueLabel {
   labelID String @db.VarChar
   issueID String @db.VarChar
-  issue   Issue  @relation(fields: [issueID], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  // issue   Issue  @relation(fields: [issueID], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  label   Label  @relation(fields: [labelID], references: [id], onDelete: Cascade, onUpdate: NoAction) @ignore
 
   @@id([labelID, issueID])
   @@index([issueID], map: "issueLabel_issueid_idx")
@@ -86,7 +87,7 @@ model Label {
   id   String @id @db.VarChar
   name String @db.VarChar
 
-  issues Issue[] @relation("IssueLabel") @ignore
+  issueLabels IssueLabel[] @ignore
 
   @@map("label")
 }
@@ -121,7 +122,7 @@ model ViewState {
   issueID String @db.VarChar
   viewed  Float?
 
-  issue Issue @relation(fields: [issueID], references: [id], onDelete: Cascade, onUpdate: NoAction) @ignore
+  issue Issue @relation(fields: [issueID], references: [id])
 
   @@id([userID, issueID])
   @@map("viewState")

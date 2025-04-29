@@ -156,24 +156,8 @@ export const issueTableRelationships = relationships(
     }),
     viewState: many({
       sourceField: ['id'],
-      destField: [],
+      destField: ['issueID'],
       destSchema: viewStateTable,
-    }),
-    labels: many({
-      sourceField: ['id'],
-      destField: [],
-      destSchema: labelTable,
-    }),
-  }),
-);
-
-export const issueLabelTableRelationships = relationships(
-  issueLabelTable,
-  ({one}) => ({
-    issue: one({
-      sourceField: ['issueID'],
-      destField: ['id'],
-      destSchema: issueTable,
     }),
   }),
 );
@@ -185,6 +169,17 @@ export const userTableRelationships = relationships(userTable, ({many}) => ({
     destSchema: issueTable,
   }),
 }));
+
+export const viewStateTableRelationships = relationships(
+  viewStateTable,
+  ({one}) => ({
+    issue: one({
+      sourceField: ['issueID'],
+      destField: ['id'],
+      destSchema: issueTable,
+    }),
+  }),
+);
 
 // Define schema
 
@@ -203,8 +198,8 @@ export const schema = createSchema({
     commentTableRelationships,
     emojiTableRelationships,
     issueTableRelationships,
-    issueLabelTableRelationships,
     userTableRelationships,
+    viewStateTableRelationships,
   ],
 });
 
