@@ -3,12 +3,17 @@
 import {
   boolean,
   createSchema,
+  enumeration,
   number,
   relationships,
   string,
   table,
   type Row,
 } from '@rocicorp/zero';
+
+// Define enums as unions
+
+export type Role = 'user' | 'crew';
 
 // Define tables
 
@@ -68,7 +73,7 @@ export const userTable = table('user')
     login: string(),
     name: string().optional(),
     avatar: string(),
-    role: string(),
+    role: enumeration<Role>(),
   })
   .primaryKey('id');
 

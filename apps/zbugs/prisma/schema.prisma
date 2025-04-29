@@ -89,12 +89,17 @@ model Label {
   @@map("label")
 }
 
+enum Role {
+  user
+  crew
+}
+
 model User {
   id       String  @id @db.VarChar
   login    String  @unique(map: "user_login_idx") @db.VarChar
   name     String? @db.VarChar
   avatar   String  @db.VarChar
-  role     String  @default("user") @db.VarChar
+  role     Role    @default(user)
   githubID Int     @unique(map: "user_githubid_idx") @ignore
 
   comments       Comment[] @ignore
