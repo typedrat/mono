@@ -17,36 +17,51 @@ import type {CustomMutatorDefs} from './custom.ts';
 
 export type Params = v.Infer<typeof pushParamsSchema>;
 
-export interface TransactionProviderHooks {
-  updateClientMutationID: () => Promise<{lastMutationID: number | bigint}>;
-}
+export type TransactionHooks = {
+  updateMutationID: () => Promise<{lastMutationID: bigint}>;
+};
 
-export interface TransactionProviderInput {
+/**
+ * Parameters to the `transact` method of the `Database` interface.
+ */
+export type TransactParams<Transaction> = {
   upstreamSchema: string;
   clientGroupID: string;
   clientID: string;
   mutationID: number;
+  callback: (
+    tx: Transaction,
+    hooks: TransactionHooks,
+  ) => Promise<MutationResponse>;
+};
+
+/**
+ * Database is an interface that represents a database PushProcessor can use to
+ * implement the push message.
+ */
+export interface Database<Transaction> {
+  transact: (args: TransactParams<Transaction>) => Promise<MutationResponse>;
 }
 
-export interface DatabaseProvider<T> {
-  transaction: <R>(
-    callback: (tx: T, transactionHooks: TransactionProviderHooks) => Promise<R>,
-    transactionInput: TransactionProviderInput,
-  ) => Promise<R>;
-}
+type ExtractTransactionType<D> = D extends Database<infer T> ? T : never;
 
-type ExtractTransactionType<D> =
-  D extends DatabaseProvider<infer T> ? T : never;
-
+/**
+ * PushProcessor is our canonical implementation of the custom mutator push
+ * endpoint. PushProcessor knows how to process push messages and dispatch them
+ * to mutator implementation, but it knows nothing about the database it is
+ * talking to. It talks to the database through a generic `Database` that is
+ * passed in. This allows callers to reuse the push implementation with whatever
+ * database they want.
+ */
 export class PushProcessor<
-  D extends DatabaseProvider<ExtractTransactionType<D>>,
+  D extends Database<ExtractTransactionType<D>>,
   MD extends CustomMutatorDefs<ExtractTransactionType<D>>,
 > {
-  readonly #dbProvider: D;
+  readonly #db: D;
   readonly #lc: LogContext;
 
-  constructor(dbProvider: D, logLevel: LogLevel = 'info') {
-    this.#dbProvider = dbProvider;
+  constructor(db: D, logLevel: LogLevel = 'info') {
+    this.#db = db;
     this.#lc = createLogContext(logLevel).withContext('PushProcessor');
   }
 
@@ -192,17 +207,21 @@ export class PushProcessor<
       );
     }
 
-    return this.#dbProvider.transaction(
-      async (dbTx, transactionHooks): Promise<MutationResponse> => {
+    return this.#db.transact({
+      upstreamSchema: params.schema,
+      clientGroupID: req.clientGroupID,
+      clientID: m.clientID,
+      mutationID: m.id,
+      callback: async (tx, hooks): Promise<MutationResponse> => {
         await this.#checkAndIncrementLastMutationID(
           this.#lc,
-          transactionHooks,
+          hooks,
           m.clientID,
           m.id,
         );
 
         if (!errorMode) {
-          await this.#dispatchMutation(dbTx, mutators, m);
+          await this.#dispatchMutation(tx, mutators, m);
         }
 
         return {
@@ -213,17 +232,11 @@ export class PushProcessor<
           result: {},
         };
       },
-      {
-        upstreamSchema: params.schema,
-        clientGroupID: req.clientGroupID,
-        clientID: m.clientID,
-        mutationID: m.id,
-      },
-    );
+    });
   }
 
   #dispatchMutation(
-    dbTx: ExtractTransactionType<D>,
+    tx: ExtractTransactionType<D>,
     mutators: MD,
     m: Mutation,
   ): Promise<void> {
@@ -234,7 +247,7 @@ export class PushProcessor<
         typeof mutator === 'function',
         () => `could not find mutator ${m.name}`,
       );
-      return mutator(dbTx, m.args[0]);
+      return mutator(tx, m.args[0]);
     }
 
     const mutatorGroup = mutators[namespace];
@@ -247,18 +260,18 @@ export class PushProcessor<
       typeof mutator === 'function',
       () => `could not find mutator ${m.name}`,
     );
-    return mutator(dbTx, m.args[0]);
+    return mutator(tx, m.args[0]);
   }
 
   async #checkAndIncrementLastMutationID(
     lc: LogContext,
-    transactionHooks: TransactionProviderHooks,
+    hooks: TransactionHooks,
     clientID: string,
     receivedMutationID: number,
   ) {
     lc.debug?.(`Incrementing LMID. Received: ${receivedMutationID}`);
 
-    const {lastMutationID} = await transactionHooks.updateClientMutationID();
+    const {lastMutationID} = await hooks.updateMutationID();
 
     if (receivedMutationID < lastMutationID) {
       throw new MutationAlreadyProcessedError(

@@ -20,7 +20,7 @@ export {
 } from './zql-postgresjs-provider.ts';
 export {
   PushProcessor,
-  type DatabaseProvider,
+  type Database as DatabaseProvider,
   type TransactionProviderInput,
   type TransactionProviderHooks,
 } from './push-processor.ts';
