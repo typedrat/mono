@@ -4,25 +4,26 @@ import {formatPgInternalConvert} from '../../z2s/src/sql.ts';
 import type {AST} from '../../zero-protocol/src/ast.ts';
 import type {Schema} from '../../zero-schema/src/builder/schema-builder.ts';
 import type {Format} from '../../zql/src/ivm/view.ts';
-import type {DBTransaction, SchemaQuery} from '../../zql/src/mutate/custom.ts';
+import type {SchemaQuery} from '../../zql/src/mutate/custom.ts';
 import {AbstractQuery, defaultFormat} from '../../zql/src/query/query-impl.ts';
 import type {HumanReadable, PullRow, Query} from '../../zql/src/query/query.ts';
 import type {TypedView} from '../../zql/src/query/typed-view.ts';
+import type {ConnectionTransaction} from './zql-pg-database.ts';
 
 export function makeSchemaQuery<S extends Schema>(
   schema: S,
 ): (
-  dbTransaction: DBTransaction<unknown>,
+  connectionTx: ConnectionTransaction,
   serverSchema: ServerSchema,
 ) => SchemaQuery<S> {
   class SchemaQueryHandler {
-    readonly #dbTransaction: DBTransaction<unknown>;
+    readonly #connectionTx: ConnectionTransaction;
     readonly #serverSchema: ServerSchema;
     constructor(
-      dbTransaction: DBTransaction<unknown>,
+      connectionTx: ConnectionTransaction,
       serverSchema: ServerSchema,
     ) {
-      this.#dbTransaction = dbTransaction;
+      this.#connectionTx = connectionTx;
       this.#serverSchema = serverSchema;
     }
 
@@ -42,7 +43,7 @@ export function makeSchemaQuery<S extends Schema>(
         schema,
         this.#serverSchema,
         prop,
-        this.#dbTransaction,
+        this.#connectionTx,
         {table: prop},
         defaultFormat,
       );
@@ -51,10 +52,10 @@ export function makeSchemaQuery<S extends Schema>(
     }
   }
 
-  return (dbTransaction: DBTransaction<unknown>, serverSchema: ServerSchema) =>
+  return (connectionTx: ConnectionTransaction, serverSchema: ServerSchema) =>
     new Proxy(
       {},
-      new SchemaQueryHandler(dbTransaction, serverSchema),
+      new SchemaQueryHandler(connectionTx, serverSchema),
     ) as SchemaQuery<S>;
 }
 
@@ -63,7 +64,7 @@ export class ZPGQuery<
   TTable extends keyof TSchema['tables'] & string,
   TReturn = PullRow<TTable, TSchema>,
 > extends AbstractQuery<TSchema, TTable, TReturn> {
-  readonly #dbTransaction: DBTransaction<unknown>;
+  readonly #connectionTx: ConnectionTransaction;
   readonly #schema: TSchema;
   readonly #serverSchema: ServerSchema;
 
@@ -78,12 +79,12 @@ export class ZPGQuery<
     schema: TSchema,
     serverSchema: ServerSchema,
     tableName: TTable,
-    dbTransaction: DBTransaction<unknown>,
+    connectionTx: ConnectionTransaction,
     ast: AST,
     format: Format,
   ) {
     super(schema, tableName, ast, format);
-    this.#dbTransaction = dbTransaction;
+    this.#connectionTx = connectionTx;
     this.#schema = schema;
     this.#serverSchema = serverSchema;
   }
@@ -104,7 +105,7 @@ export class ZPGQuery<
       schema,
       this.#serverSchema,
       tableName,
-      this.#dbTransaction,
+      this.#connectionTx,
       ast,
       format,
     );
@@ -122,7 +123,7 @@ export class ZPGQuery<
         ),
       );
     this.#query = sqlQuery;
-    const pgIterableResult = await this.#dbTransaction.query(
+    const pgIterableResult = await this.#connectionTx.query(
       sqlQuery.text,
       sqlQuery.values,
     );

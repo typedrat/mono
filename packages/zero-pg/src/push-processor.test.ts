@@ -8,8 +8,8 @@ import {
   ZQLPostgresJSAdapter,
   type PostgresJSTransaction,
   type PostgresJSClient,
-} from './zql-postgresjs-provider.ts';
-import {ZQLDatabaseProvider} from './zql-provider.ts';
+} from './postgres-connection.ts';
+import {ZQLDatabaseProvider} from './zql-pg-database.ts';
 describe('PushProcessor', () => {
   const body = {
     pushVersion: 1,

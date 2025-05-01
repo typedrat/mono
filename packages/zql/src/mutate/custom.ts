@@ -9,64 +9,25 @@ import type {Query} from '../query/query.ts';
 
 type ClientID = string;
 
-export type Location = 'client' | 'server';
-export type TransactionReason = 'optimistic' | 'rebase' | 'authoritative';
-
-export interface TransactionBase<S extends Schema> {
-  readonly location: Location;
-  readonly clientID: ClientID;
-  /**
-   * The ID of the mutation that is being applied.
-   */
-  readonly mutationID: number;
-
-  /**
-   * The reason for the transaction.
-   */
-  readonly reason: TransactionReason;
-
-  readonly mutate: SchemaCRUD<S>;
-  readonly query: SchemaQuery<S>;
-}
-
-export type Transaction<S extends Schema, TWrappedTransaction = unknown> =
-  | ServerTransaction<S, TWrappedTransaction>
-  | ClientTransaction<S>;
-
-export interface ServerTransaction<S extends Schema, TWrappedTransaction>
-  extends TransactionBase<S> {
-  readonly location: 'server';
-  readonly reason: 'authoritative';
-  readonly dbTransaction: DBTransaction<TWrappedTransaction>;
-}
-
 /**
  * An instance of this is passed to custom mutator implementations and
  * allows reading and writing to the database and IVM at the head
  * at which the mutator is being applied.
  */
-export interface ClientTransaction<S extends Schema>
-  extends TransactionBase<S> {
+export interface ClientTransaction<S extends Schema> {
+  readonly clientID: ClientID;
+  /**
+   * The ID of the mutation that is being applied.
+   */
+  readonly mutationID: number;
   readonly location: 'client';
   readonly reason: 'optimistic' | 'rebase';
+  readonly mutate: SchemaCRUD<S>;
+  readonly query: SchemaQuery<S>;
 }
 
 export interface Row {
   [column: string]: unknown;
-}
-
-export interface DBConnection<TWrappedTransaction> extends Queryable {
-  transaction: <T>(
-    cb: (tx: DBTransaction<TWrappedTransaction>) => Promise<T>,
-  ) => Promise<T>;
-}
-
-export interface DBTransaction<T> extends Queryable {
-  readonly wrappedTransaction: T;
-}
-
-interface Queryable {
-  query: (query: string, args: unknown[]) => Promise<Iterable<Row>>;
 }
 
 export type SchemaCRUD<S extends Schema> = {

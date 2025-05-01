@@ -4,10 +4,10 @@ import type {PostgresDB} from '../../zero-cache/src/types/pg.ts';
 import {getClientsTableDefinition} from '../../zero-cache/src/services/change-source/pg/schema/shard.ts';
 
 import {PushProcessor} from './push-processor.ts';
-import {ZQLPostgresJSAdapter} from './zql-postgresjs-provider.ts';
+import {ZQLPostgresJSAdapter} from './postgres-connection.ts';
 import type {PushBody} from '../../zero-protocol/src/push.ts';
 import {customMutatorKey} from '../../zql/src/mutate/custom.ts';
-import {ZQLDatabaseProvider} from './zql-provider.ts';
+import {ZQLDatabaseProvider} from './zql-pg-database.ts';
 
 let pg: PostgresDB;
 const params = {

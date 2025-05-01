@@ -4,8 +4,6 @@ import type {
   SchemaCRUD,
   SchemaQuery,
   TableCRUD,
-  TransactionBase,
-  DBTransaction,
 } from '../../zql/src/mutate/custom.ts';
 import {
   formatPgInternalConvert,
@@ -18,13 +16,7 @@ import type {
   ServerTableSchema,
 } from '../../z2s/src/schema.ts';
 import {getServerSchema} from './schema.ts';
-
-interface ServerTransaction<S extends Schema, TWrappedTransaction>
-  extends TransactionBase<S> {
-  readonly location: 'server';
-  readonly reason: 'authoritative';
-  readonly dbTransaction: DBTransaction<TWrappedTransaction>;
-}
+import type {ConnectionTransaction} from './zql-pg-database.ts';
 
 export type CustomMutatorDefs<TDBTransaction> = {
   [namespaceOrKey: string]:
@@ -40,70 +32,70 @@ export type CustomMutatorImpl<TDBTransaction, TArgs = any> = (
   args: TArgs,
 ) => Promise<void>;
 
-export class TransactionImpl<S extends Schema, TWrappedTransaction>
-  implements ServerTransaction<S, TWrappedTransaction>
-{
+export class ZQLPGTransaction<S extends Schema> {
+  readonly #connectionTx: ConnectionTransaction;
+
   readonly location = 'server';
   readonly reason = 'authoritative';
-  readonly dbTransaction: DBTransaction<TWrappedTransaction>;
   readonly clientID: string;
   readonly mutationID: number;
   readonly mutate: SchemaCRUD<S>;
   readonly query: SchemaQuery<S>;
 
   constructor(
-    dbTransaction: DBTransaction<TWrappedTransaction>,
+    connectionTx: ConnectionTransaction,
     clientID: string,
     mutationID: number,
     mutate: SchemaCRUD<S>,
     query: SchemaQuery<S>,
   ) {
-    this.dbTransaction = dbTransaction;
+    this.#connectionTx = connectionTx;
     this.clientID = clientID;
     this.mutationID = mutationID;
     this.mutate = mutate;
     this.query = query;
+  }
+
+  querySQL(sql: string, params: unknown[]): Promise<unknown[]> {
+    return this.#connectionTx.query(sql, params);
   }
 }
 
 const dbTxSymbol = Symbol();
 const serverSchemaSymbol = Symbol();
 type WithHiddenTxAndSchema = {
-  [dbTxSymbol]: DBTransaction<unknown>;
+  [dbTxSymbol]: ConnectionTransaction;
   [serverSchemaSymbol]: ServerSchema;
 };
 
-export async function makeServerTransaction<
-  S extends Schema,
-  TWrappedTransaction,
->(
-  dbTransaction: DBTransaction<TWrappedTransaction>,
+export async function makeServerTransaction<S extends Schema>(
+  connectionTx: ConnectionTransaction,
   clientID: string,
   mutationID: number,
   schema: S,
   mutate: (
-    dbTransaction: DBTransaction<TWrappedTransaction>,
+    connectionTx: ConnectionTransaction,
     serverSchema: ServerSchema,
   ) => SchemaCRUD<S>,
   query: (
-    dbTransaction: DBTransaction<TWrappedTransaction>,
+    connectionTx: ConnectionTransaction,
     serverSchema: ServerSchema,
   ) => SchemaQuery<S>,
 ) {
-  const serverSchema = await getServerSchema(dbTransaction, schema);
-  return new TransactionImpl(
-    dbTransaction,
+  const serverSchema = await getServerSchema(connectionTx, schema);
+  return new ZQLPGTransaction(
+    connectionTx,
     clientID,
     mutationID,
-    mutate(dbTransaction, serverSchema),
-    query(dbTransaction, serverSchema),
+    mutate(connectionTx, serverSchema),
+    query(connectionTx, serverSchema),
   );
 }
 
 export function makeSchemaCRUD<S extends Schema>(
   schema: S,
 ): (
-  dbTransaction: DBTransaction<unknown>,
+  connectionTx: ConnectionTransaction,
   serverSchema: ServerSchema,
 ) => SchemaCRUD<S> {
   const schemaCRUDs: Record<string, TableCRUD<TableSchema>> = {};
@@ -118,13 +110,13 @@ export function makeSchemaCRUD<S extends Schema>(
    * as requested.
    */
   class CRUDHandler {
-    readonly #dbTransaction: DBTransaction<unknown>;
+    readonly connectionTx: ConnectionTransaction;
     readonly #serverSchema: ServerSchema;
     constructor(
-      dbTransaction: DBTransaction<unknown>,
+      dbTransaction: ConnectionTransaction,
       serverSchema: ServerSchema,
     ) {
-      this.#dbTransaction = dbTransaction;
+      this.connectionTx = dbTransaction;
       this.#serverSchema = serverSchema;
     }
 
@@ -134,7 +126,7 @@ export function makeSchemaCRUD<S extends Schema>(
       }
 
       const txHolder: WithHiddenTxAndSchema = {
-        [dbTxSymbol]: this.#dbTransaction,
+        [dbTxSymbol]: this.connectionTx,
         [serverSchemaSymbol]: this.#serverSchema,
       };
       target[prop] = Object.fromEntries(
@@ -148,11 +140,8 @@ export function makeSchemaCRUD<S extends Schema>(
     }
   }
 
-  return (dbTransaction: DBTransaction<unknown>, serverSchema: ServerSchema) =>
-    new Proxy(
-      {},
-      new CRUDHandler(dbTransaction, serverSchema),
-    ) as SchemaCRUD<S>;
+  return (connectionTx: ConnectionTransaction, serverSchema: ServerSchema) =>
+    new Proxy({}, new CRUDHandler(connectionTx, serverSchema)) as SchemaCRUD<S>;
 }
 
 function removeUndefined<T extends Record<string, unknown>>(value: T): T {

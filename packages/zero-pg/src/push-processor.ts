@@ -17,22 +17,18 @@ import type {CustomMutatorDefs} from './custom.ts';
 
 export type Params = v.Infer<typeof pushParamsSchema>;
 
-export type TransactionHooks = {
-  updateMutationID: () => Promise<{lastMutationID: bigint}>;
-};
+export interface TransactionHooks {
+  incrementLMID(): Promise<{lmid: bigint}>;
+}
 
 /**
  * Parameters to the `transact` method of the `Database` interface.
  */
-export type TransactParams<Transaction> = {
+export type TransactParams = {
   upstreamSchema: string;
   clientGroupID: string;
   clientID: string;
   mutationID: number;
-  callback: (
-    tx: Transaction,
-    hooks: TransactionHooks,
-  ) => Promise<MutationResponse>;
 };
 
 /**
@@ -40,7 +36,13 @@ export type TransactParams<Transaction> = {
  * implement the push message.
  */
 export interface Database<Transaction> {
-  transact: (args: TransactParams<Transaction>) => Promise<MutationResponse>;
+  transact: (
+    args: TransactParams,
+    callback: (
+      tx: Transaction,
+      hooks: TransactionHooks,
+    ) => Promise<MutationResponse>,
+  ) => Promise<MutationResponse>;
 }
 
 type ExtractTransactionType<D> = D extends Database<infer T> ? T : never;
@@ -207,12 +209,14 @@ export class PushProcessor<
       );
     }
 
-    return this.#db.transact({
-      upstreamSchema: params.schema,
-      clientGroupID: req.clientGroupID,
-      clientID: m.clientID,
-      mutationID: m.id,
-      callback: async (tx, hooks): Promise<MutationResponse> => {
+    return this.#db.transact(
+      {
+        upstreamSchema: params.schema,
+        clientGroupID: req.clientGroupID,
+        clientID: m.clientID,
+        mutationID: m.id,
+      },
+      async (tx, hooks): Promise<MutationResponse> => {
         await this.#checkAndIncrementLastMutationID(
           this.#lc,
           hooks,
@@ -232,7 +236,7 @@ export class PushProcessor<
           result: {},
         };
       },
-    });
+    );
   }
 
   #dispatchMutation(
@@ -271,7 +275,7 @@ export class PushProcessor<
   ) {
     lc.debug?.(`Incrementing LMID. Received: ${receivedMutationID}`);
 
-    const {lastMutationID} = await hooks.updateMutationID();
+    const {lmid: lastMutationID} = await hooks.incrementLMID();
 
     if (receivedMutationID < lastMutationID) {
       throw new MutationAlreadyProcessedError(

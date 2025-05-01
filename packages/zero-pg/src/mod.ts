@@ -5,22 +5,16 @@ export {
   type CustomMutatorImpl,
 } from './custom.ts';
 export {makeSchemaQuery} from './query.ts';
-export type {
-  Transaction,
-  ServerTransaction,
-  DBTransaction,
-  DBConnection,
-  Row,
-} from '../../zql/src/mutate/custom.ts';
-export {ZQLDatabaseProvider} from './zql-provider.ts';
+export type {Row} from '../../zql/src/mutate/custom.ts';
+export {ZQLPGDatabase} from './zql-pg-database.ts';
 export {
-  ZQLPostgresJSAdapter,
-  type PostgresJSClient,
-  type PostgresJSTransaction,
-} from './zql-postgresjs-provider.ts';
+  PostgresConnection,
+  type PostgresLibTransaction,
+  type PostgresLibSQL,
+} from './postgres-connection.ts';
 export {
   PushProcessor,
-  type Database as DatabaseProvider,
-  type TransactionProviderInput,
-  type TransactionProviderHooks,
+  type Database,
+  type TransactParams,
+  type TransactionHooks,
 } from './push-processor.ts';

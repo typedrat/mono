@@ -3,7 +3,7 @@ import type {ServerSchema} from '../../z2s/src/schema.ts';
 import {formatPg, sql} from '../../z2s/src/sql.ts';
 import {dataTypeToZqlValueType} from '../../zero-cache/src/types/pg.ts';
 import type {Schema} from '../../zero-schema/src/builder/schema-builder.ts';
-import type {DBTransaction} from '../../zql/src/mutate/custom.ts';
+import type {ConnectionTransaction} from './zql-pg-database.ts';
 
 export type ServerSchemaRow = {
   schema: string;
@@ -15,7 +15,7 @@ export type ServerSchemaRow = {
 };
 
 export async function getServerSchema<S extends Schema>(
-  dbTransaction: DBTransaction<unknown>,
+  connectionTx: ConnectionTransaction,
   schema: S,
 ): Promise<ServerSchema> {
   const schemaTablePairs: [string, string][] = Object.values(schema.tables).map(
@@ -39,7 +39,7 @@ export async function getServerSchema<S extends Schema>(
   }
 
   // Cast all inputs to text and all outputs to text to avoid
-  // any conversions customer's DBTransaction impl has on other types.
+  // any conversions customer's DatabaseTransaction impl has on other types.
   const inClause = sql.join(
     schemaTablePairs.map(
       ([schema, table]) => sql`(${schema}::text, ${table}::text)`,
@@ -64,7 +64,7 @@ export async function getServerSchema<S extends Schema>(
           (c.table_schema, c.table_name) IN (${inClause})
     `;
   const {text, values} = formatPg(query);
-  const results: Iterable<ServerSchemaRow> = (await dbTransaction.query(
+  const results: Iterable<ServerSchemaRow> = (await connectionTx.query(
     text,
     values,
   )) as Iterable<ServerSchemaRow>;
