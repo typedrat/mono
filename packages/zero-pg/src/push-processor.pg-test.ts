@@ -7,7 +7,7 @@ import {PushProcessor} from './push-processor.ts';
 import {ZQLPostgresJSAdapter} from './postgres-connection.ts';
 import type {PushBody} from '../../zero-protocol/src/push.ts';
 import {customMutatorKey} from '../../zql/src/mutate/custom.ts';
-import {ZQLDatabaseProvider} from './zql-pg-database.ts';
+import {ZQLDatabaseProvider} from './pg-zql-database.ts';
 
 let pg: PostgresDB;
 const params = {

@@ -30,8 +30,8 @@ import {getServerSchema} from './schema.ts';
  * because the Transaction it passes to those mutators exposes the same ZQL
  * API as the client-side Transaction.
  */
-export class ZQLPGDatabase<S extends Schema>
-  implements Database<ZQLPGTransaction<S>>
+export class PGZQLDatabase<S extends Schema>
+  implements Database<PGZQLTransaction<S>>
 {
   readonly #connection: Connection;
   readonly #schema: S;
@@ -55,7 +55,7 @@ export class ZQLPGDatabase<S extends Schema>
   transact(
     args: TransactParams,
     callback: (
-      tx: ZQLPGTransaction<S>,
+      tx: PGZQLTransaction<S>,
       hooks: TransactHooks,
     ) => Promise<MutationResponse>,
   ): Promise<MutationResponse> {
@@ -92,7 +92,7 @@ export class ZQLPGDatabase<S extends Schema>
   }
 }
 
-export class ZQLPGTransaction<S extends Schema> {
+export class PGZQLTransaction<S extends Schema> {
   readonly #connectionTx: ConnectionTransaction;
 
   readonly location = 'server';
@@ -143,7 +143,7 @@ export async function makeServerTransaction<S extends Schema>(
   ) => SchemaQuery<S>,
 ) {
   const serverSchema = await getServerSchema(connectionTx, schema);
-  return new ZQLPGTransaction(
+  return new PGZQLTransaction(
     connectionTx,
     clientID,
     mutationID,
