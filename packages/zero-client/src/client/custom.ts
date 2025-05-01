@@ -16,7 +16,6 @@ import type {
   SchemaCRUD,
   SchemaQuery,
   TableCRUD,
-  Transaction,
   UpdateValue,
   UpsertValue,
 } from '../../../zql/src/mutate/custom.ts';
@@ -46,7 +45,7 @@ export type PromiseWithServerResult = Promise<void> & {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type CustomMutatorImpl<S extends Schema, TArgs = any> = (
-  tx: Transaction<S>,
+  tx: ClientTransaction<S>,
   // TODO: many args. See commit: 52657c2f934b4a458d628ea77e56ce92b61eb3c6 which did have many args.
   // The issue being that it will be a protocol change to support varargs.
   args: TArgs,
@@ -64,7 +63,7 @@ export type MakeCustomMutatorInterfaces<
   MD extends CustomMutatorDefs<S>,
 > = {
   readonly [NamespaceOrName in keyof MD]: MD[NamespaceOrName] extends (
-    tx: Transaction<S>,
+    tx: ClientTransaction<S>,
     ...args: infer Args
   ) => Promise<void>
     ? (...args: Args) => PromiseWithServerResult

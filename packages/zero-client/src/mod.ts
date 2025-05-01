@@ -98,8 +98,6 @@ export type {Entry, Format, View, ViewFactory} from '../../zql/src/ivm/view.ts';
 export type {
   DeleteID,
   InsertValue,
-  ServerTransaction,
-  Transaction,
   UpdateValue,
   UpsertValue,
 } from '../../zql/src/mutate/custom.ts';
