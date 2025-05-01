@@ -38,6 +38,8 @@ export type AddCommentArgs = {
   created: number;
 };
 
+export type Transaction = ClientTransaction<Schema> | ZQLPGTransaction<Schema>;
+
 export function createMutators(authData: AuthData | undefined) {
   return {
     issue: {
@@ -160,13 +162,10 @@ export function createMutators(authData: AuthData | undefined) {
         await tx.mutate.userPref.upsert({key, value, userID});
       },
     },
-  } as const satisfies CustomMutatorDefs<
-    Schema,
-    ClientTransaction<Schema> | ZQLPGTransaction<Schema>
-  >;
+  } as const satisfies CustomMutatorDefs<Schema, Transaction>;
 
   async function addEmoji(
-    tx: ClientTransaction<Schema> | ZQLPGTransaction<Schema>,
+    tx: Transaction,
     subjectType: 'issue' | 'comment',
     {id, unicode, annotation, subjectID, created}: AddEmojiArgs,
   ) {

@@ -7,6 +7,9 @@ import type {
 } from '../../../zero-schema/src/table-schema.ts';
 import type {Query} from '../query/query.ts';
 
+// TODO: Why is the custom mutator stuff in zql to begin with? It seems
+// completely a feature of zero-client, nothing to do with zql.
+
 type ClientID = string;
 
 /**
@@ -16,9 +19,6 @@ type ClientID = string;
  */
 export interface ClientTransaction<S extends Schema> {
   readonly clientID: ClientID;
-  /**
-   * The ID of the mutation that is being applied.
-   */
   readonly mutationID: number;
   readonly location: 'client';
   readonly reason: 'optimistic' | 'rebase';

@@ -3,6 +3,7 @@ import type {schema} from './schema.ts';
 import {must} from '../../../packages/shared/src/must.ts';
 import {assert} from '../../../packages/shared/src/asserts.ts';
 import * as v from '../../../packages/shared/src/valita.ts';
+import type {Transaction} from './mutators.ts';
 
 /** The contents of the zbugs JWT */
 export const authDataSchema = v.object({
@@ -46,7 +47,7 @@ export async function assertIsCreatorOrAdmin(
 }
 
 export async function assertUserCanSeeIssue(
-  tx: Transaction<typeof schema, unknown>,
+  tx: Transaction,
   authData: AuthData,
   issueID: string,
 ) {
@@ -61,7 +62,7 @@ export async function assertUserCanSeeIssue(
 }
 
 export async function assertUserCanSeeComment(
-  tx: Transaction<typeof schema, unknown>,
+  tx: Transaction,
   authData: AuthData,
   commentID: string,
 ) {
