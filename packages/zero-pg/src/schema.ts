@@ -3,7 +3,7 @@ import type {ServerSchema} from '../../z2s/src/schema.ts';
 import {formatPg, sql} from '../../z2s/src/sql.ts';
 import {dataTypeToZqlValueType} from '../../zero-cache/src/types/pg.ts';
 import type {Schema} from '../../zero-schema/src/builder/schema-builder.ts';
-import type {ConnectionTransaction} from './zql-pg-database.ts';
+import type {ConnectionTransaction} from './connection.ts';
 
 export type ServerSchemaRow = {
   schema: string;

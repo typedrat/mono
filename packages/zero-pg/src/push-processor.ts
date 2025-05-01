@@ -13,7 +13,6 @@ import {
 } from '../../zero-protocol/src/push.ts';
 import {splitMutatorKey} from '../../zql/src/mutate/custom.ts';
 import {createLogContext} from './logging.ts';
-import type {CustomMutatorDefs} from './custom.ts';
 
 export type Params = v.Infer<typeof pushParamsSchema>;
 
@@ -44,6 +43,20 @@ export interface Database<Transaction> {
     ) => Promise<MutationResponse>,
   ) => Promise<MutationResponse>;
 }
+
+export type CustomMutatorDefs<Transaction> = {
+  [namespaceOrKey: string]:
+    | {
+        [key: string]: CustomMutatorImpl<Transaction>;
+      }
+    | CustomMutatorImpl<Transaction>;
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type CustomMutatorImpl<Transaction, TArgs = any> = (
+  tx: Transaction,
+  args: TArgs,
+) => Promise<void>;
 
 /**
  * PushProcessor is our canonical implementation of the custom mutator push

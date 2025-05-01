@@ -1,6 +1,6 @@
 import type {JSONValue} from '../../shared/src/json.ts';
 import type {Row} from '../../zql/src/mutate/custom.ts';
-import type {Connection} from './zql-pg-database.ts';
+import type {Connection, ConnectionTransaction} from './connection.ts';
 
 /**
  * Subset of the postgres lib's `Transaction` interface that we use.
@@ -17,7 +17,7 @@ export type PostgresLibSQL = {
   begin<R>(fn: (tx: PostgresLibTransaction) => Promise<R>): Promise<R>;
 };
 
-class PostgresTransaction {
+class PostgresTransaction implements ConnectionTransaction {
   readonly #lib: PostgresLibTransaction;
 
   constructor(lib: PostgresLibTransaction) {
@@ -34,13 +34,6 @@ export class PostgresConnection implements Connection {
   constructor(lib: PostgresLibSQL) {
     this.#lib = lib;
   }
-
-  /*
-  TODO: needed?
-  query(sql: string, params: unknown[]): Promise<Row[]> {
-    return this.#lib.unsafe(sql, params as JSONValue[]);
-  }
-  */
 
   transact<T>(fn: (tx: PostgresTransaction) => Promise<T>): Promise<T> {
     return this.#lib.begin(libTx =>

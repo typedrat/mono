@@ -8,7 +8,7 @@ import type {SchemaQuery} from '../../zql/src/mutate/custom.ts';
 import {AbstractQuery, defaultFormat} from '../../zql/src/query/query-impl.ts';
 import type {HumanReadable, PullRow, Query} from '../../zql/src/query/query.ts';
 import type {TypedView} from '../../zql/src/query/typed-view.ts';
-import type {ConnectionTransaction} from './zql-pg-database.ts';
+import type {ConnectionTransaction} from './connection.ts';
 
 export function makeSchemaQuery<S extends Schema>(
   schema: S,
