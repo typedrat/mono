@@ -31,21 +31,25 @@ import type {ZeroLogContext} from './zero-log-context.ts';
 /**
  * The shape which a user's custom mutator definitions must conform to.
  */
-export type CustomMutatorDefs<S extends Schema> = {
+export type CustomMutatorDefs<S extends Schema, T = ClientTransaction<S>> = {
   [namespaceOrKey: string]:
     | {
-        [key: string]: CustomMutatorImpl<S>;
+        [key: string]: CustomMutatorImpl<S, T>;
       }
-    | CustomMutatorImpl<S>;
+    | CustomMutatorImpl<S, T>;
 };
 
 export type PromiseWithServerResult = Promise<void> & {
   server: Promise<MutationResult>;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type CustomMutatorImpl<S extends Schema, TArgs = any> = (
-  tx: ClientTransaction<S>,
+export type CustomMutatorImpl<
+  S extends Schema,
+  T = ClientTransaction<S>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  TArgs = any,
+> = (
+  tx: T,
   // TODO: many args. See commit: 52657c2f934b4a458d628ea77e56ce92b61eb3c6 which did have many args.
   // The issue being that it will be a protocol change to support varargs.
   args: TArgs,

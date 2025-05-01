@@ -100,6 +100,7 @@ export type {
   InsertValue,
   UpdateValue,
   UpsertValue,
+  ClientTransaction,
 } from '../../zql/src/mutate/custom.ts';
 export {escapeLike} from '../../zql/src/query/escape-like.ts';
 export type {

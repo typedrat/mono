@@ -1,6 +1,11 @@
-import {schema} from './schema.ts';
+import {schema, type Schema} from './schema.ts';
 import {assert} from '../../../packages/shared/src/asserts.ts';
-import type {UpdateValue, Transaction, CustomMutatorDefs} from '@rocicorp/zero';
+import type {
+  UpdateValue,
+  ClientTransaction,
+  CustomMutatorDefs,
+} from '@rocicorp/zero';
+import {ZQLPGTransaction} from '@rocicorp/zero/pg';
 import {
   assertIsCreatorOrAdmin,
   assertUserCanSeeIssue,
@@ -155,10 +160,13 @@ export function createMutators(authData: AuthData | undefined) {
         await tx.mutate.userPref.upsert({key, value, userID});
       },
     },
-  } as const satisfies CustomMutatorDefs<typeof schema>;
+  } as const satisfies CustomMutatorDefs<
+    Schema,
+    ClientTransaction<Schema> | ZQLPGTransaction<Schema>
+  >;
 
   async function addEmoji(
-    tx: Transaction<typeof schema, unknown>,
+    tx: ClientTransaction<Schema> | ZQLPGTransaction<Schema>,
     subjectType: 'issue' | 'comment',
     {id, unicode, annotation, subjectID, created}: AddEmojiArgs,
   ) {

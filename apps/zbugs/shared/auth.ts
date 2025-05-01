@@ -1,4 +1,4 @@
-import type {Query, Transaction} from '@rocicorp/zero';
+import type {Query} from '@rocicorp/zero';
 import type {schema} from './schema.ts';
 import {must} from '../../../packages/shared/src/must.ts';
 import {assert} from '../../../packages/shared/src/asserts.ts';
