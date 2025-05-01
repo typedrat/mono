@@ -1,8 +1,4 @@
-import {
-  PushProcessor,
-  ZQLDatabaseProvider,
-  ZQLPostgresJSAdapter,
-} from '@rocicorp/zero/pg';
+import {PushProcessor} from '@rocicorp/zero/pg';
 import postgres from 'postgres';
 import {schema} from '../shared/schema.ts';
 import {createServerMutators, type PostCommitTask} from './server-mutators.ts';

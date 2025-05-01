@@ -5,7 +5,7 @@ import type {
   ClientTransaction,
   CustomMutatorDefs,
 } from '@rocicorp/zero';
-import {ZQLPGTransaction} from '@rocicorp/zero/pg';
+import {PGZQLTransaction} from '@rocicorp/zero/pg';
 import {
   assertIsCreatorOrAdmin,
   assertUserCanSeeIssue,
@@ -37,8 +37,6 @@ export type AddCommentArgs = {
   body: string;
   created: number;
 };
-
-export type Transaction = ClientTransaction<Schema> | ZQLPGTransaction<Schema>;
 
 export function createMutators(authData: AuthData | undefined) {
   return {

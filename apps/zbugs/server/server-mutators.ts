@@ -3,9 +3,10 @@ import {
   type CreateIssueArgs,
   type AddEmojiArgs,
   type AddCommentArgs,
+  type Transaction,
 } from '../shared/mutators.ts';
 import {type CustomMutatorDefs, type UpdateValue} from '@rocicorp/zero';
-import {schema} from '../shared/schema.ts';
+import {schema, type Schema} from '../shared/schema.ts';
 import {notify} from './notify.ts';
 import {assert} from '../../../packages/shared/src/asserts.ts';
 import {type AuthData} from '../shared/auth.ts';
@@ -178,5 +179,5 @@ export function createServerMutators(
         );
       },
     },
-  } as const satisfies CustomMutatorDefs<typeof schema>;
+  } as const satisfies CustomMutatorDefs<Schema, Transaction>;
 }
