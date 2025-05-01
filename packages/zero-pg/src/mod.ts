@@ -16,5 +16,5 @@ export {
   PushProcessor,
   type Database,
   type TransactParams,
-  type TransactionHooks,
+  type TransactHooks as TransactionHooks,
 } from './push-processor.ts';

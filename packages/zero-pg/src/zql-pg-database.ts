@@ -1,6 +1,6 @@
 import type {
   Database,
-  TransactionHooks,
+  TransactHooks,
   TransactParams,
 } from './push-processor.ts';
 import type {SchemaCRUD, SchemaQuery} from '../../zql/src/mutate/custom.ts';
@@ -53,7 +53,7 @@ export class ZQLPGDatabase<S extends Schema>
     args: TransactParams,
     callback: (
       tx: ZQLPGTransaction<S>,
-      hooks: TransactionHooks,
+      hooks: TransactHooks,
     ) => Promise<MutationResponse>,
   ): Promise<MutationResponse> {
     return this.#connection.transact(async connectTx => {

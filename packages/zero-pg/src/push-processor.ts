@@ -17,7 +17,7 @@ import type {CustomMutatorDefs} from './custom.ts';
 
 export type Params = v.Infer<typeof pushParamsSchema>;
 
-export interface TransactionHooks {
+export interface TransactHooks {
   incrementLMID(): Promise<{lmid: bigint}>;
 }
 
@@ -40,12 +40,10 @@ export interface Database<Transaction> {
     args: TransactParams,
     callback: (
       tx: Transaction,
-      hooks: TransactionHooks,
+      hooks: TransactHooks,
     ) => Promise<MutationResponse>,
   ) => Promise<MutationResponse>;
 }
-
-type ExtractTransactionType<D> = D extends Database<infer T> ? T : never;
 
 /**
  * PushProcessor is our canonical implementation of the custom mutator push
@@ -56,8 +54,9 @@ type ExtractTransactionType<D> = D extends Database<infer T> ? T : never;
  * database they want.
  */
 export class PushProcessor<
-  D extends Database<ExtractTransactionType<D>>,
-  MD extends CustomMutatorDefs<ExtractTransactionType<D>>,
+  T,
+  D extends Database<T>,
+  MD extends CustomMutatorDefs<T>,
 > {
   readonly #db: D;
   readonly #lc: LogContext;
@@ -239,11 +238,7 @@ export class PushProcessor<
     );
   }
 
-  #dispatchMutation(
-    tx: ExtractTransactionType<D>,
-    mutators: MD,
-    m: Mutation,
-  ): Promise<void> {
+  #dispatchMutation(tx: T, mutators: MD, m: Mutation): Promise<void> {
     const [namespace, name] = splitMutatorKey(m.name);
     if (name === undefined) {
       const mutator = mutators[namespace];
@@ -269,7 +264,7 @@ export class PushProcessor<
 
   async #checkAndIncrementLastMutationID(
     lc: LogContext,
-    hooks: TransactionHooks,
+    hooks: TransactHooks,
     clientID: string,
     receivedMutationID: number,
   ) {
