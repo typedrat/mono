@@ -415,6 +415,7 @@ function* generateWithConstraint(
 
 function* generateWithFilter(it: Stream<Node>, filter: (row: Row) => boolean) {
   for (const node of it) {
+    console.log(node.row);
     if (filter(node.row)) {
       yield node;
     }

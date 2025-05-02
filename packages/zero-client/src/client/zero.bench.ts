@@ -1,5 +1,5 @@
 import {resolver} from '@rocicorp/resolver';
-import {bench, describe, expect} from 'vitest';
+import {afterAll, beforeAll, bench, describe, expect} from 'vitest';
 import type {Row} from '../../../zql/src/query/query.ts';
 import {getInternalReplicacheImplForTesting, Zero} from './zero.ts';
 
@@ -47,108 +47,154 @@ async function withZero(
   }
   await z.close();
 }
-const N = 1_000;
+const N = 10_000;
 
-describe('basics', () => {
-  bench(
-    `All ${N} rows x 10 columns (numbers)`,
-    () =>
-      withZero(async z => {
-        const {promise, resolve} = resolver<readonly UserRow[]>();
-        const m = z.query.user.materialize();
-        m.addListener(data => {
-          if (data.length === N) {
-            resolve(data as readonly UserRow[]);
-          }
-        });
-        const rows = await promise;
-        expect(rows.reduce((sum, row) => sum + row.a, 0)).toBe(
-          ((N - 1) / 2) * N,
-        );
-        m.destroy();
-      }),
-    {
-      throws: true,
-      setup: () =>
-        withZero(async z => {
-          await z.mutateBatch(async m => {
-            for (let i = 0; i < N; i++) {
-              await m.user.insert({
-                a: i,
-                b: i,
-                c: i,
-                d: i,
-                e: i,
-                f: i,
-                g: i,
-                h: i,
-                i,
-                j: i,
-              });
-            }
-          });
-        }, true),
+// describe('basics', () => {
+//   bench(
+//     `All ${N} rows x 10 columns (numbers)`,
+//     () =>
+//       withZero(async z => {
+//         const {promise, resolve} = resolver<readonly UserRow[]>();
+//         const m = z.query.user.materialize();
+//         m.addListener(data => {
+//           if (data.length === N) {
+//             resolve(data as readonly UserRow[]);
+//           }
+//         });
+//         const rows = await promise;
+//         expect(rows.reduce((sum, row) => sum + row.a, 0)).toBe(
+//           ((N - 1) / 2) * N,
+//         );
+//         m.destroy();
+//       }),
+//     {
+//       throws: true,
+//       setup: () =>
+//         withZero(async z => {
+//           await z.mutateBatch(async m => {
+//             for (let i = 0; i < N; i++) {
+//               await m.user.insert({
+//                 a: i,
+//                 b: i,
+//                 c: i,
+//                 d: i,
+//                 e: i,
+//                 f: i,
+//                 g: i,
+//                 h: i,
+//                 i,
+//                 j: i,
+//               });
+//             }
+//           });
+//         }, true),
 
-      teardown: () =>
-        withZero(async z => {
-          await z.mutateBatch(async m => {
-            for (let i = 0; i < N; i++) {
-              await m.user.delete({a: i});
-            }
-          });
-        }, true),
-    },
-  );
-});
+//       teardown: () =>
+//         withZero(async z => {
+//           await z.mutateBatch(async m => {
+//             for (let i = 0; i < N; i++) {
+//               await m.user.delete({a: i});
+//             }
+//           });
+//         }, true),
+//     },
+//   );
+// });
 
 describe('with filter', () => {
-  bench(
-    `Lower rows ${N / 2} x 10 columns (numbers)`,
-    () =>
-      withZero(async z => {
-        const {promise, resolve} = resolver<readonly UserRow[]>();
-        const m = z.query.user.where('a', '<', N / 2).materialize();
-        m.addListener(data => {
-          if (data.length === N / 2) {
-            resolve(data as readonly UserRow[]);
-          }
-        });
-        const rows = await promise;
-        expect(rows.reduce((sum, row) => sum + row.a, 0)).toBe(
-          (((N / 2 - 1) / 2) * N) / 2,
-        );
-        m.destroy();
-      }),
+  // bench(
+  //   `Lower rows ${N / 2} x 10 columns (numbers)`,
+  //   () =>
+  //     withZero(async z => {
+  //       const {promise, resolve} = resolver<readonly UserRow[]>();
+  //       const m = z.query.user.where('a', '<', N / 2).materialize();
+  //       m.addListener(data => {
+  //         if (data.length === N / 2) {
+  //           resolve(data as readonly UserRow[]);
+  //         }
+  //       });
+  //       const rows = await promise;
+  //       expect(rows.reduce((sum, row) => sum + row.a, 0)).toBe(
+  //         (((N / 2 - 1) / 2) * N) / 2,
+  //       );
+  //       m.destroy();
+  //     }),
+  //   {
+  //     throws: true,
+  //     setup: () =>
+  //       withZero(async z => {
+  //         await z.mutateBatch(async m => {
+  //           for (let i = 0; i < N; i++) {
+  //             await m.user.insert({
+  //               a: i,
+  //               b: i,
+  //               c: i,
+  //               d: i,
+  //               e: i,
+  //               f: i,
+  //               g: i,
+  //               h: i,
+  //               i,
+  //               j: i,
+  //             });
+  //           }
+  //         });
+  //       }, true),
+  //     teardown: () =>
+  //       withZero(async z => {
+  //         await z.mutateBatch(async m => {
+  //           for (let i = 0; i < N; i++) {
+  //             await m.user.delete({a: i});
+  //           }
+  //         });
+  //       }, true),
+  //   },
+  // );
+});
+
+describe('pk compare', async () => {
+  const z = new Zero({
+    schema,
+    server: null,
+    userID,
+    kvStore: 'idb',
+  });
+  await z.mutateBatch(async m => {
+    for (let i = 0; i < N; i++) {
+      await m.user.insert({
+        a: i,
+        b: i,
+        c: i,
+        d: i,
+        e: i,
+        f: i,
+        g: i,
+        h: i,
+        i,
+        j: i,
+      });
+    }
+  });
+  await getInternalReplicacheImplForTesting(z).persist();
+
+  bench.only(
+    `id = N`,
+    async () => {
+      const {promise, resolve} = resolver<readonly UserRow[]>();
+      const value = 0;
+      const m = z.query.user.where('a', value).materialize();
+      m.addListener(data => {
+        if (data.length === 1) {
+          resolve(data as readonly UserRow[]);
+        }
+      });
+      const rows = await promise;
+      expect(rows[0].a).toBe(value);
+      m.destroy();
+    },
     {
       throws: true,
-      setup: () =>
-        withZero(async z => {
-          await z.mutateBatch(async m => {
-            for (let i = 0; i < N; i++) {
-              await m.user.insert({
-                a: i,
-                b: i,
-                c: i,
-                d: i,
-                e: i,
-                f: i,
-                g: i,
-                h: i,
-                i,
-                j: i,
-              });
-            }
-          });
-        }, true),
-
-      teardown: () =>
-        withZero(async z => {
-          await z.mutateBatch(async m => {
-            for (let i = 0; i < N; i++) {
-              await m.user.delete({a: i});
-            }
-          });
-        }, true),
+      iterations: 1,
     },
   );
 });
