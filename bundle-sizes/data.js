@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1745015610555,
+  "lastUpdate": 1746225830138,
   "repoUrl": "https://github.com/rocicorp/mono",
   "entries": {
     "Bundle Sizes": [
@@ -52461,6 +52461,50 @@ window.BENCHMARK_DATA = {
           {
             "name": "Size of replicache.min.mjs.br (Brotli compressed)",
             "value": 31533,
+            "unit": "bytes"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "mlaw@roci.dev",
+            "name": "Matt Wonlaw",
+            "username": "tantaman"
+          },
+          "committer": {
+            "email": "aaron@aaronboodman.com",
+            "name": "Aaron Boodman",
+            "username": "aboodman"
+          },
+          "distinct": true,
+          "id": "3b8d31b3008c136aad054786db5698c2c988044c",
+          "message": "feat(zero-client): server and client promise separation",
+          "timestamp": "2025-05-02T12:42:49-10:00",
+          "tree_id": "59fcefc6043ac11aa674d97862aa1c7ff5514a35",
+          "url": "https://github.com/rocicorp/mono/commit/3b8d31b3008c136aad054786db5698c2c988044c"
+        },
+        "date": 1746225817161,
+        "tool": "customSmallerIsBetter",
+        "benches": [
+          {
+            "name": "Size of replicache.mjs",
+            "value": 300339,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.mjs.br (Brotli compressed)",
+            "value": 54143,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs",
+            "value": 110596,
+            "unit": "bytes"
+          },
+          {
+            "name": "Size of replicache.min.mjs.br (Brotli compressed)",
+            "value": 31684,
             "unit": "bytes"
           }
         ]
