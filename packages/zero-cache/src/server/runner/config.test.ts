@@ -1,11 +1,264 @@
 import {stripVTControlCharacters as stripAnsi} from 'node:util';
 import {expect, test, vi} from 'vitest';
-import {
-  parseOptions,
-  parseOptionsAdvanced,
-} from '../../../shared/src/options.ts';
-import {INVALID_APP_ID_MESSAGE} from '../types/shards.ts';
-import {zeroOptions} from './zero-config.ts';
+import {parseOptions} from '../../../../shared/src/options.ts';
+import {getMultiZeroConfig, multiConfigSchema} from './config.ts';
+
+test('parse options', () => {
+  expect(
+    getMultiZeroConfig(
+      {
+        ['ZERO_UPSTREAM_DB']: 'foo',
+      },
+      [
+        '--tenants-json',
+        JSON.stringify({
+          tenants: [
+            {
+              id: 'ten-boo',
+              host: 'Normalize.ME',
+              path: 'tenboo',
+              env: {
+                ['ZERO_REPLICA_FILE']: 'tenboo.db',
+                ['ZERO_CVR_DB']: 'foo',
+                ['ZERO_CHANGE_DB']: 'foo',
+                ['ZERO_APP_ID']: 'foo',
+              },
+            },
+            {
+              id: 'ten_bar',
+              path: '/tenbar',
+              env: {
+                ['ZERO_REPLICA_FILE']: 'tenbar.db',
+                ['ZERO_CVR_DB']: 'bar',
+                ['ZERO_CHANGE_DB']: 'bar',
+                ['ZERO_APP_ID']: 'bar',
+              },
+            },
+            {
+              id: 'tenbaz-123',
+              path: '/tenbaz',
+              env: {
+                ['ZERO_REPLICA_FILE']: 'tenbar.db',
+                ['ZERO_UPSTREAM_DB']: 'overridden',
+                ['ZERO_CVR_DB']: 'baz',
+                ['ZERO_CHANGE_DB']: 'baz',
+                ['ZERO_APP_ID']: 'foo',
+              },
+            },
+          ],
+        }),
+      ],
+    ),
+  ).toMatchInlineSnapshot(`
+    {
+      "config": {
+        "app": {
+          "id": "zero",
+          "publications": [],
+        },
+        "auth": {},
+        "autoReset": true,
+        "change": {
+          "db": "foo",
+          "maxConns": 5,
+        },
+        "cvr": {
+          "db": "foo",
+          "maxConns": 30,
+        },
+        "initialSync": {
+          "rowBatchSize": 10000,
+          "tableCopyWorkers": 5,
+        },
+        "lazyStartup": false,
+        "litestream": {
+          "checkpointThresholdMB": 40,
+          "configPath": "./src/services/litestream/config.yml",
+          "incrementalBackupIntervalMinutes": 15,
+          "logLevel": "warn",
+          "multipartConcurrency": 48,
+          "multipartSize": 16777216,
+          "restoreParallelism": 48,
+          "snapshotBackupIntervalHours": 12,
+        },
+        "log": {
+          "format": "text",
+          "ivmSampling": 5000,
+          "level": "info",
+          "slowHydrateThreshold": 100,
+          "slowRowThreshold": 2,
+        },
+        "perUserMutationLimit": {
+          "windowMs": 60000,
+        },
+        "port": 4848,
+        "push": {},
+        "replica": {},
+        "shard": {
+          "num": 0,
+        },
+        "targetClientRowCount": 20000,
+        "tenants": [
+          {
+            "env": {
+              "ZERO_APP_ID": "foo",
+              "ZERO_CHANGE_DB": "foo",
+              "ZERO_CVR_DB": "foo",
+              "ZERO_REPLICA_FILE": "tenboo.db",
+            },
+            "host": "normalize.me",
+            "id": "ten-boo",
+            "path": "/tenboo/",
+          },
+          {
+            "env": {
+              "ZERO_APP_ID": "bar",
+              "ZERO_CHANGE_DB": "bar",
+              "ZERO_CVR_DB": "bar",
+              "ZERO_REPLICA_FILE": "tenbar.db",
+            },
+            "id": "ten_bar",
+            "path": "/tenbar/",
+          },
+          {
+            "env": {
+              "ZERO_APP_ID": "foo",
+              "ZERO_CHANGE_DB": "baz",
+              "ZERO_CVR_DB": "baz",
+              "ZERO_REPLICA_FILE": "tenbar.db",
+              "ZERO_UPSTREAM_DB": "overridden",
+            },
+            "id": "tenbaz-123",
+            "path": "/tenbaz/",
+          },
+        ],
+        "upstream": {
+          "db": "foo",
+          "maxConns": 20,
+          "type": "pg",
+        },
+      },
+      "env": {
+        "ZERO_APP_ID": "zero",
+        "ZERO_APP_PUBLICATIONS": "",
+        "ZERO_AUTO_RESET": "true",
+        "ZERO_CHANGE_MAX_CONNS": "5",
+        "ZERO_CVR_MAX_CONNS": "30",
+        "ZERO_INITIAL_SYNC_ROW_BATCH_SIZE": "10000",
+        "ZERO_INITIAL_SYNC_TABLE_COPY_WORKERS": "5",
+        "ZERO_LAZY_STARTUP": "false",
+        "ZERO_LITESTREAM_CHECKPOINT_THRESHOLD_MB": "40",
+        "ZERO_LITESTREAM_CONFIG_PATH": "./src/services/litestream/config.yml",
+        "ZERO_LITESTREAM_INCREMENTAL_BACKUP_INTERVAL_MINUTES": "15",
+        "ZERO_LITESTREAM_LOG_LEVEL": "warn",
+        "ZERO_LITESTREAM_MULTIPART_CONCURRENCY": "48",
+        "ZERO_LITESTREAM_MULTIPART_SIZE": "16777216",
+        "ZERO_LITESTREAM_RESTORE_PARALLELISM": "48",
+        "ZERO_LITESTREAM_SNAPSHOT_BACKUP_INTERVAL_HOURS": "12",
+        "ZERO_LOG_FORMAT": "text",
+        "ZERO_LOG_IVM_SAMPLING": "5000",
+        "ZERO_LOG_LEVEL": "info",
+        "ZERO_LOG_SLOW_HYDRATE_THRESHOLD": "100",
+        "ZERO_LOG_SLOW_ROW_THRESHOLD": "2",
+        "ZERO_PER_USER_MUTATION_LIMIT_WINDOW_MS": "60000",
+        "ZERO_PORT": "4848",
+        "ZERO_SHARD_NUM": "0",
+        "ZERO_TARGET_CLIENT_ROW_COUNT": "20000",
+        "ZERO_TENANTS_JSON": "{"tenants":[{"id":"ten-boo","host":"Normalize.ME","path":"tenboo","env":{"ZERO_REPLICA_FILE":"tenboo.db","ZERO_CVR_DB":"foo","ZERO_CHANGE_DB":"foo","ZERO_APP_ID":"foo"}},{"id":"ten_bar","path":"/tenbar","env":{"ZERO_REPLICA_FILE":"tenbar.db","ZERO_CVR_DB":"bar","ZERO_CHANGE_DB":"bar","ZERO_APP_ID":"bar"}},{"id":"tenbaz-123","path":"/tenbaz","env":{"ZERO_REPLICA_FILE":"tenbar.db","ZERO_UPSTREAM_DB":"overridden","ZERO_CVR_DB":"baz","ZERO_CHANGE_DB":"baz","ZERO_APP_ID":"foo"}}]}",
+        "ZERO_UPSTREAM_DB": "foo",
+        "ZERO_UPSTREAM_MAX_CONNS": "20",
+        "ZERO_UPSTREAM_TYPE": "pg",
+      },
+    }
+  `);
+});
+
+test.each([
+  [
+    'Only a single path component may be specified',
+    [
+      {
+        id: 'tenboo',
+        path: '/too/many-slashes',
+        env: {
+          ['ZERO_REPLICA_FILE']: 'foo.db',
+          ['ZERO_CVR_DB']: 'foo',
+          ['ZERO_CHANGE_DB']: 'foo',
+        },
+      },
+    ],
+  ],
+  [
+    'Unexpected property ZERO_UPSTREAM_DBZ',
+    [
+      {
+        id: 'tenboo',
+        path: '/zero',
+        env: {
+          ['ZERO_UPSTREAM_DBZ']: 'oops',
+          ['ZERO_REPLICA_FILE']: 'boo.db',
+          ['ZERO_CVR_DB']: 'boo',
+          ['ZERO_CHANGE_DB']: 'boo',
+        },
+      },
+    ],
+  ],
+  [
+    'Must be non-empty',
+    [
+      {
+        id: '',
+        path: '/foo',
+        env: {
+          ['ZERO_REPLICA_FILE']: 'foo.db',
+          ['ZERO_CVR_DB']: 'foo',
+          ['ZERO_CHANGE_DB']: 'foo',
+        },
+      },
+    ],
+  ],
+  [
+    'contain only alphanumeric characters, underscores, and hyphens',
+    [
+      {
+        id: 'id/with/slashes',
+        path: '/foo',
+        env: {
+          ['ZERO_REPLICA_FILE']: 'foo.db',
+          ['ZERO_CVR_DB']: 'foo',
+          ['ZERO_CHANGE_DB']: 'foo',
+        },
+      },
+    ],
+  ],
+  [
+    'Multiple tenants with ID',
+    [
+      {
+        id: 'foo',
+        path: '/foo',
+        env: {
+          ['ZERO_REPLICA_FILE']: 'foo.db',
+          ['ZERO_CVR_DB']: 'foo',
+          ['ZERO_CHANGE_DB']: 'foo',
+        },
+      },
+      {
+        id: 'foo',
+        path: '/bar',
+        env: {
+          ['ZERO_REPLICA_FILE']: 'bar.db',
+          ['ZERO_CVR_DB']: 'bar',
+          ['ZERO_CHANGE_DB']: 'bar',
+        },
+      },
+    ],
+  ],
+])('%s', (errMsg, tenants) => {
+  expect(() =>
+    getMultiZeroConfig({}, ['--tenants-json', JSON.stringify({tenants})]),
+  ).toThrowError(errMsg);
+});
 
 class ExitAfterUsage extends Error {}
 const exit = () => {
@@ -16,7 +269,7 @@ const exit = () => {
 test('zero-cache --help', () => {
   const logger = {info: vi.fn()};
   expect(() =>
-    parseOptions(zeroOptions, ['--help'], 'ZERO_', {}, logger, exit),
+    parseOptions(multiConfigSchema, ['--help'], 'ZERO_', {}, logger, exit),
   ).toThrow(ExitAfterUsage);
   expect(logger.info).toHaveBeenCalled();
   expect(stripAnsi(logger.info.mock.calls[0][0])).toMatchInlineSnapshot(`
@@ -353,57 +606,50 @@ test('zero-cache --help', () => {
                                                                                                                                                                   
                                                                 Currently only supported in single-node mode.                                                     
                                                                                                                                                                   
+     --server-version string                                    optional                                                                                          
+       ZERO_SERVER_VERSION env                                                                                                                                    
+                                                                The version string outputted to logs when the server starts up.                                   
+                                                                                                                                                                  
+     --tenants-json string                                      optional                                                                                          
+       ZERO_TENANTS_JSON env                                                                                                                                      
+                                                                JSON encoding of per-tenant configs for running the server in multi-tenant mode:                  
+                                                                                                                                                                  
+                                                                {                                                                                                 
+                                                                  /**                                                                                             
+                                                                   * Requests to the main application port are dispatched to the first tenant                     
+                                                                   * with a matching host and path. If both host and path are specified,                          
+                                                                   * both must match for the request to be dispatched to that tenant.                             
+                                                                   *                                                                                              
+                                                                   * Requests can also be sent directly to the ZERO_PORT specified                                
+                                                                   * in a tenant's env overrides. In this case, no host or path                                   
+                                                                   * matching is necessary.                                                                       
+                                                                   */                                                                                             
+                                                                  tenants: {                                                                                      
+                                                                     /**                                                                                          
+                                                                      * Unique per-tenant ID used internally for multi-node dispatch.                             
+                                                                      *                                                                                           
+                                                                      * The ID may only contain alphanumeric characters, underscores, and hyphens.                
+                                                                      * Note that changing the ID may result in temporary disruption in multi-node                
+                                                                      * mode, when the configs in the view-syncer and replication-manager differ.                 
+                                                                      */                                                                                          
+                                                                     id: string;                                                                                  
+                                                                     host?: string;  // case-insensitive full Host: header match                                  
+                                                                     path?: string;  // first path component, with or without leading slash                       
+                                                                                                                                                                  
+                                                                     /**                                                                                          
+                                                                      * Options are inherited from the main application (e.g. args and ENV) by default,           
+                                                                      * and are overridden by values in the tenant's env object.                                  
+                                                                      */                                                                                          
+                                                                     env: {                                                                                       
+                                                                       ZERO_REPLICA_FILE: string                                                                  
+                                                                       ZERO_UPSTREAM_DB: string                                                                   
+                                                                       ZERO_CVR_DB: string                                                                        
+                                                                       ZERO_CHANGE_DB: string                                                                     
+                                                                       ...                                                                                        
+                                                                     };                                                                                           
+                                                                  }[];                                                                                            
+                                                                }                                                                                                 
+                                                                                                                                                                  
     "
   `);
-});
-
-test.each([['has/slashes'], ['has-dashes'], ['has.dots']])(
-  '--app-id %s',
-  appID => {
-    const logger = {info: vi.fn()};
-    expect(() =>
-      parseOptionsAdvanced(
-        zeroOptions,
-        ['--app-id', appID],
-        'ZERO_',
-        false, // allow unknown
-        true, // allow partial
-        {},
-        logger,
-        exit,
-      ),
-    ).toThrowError(INVALID_APP_ID_MESSAGE);
-  },
-);
-
-test.each([['isok'], ['has_underscores'], ['1'], ['123']])(
-  '--app-id %s',
-  appID => {
-    const {config} = parseOptionsAdvanced(
-      zeroOptions,
-      ['--app-id', appID],
-      'ZERO_',
-      false,
-      true,
-    );
-    expect(config.app.id).toBe(appID);
-  },
-);
-
-test('--shard-id disallowed', () => {
-  const logger = {info: vi.fn()};
-  expect(() =>
-    parseOptionsAdvanced(
-      zeroOptions,
-      ['--shard-id', 'prod'],
-      'ZERO_',
-      false, // allow unknown
-      true, // allow partial
-      {},
-      logger,
-      exit,
-    ),
-  ).toThrowErrorMatchingInlineSnapshot(
-    `[Error: ZERO_SHARD_ID is deprecated. Please use ZERO_APP_ID instead.]`,
-  );
 });
