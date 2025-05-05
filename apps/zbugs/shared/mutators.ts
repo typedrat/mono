@@ -14,6 +14,7 @@ import {
   type AuthData,
   assertIsLoggedIn,
 } from './auth.ts';
+import type {PostgresTransaction} from '@rocicorp/zero/pg';
 
 export type AddEmojiArgs = {
   id: string;
@@ -37,6 +38,10 @@ export type AddCommentArgs = {
   body: string;
   created: number;
 };
+
+export type Transaction =
+  | ClientTransaction<Schema>
+  | PGZQLTransaction<Schema, PostgresTransaction>;
 
 export function createMutators(authData: AuthData | undefined) {
   return {
@@ -160,7 +165,10 @@ export function createMutators(authData: AuthData | undefined) {
         await tx.mutate.userPref.upsert({key, value, userID});
       },
     },
-  } as const satisfies CustomMutatorDefs<Schema, Transaction>;
+  } as const satisfies CustomMutatorDefs<
+    Schema,
+    ClientTransaction<Schema> | PGZQLTransaction<Schema, PostgresTransaction>
+  >;
 
   async function addEmoji(
     tx: Transaction,

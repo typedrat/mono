@@ -30,22 +30,25 @@ import {getServerSchema} from './schema.ts';
  * because the Transaction it passes to those mutators exposes the same ZQL
  * API as the client-side Transaction.
  */
-export class PGZQLDatabase<S extends Schema>
-  implements Database<PGZQLTransaction<S>>
+export class PGZQLDatabase<
+  S extends Schema,
+  CT extends ConnectionTransaction,
+  C extends Connection<CT>,
+> implements Database<PGZQLTransaction<S>>
 {
-  readonly #connection: Connection;
+  readonly #connection: C;
   readonly #schema: S;
 
   readonly #mutate: (
-    connectionTx: ConnectionTransaction,
+    connectionTx: CT,
     serverSchema: ServerSchema,
   ) => SchemaCRUD<S>;
   readonly #query: (
-    connectionTx: ConnectionTransaction,
+    connectionTx: CT,
     serverSchema: ServerSchema,
   ) => SchemaQuery<S>;
 
-  constructor(connection: Connection, schema: S) {
+  constructor(connection: C, schema: S) {
     this.#connection = connection;
     this.#schema = schema;
     this.#mutate = makeSchemaCRUD(schema);

@@ -1,5 +1,5 @@
-export interface Connection {
-  transact<R>(callback: (tx: ConnectionTransaction) => Promise<R>): Promise<R>;
+export interface Connection<CT extends ConnectionTransaction> {
+  transact<R>(callback: (tx: CT) => Promise<R>): Promise<R>;
 }
 
 export interface ConnectionTransaction {

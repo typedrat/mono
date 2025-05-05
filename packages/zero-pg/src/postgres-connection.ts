@@ -17,7 +17,7 @@ export type PostgresLibSQL = {
   begin<R>(fn: (tx: PostgresLibTransaction) => Promise<R>): Promise<R>;
 };
 
-class PostgresTransaction implements ConnectionTransaction {
+export class PostgresTransaction implements ConnectionTransaction {
   readonly #lib: PostgresLibTransaction;
 
   constructor(lib: PostgresLibTransaction) {
@@ -29,7 +29,7 @@ class PostgresTransaction implements ConnectionTransaction {
   }
 }
 
-export class PostgresConnection implements Connection {
+export class PostgresConnection implements Connection<PostgresTransaction> {
   readonly #lib: PostgresLibSQL;
   constructor(lib: PostgresLibSQL) {
     this.#lib = lib;
