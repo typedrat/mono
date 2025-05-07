@@ -56,53 +56,41 @@ export function ListPage({onReady}: {onReady: () => void}) {
     qs.get('sort')?.toLowerCase() === 'created' ? 'created' : 'modified';
   const sortDirection =
     qs.get('sortDir')?.toLowerCase() === 'asc' ? 'asc' : 'desc';
+  const open =
+    status === 'open' ? true : status === 'closed' ? false : undefined;
+  const pageSize = 10;
+  const [limit, setLimit] = useState(pageSize);
 
-  let q = z.query.issue
+  const q = z.query.issue
     .orderBy(sortField, sortDirection)
     .orderBy('id', sortDirection)
     .related('labels')
-    .related('viewState', q => q.where('userID', z.userID).one());
-
-  const open =
-    status === 'open' ? true : status === 'closed' ? false : undefined;
-
-  if (open !== undefined) {
-    q = q.where('open', open);
-  }
-
-  if (creator) {
-    q = q.whereExists('creator', q => q.where('login', creator));
-  }
-
-  if (assignee) {
-    q = q.whereExists('assignee', q => q.where('login', assignee));
-  }
-
-  if (textFilter) {
-    q = q.where(({or, cmp, exists}) =>
-      or(
-        cmp('title', 'ILIKE', `%${escapeLike(textFilter)}%`),
-        cmp('description', 'ILIKE', `%${escapeLike(textFilter)}%`),
-        exists('comments', q =>
-          q.where('body', 'ILIKE', `%${escapeLike(textFilter)}%`),
-        ),
+    .related('viewState', q => q.where('userID', z.userID).one())
+    .where(({and, cmp, exists, or}) =>
+      and(
+        open ? cmp('open', open) : undefined,
+        creator ? exists('creator', q => q.where('login', creator)) : undefined,
+        assignee
+          ? exists('assignee', q => q.where('login', assignee))
+          : undefined,
+        textFilter
+          ? or(
+              cmp('title', 'ILIKE', `%${escapeLike(textFilter)}%`),
+              cmp('description', 'ILIKE', `%${escapeLike(textFilter)}%`),
+              exists('comments', q =>
+                q.where('body', 'ILIKE', `%${escapeLike(textFilter)}%`),
+              ),
+            )
+          : undefined,
+        ...labels.map(label => exists('labels', q => q.where('name', label))),
       ),
-    );
-  }
+    )
+    .limit(limit);
 
-  for (const label of labels) {
-    q = q.whereExists('labels', q => q.where('name', label));
-  }
-
-  const pageSize = 10;
-  const [limit, setLimit] = useState(pageSize);
   useEffect(() => {
-    setLimit(pageSize);
     virtualizer.scrollToIndex(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q.hash()]);
-
-  q = q.limit(limit);
 
   // We don't want to cache every single keystroke. We already debounce
   // keystrokes for the URL, so we just reuse that.
