@@ -68,10 +68,6 @@ test.each([
     {version: '3', worker: 'replication', action: 'changes'},
   ],
   [
-    '/replication/v3/snapshot?id=foobar',
-    {version: '3', worker: 'replication', action: 'snapshot'},
-  ],
-  [
     '/api/replication/v1/changes',
     {base: 'api', worker: 'replication', version: '1', action: 'changes'},
   ],

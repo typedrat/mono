@@ -11,7 +11,7 @@ import {
 } from 'vitest';
 import WebSocket from 'ws';
 import {createSilentLogContext} from '../../../../shared/src/logging-test-utils.ts';
-import {getConnectionURI, testDBs} from '../../test/db.ts';
+import {testDBs} from '../../test/db.ts';
 import {type PostgresDB} from '../../types/pg.ts';
 import {inProcChannel} from '../../types/processes.ts';
 import {cdcSchema, type ShardID} from '../../types/shards.ts';
@@ -19,15 +19,14 @@ import type {Source} from '../../types/streams.ts';
 import {Subscription} from '../../types/subscription.ts';
 import {installWebSocketHandoff} from '../../types/websocket-handoff.ts';
 import {ReplicationMessages} from '../replicator/test-utils.ts';
-import type {BackupMonitor} from './backup-monitor.ts';
 import {
   ChangeStreamerHttpClient,
   ChangeStreamerHttpServer,
+  getSubscriberContext,
 } from './change-streamer-http.ts';
 import type {Downstream, SubscriberContext} from './change-streamer.ts';
 import {PROTOCOL_VERSION} from './change-streamer.ts';
 import {setupCDCTables} from './schema/tables.ts';
-import {type SnapshotMessage} from './snapshot.ts';
 
 const SHARD_ID = {
   appID: 'foo',
@@ -38,13 +37,9 @@ describe('change-streamer/http', () => {
   let lc: LogContext;
   let changeDB: PostgresDB;
   let downstream: Subscription<Downstream>;
-  let snapshotStream: Subscription<SnapshotMessage>;
   let subscribeFn: MockedFunction<
     (ctx: SubscriberContext) => Promise<Subscription<Downstream>>
   >;
-  let snapshotFn: MockedFunction<(id: string) => Subscription<SnapshotMessage>>;
-  let endReservationFn: MockedFunction<(id: string) => void>;
-
   let serverAddress: string;
   let dispatcherAddress: string;
   let connectionClosed: Promise<Downstream[]>;
@@ -59,44 +54,26 @@ describe('change-streamer/http', () => {
       INSERT INTO ${changeDB(cdcSchema(SHARD_ID))}."replicationState"
         ${changeDB({lastWatermark: '123'})}
     `;
-    changeStreamerClient = new ChangeStreamerHttpClient(
-      lc,
-      SHARD_ID,
-      getConnectionURI(changeDB),
-    );
+    changeStreamerClient = new ChangeStreamerHttpClient(lc, SHARD_ID, changeDB);
 
     const {promise, resolve: cleanup} = resolver<Downstream[]>();
     connectionClosed = promise;
     downstream = Subscription.create({cleanup});
-    snapshotStream = Subscription.create();
     subscribeFn = vi.fn();
-    snapshotFn = vi.fn();
-    endReservationFn = vi.fn();
 
     const [parent, receiver] = inProcChannel();
 
     const dispatcher = Fastify();
     installWebSocketHandoff(
       lc,
-      req => {
-        const {pathname} = new URL(req.url ?? '', 'http://unused/');
-        const action = pathname.substring(pathname.lastIndexOf('/') + 1);
-        return {payload: action, receiver};
-      },
+      req => ({payload: getSubscriberContext(req), receiver}),
       dispatcher.server,
     );
 
     // Run the server for real instead of using `injectWS()`, as that has a
     // different behavior for ws.close().
     const server = new ChangeStreamerHttpServer(lc, {port: 0}, parent);
-
-    server.setDelegates(
-      {subscribe: subscribeFn.mockResolvedValue(downstream)},
-      {
-        startSnapshotReservation: snapshotFn.mockReturnValue(snapshotStream),
-        endReservation: endReservationFn,
-      } as unknown as BackupMonitor,
-    );
+    server.setDelegate({subscribe: subscribeFn.mockResolvedValue(downstream)});
 
     const [dispatcherURL, serverURL] = await Promise.all([
       dispatcher.listen(),
@@ -150,7 +127,7 @@ describe('change-streamer/http', () => {
     );
 
     // Setting the delegate should result in responding to /keepalive
-    server.setDelegates({subscribe: vi.fn()}, null);
+    server.setDelegate({subscribe: vi.fn()});
 
     res = await fetch(`${baseURL}/`);
     expect(res.ok).toBe(true);
@@ -168,16 +145,12 @@ describe('change-streamer/http', () => {
         `/replication/v${PROTOCOL_VERSION}/changes`,
       ],
       [
-        'Missing taskID in snapshot request',
-        `/replication/v${PROTOCOL_VERSION}/snapshot`,
-      ],
-      [
         'invalid querystring - missing watermark',
         `/replication/v${PROTOCOL_VERSION}/changes?id=foo&replicaVersion=bar&initial=true`,
       ],
       [
         // Change the error message as necessary
-        `Cannot service client at protocol v4. Supported protocols: [v1 ... v3]`,
+        `Cannot service client at protocol v3. Supported protocols: [v1 ... v2]`,
         `/replication/v${PROTOCOL_VERSION + 1}/changes` +
           `?id=foo&replicaVersion=bar&watermark=123&initial=true`,
       ],
@@ -196,29 +169,9 @@ describe('change-streamer/http', () => {
   test.each([
     ['hostname', () => serverAddress],
     ['websocket handoff', () => dispatcherAddress],
-  ])('snapshot status streamed over websocket: %s', async (_name, addr) => {
-    await setChangeStreamerAddress(addr());
-    const sub = await changeStreamerClient.reserveSnapshot('foo-bar-id');
-
-    expect(snapshotFn).toHaveBeenCalledWith('foo-bar-id');
-
-    const status = [
-      'status',
-      {tag: 'status', backupURL: 's3://foo/bar'},
-    ] satisfies SnapshotMessage;
-
-    snapshotStream.push(status);
-
-    expect(await drain(1, sub)).toEqual([status]);
-  });
-
-  test.each([
-    ['hostname', () => serverAddress],
-    ['websocket handoff', () => dispatcherAddress],
-  ])('basic changes streamed over websocket: %s', async (_name, addr) => {
+  ])('basic messages streamed over websocket: %s', async (_name, addr) => {
     const ctx = {
       protocolVersion: PROTOCOL_VERSION,
-      taskID: 'foo-task',
       id: 'foo',
       mode: 'serving',
       replicaVersion: 'abc',
@@ -227,8 +180,6 @@ describe('change-streamer/http', () => {
     } as const;
     await setChangeStreamerAddress(addr());
     const sub = await changeStreamerClient.subscribe(ctx);
-
-    expect(endReservationFn).toHaveBeenCalledWith('foo-task');
 
     downstream.push(['begin', {tag: 'begin'}, {commitWatermark: '456'}]);
     downstream.push(['commit', {tag: 'commit'}, {watermark: '456'}]);
@@ -250,7 +201,6 @@ describe('change-streamer/http', () => {
     await setChangeStreamerAddress(serverAddress);
     const sub = await changeStreamerClient.subscribe({
       protocolVersion: PROTOCOL_VERSION,
-      taskID: 'foo-task',
       id: 'foo',
       mode: 'serving',
       replicaVersion: 'abc',
