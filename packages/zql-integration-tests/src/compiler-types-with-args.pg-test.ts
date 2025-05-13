@@ -32,7 +32,7 @@ import {Transaction} from '../../zero-pg/src/test/util.ts';
 
 const lc = createSilentLogContext();
 
-const DB_NAME = 'compiler-bigint';
+const DB_NAME = 'compiler-types-with-params';
 
 let pg: PostgresDB;
 let nodePostgres: Client;
@@ -47,7 +47,8 @@ CREATE TABLE IF NOT EXISTS "issue" (
 CREATE TABLE IF NOT EXISTS "comment" (
   "id" TEXT PRIMARY KEY,
   "issueId" TEXT NOT NULL,
-  "hash" BIGINT NOT NULL
+  "hash" char(6) NOT NULL,
+  "weight" numeric(10, 2) NOT NULL
 );
 `;
 
@@ -62,7 +63,8 @@ const comment = table('comment')
   .columns({
     id: string(),
     issueId: string(),
-    hash: number(),
+    hash: string(),
+    weight: number(),
   })
   .primaryKey('id');
 
@@ -80,8 +82,9 @@ const schema = createSchema({
 });
 type Schema = typeof schema;
 
-let issueQuery: Query<Schema, 'issue'>;
 let serverSchema: ServerSchema;
+
+let issueQuery: Query<Schema, 'issue'>;
 
 beforeAll(async () => {
   pg = await testDBs.create(DB_NAME, undefined, false);
@@ -101,7 +104,8 @@ beforeAll(async () => {
       id: `comment${i + 1}`,
       issueId: `issue${Math.ceil((i + 1) / 2)}`,
       // all but comment6 have values < Number.MAX_SAFE_INTEGER
-      hash: BigInt(Number.MAX_SAFE_INTEGER) - 4n + BigInt(i),
+      hash: `hash-${i + 1}`,
+      weight: Number(`${i + 1}.${i + 1}${i + 1}`),
     })),
   };
 
@@ -140,7 +144,7 @@ beforeAll(async () => {
     testData.issue,
   );
   expect(
-    mapResultToClientNames(commentPgRows.map(mapHash), schema, 'comment'),
+    mapResultToClientNames(commentPgRows.map(mapWeight), schema, 'comment'),
   ).toEqual(testData.comment);
 
   const [issueLiteRows, commentLiteRows] = [
@@ -159,9 +163,9 @@ beforeAll(async () => {
     issueLiteRows.map(row => fromSQLiteTypes(schema.tables.issue.columns, row)),
   ).toEqual(testData.issue);
   expect(
-    commentLiteRows
-      .map(row => fromSQLiteTypes(schema.tables.comment.columns, row))
-      .map(mapHash),
+    commentLiteRows.map(row =>
+      fromSQLiteTypes(schema.tables.comment.columns, row),
+    ),
   ).toEqual(testData.comment);
 
   const {host, port, user, pass} = pg.options;
@@ -179,16 +183,6 @@ afterAll(async () => {
   await nodePostgres.end();
 });
 
-function mapHash(commentRow: Record<string, unknown>) {
-  if ('hash' in commentRow) {
-    return {
-      ...commentRow,
-      hash: BigInt(commentRow.hash as string | number),
-    };
-  }
-  return commentRow;
-}
-
 describe('compiling ZQL to SQL', () => {
   describe('postgres.js', () => {
     t((query: string, args: unknown[]) =>
@@ -204,75 +198,10 @@ describe('compiling ZQL to SQL', () => {
   function t(
     runPgQuery: (query: string, args: unknown[]) => Promise<unknown[]>,
   ) {
-    test('All bigints in safe Number range', async () => {
-      const query = issueQuery.related('comments').limit(2);
-      const c = compile(serverSchema, schema, completedAST(query));
-      const sqlQuery = formatPgInternalConvert(c);
-      const pgResult = extractZqlResult(
-        await runPgQuery(sqlQuery.text, sqlQuery.values as JSONValue[]),
-      );
-      const zqlResult = mapResultToClientNames(await query, schema, 'issue');
-      expect(zqlResult).toEqualPg(pgResult);
-      expect(zqlResult).toMatchInlineSnapshot(`
-        [
-          {
-            "comments": [
-              {
-                "hash": 9007199254740987,
-                "id": "comment1",
-                "issueId": "issue1",
-              },
-              {
-                "hash": 9007199254740988,
-                "id": "comment2",
-                "issueId": "issue1",
-              },
-            ],
-            "id": "issue1",
-            "title": "Test Issue 1",
-          },
-          {
-            "comments": [
-              {
-                "hash": 9007199254740989,
-                "id": "comment3",
-                "issueId": "issue2",
-              },
-              {
-                "hash": 9007199254740990,
-                "id": "comment4",
-                "issueId": "issue2",
-              },
-            ],
-            "id": "issue2",
-            "title": "Test Issue 2",
-          },
-        ]
-      `);
-    });
-
-    test('bigint exceeds safe range', async () => {
+    test('basic', async () => {
       const query = issueQuery.related('comments');
       const c = compile(serverSchema, schema, completedAST(query));
       const sqlQuery = formatPgInternalConvert(c);
-      const result = await runPgQuery(
-        sqlQuery.text,
-        sqlQuery.values as JSONValue[],
-      );
-      expect(() => extractZqlResult(result)).toThrowErrorMatchingInlineSnapshot(
-        `[Error: Value exceeds safe Number range. [2]['comments'][1]['hash'] = 9007199254740992]`,
-      );
-    });
-
-    test('bigint comparison operators', async () => {
-      const query = issueQuery.related('comments', q =>
-        q
-          .where('hash', '>', Number(Number.MAX_SAFE_INTEGER - 6))
-          .where('hash', '<', Number(Number.MAX_SAFE_INTEGER))
-          .where('hash', '!=', Number(Number.MAX_SAFE_INTEGER - 3)),
-      );
-      const c = compile(serverSchema, schema, completedAST(query));
-      const sqlQuery = formatPgInternalConvert(c);
       const pgResult = extractZqlResult(
         await runPgQuery(sqlQuery.text, sqlQuery.values as JSONValue[]),
       );
@@ -283,9 +212,16 @@ describe('compiling ZQL to SQL', () => {
           {
             "comments": [
               {
-                "hash": 9007199254740987,
+                "hash": "hash-1",
                 "id": "comment1",
                 "issueId": "issue1",
+                "weight": 1.11,
+              },
+              {
+                "hash": "hash-2",
+                "id": "comment2",
+                "issueId": "issue1",
+                "weight": 2.22,
               },
             ],
             "id": "issue1",
@@ -294,29 +230,139 @@ describe('compiling ZQL to SQL', () => {
           {
             "comments": [
               {
-                "hash": 9007199254740989,
+                "hash": "hash-3",
                 "id": "comment3",
                 "issueId": "issue2",
+                "weight": 3.33,
               },
               {
-                "hash": 9007199254740990,
+                "hash": "hash-4",
                 "id": "comment4",
                 "issueId": "issue2",
+                "weight": 4.44,
               },
             ],
             "id": "issue2",
             "title": "Test Issue 2",
           },
           {
-            "comments": [],
+            "comments": [
+              {
+                "hash": "hash-5",
+                "id": "comment5",
+                "issueId": "issue3",
+                "weight": 5.55,
+              },
+              {
+                "hash": "hash-6",
+                "id": "comment6",
+                "issueId": "issue3",
+                "weight": 6.66,
+              },
+            ],
             "id": "issue3",
             "title": "Test Issue 3",
           },
         ]
       `);
+    });
+
+    test('order by', async () => {
+      const query = issueQuery
+        .related('comments', q => q.orderBy('hash', 'asc'))
+        .limit(2);
+      const c = compile(serverSchema, schema, completedAST(query));
+      const sqlQuery = formatPgInternalConvert(c);
+      const pgResult = extractZqlResult(
+        await runPgQuery(sqlQuery.text, sqlQuery.values as JSONValue[]),
+      );
+      const zqlResult = mapResultToClientNames(await query, schema, 'issue');
+      expect(zqlResult).toEqualPg(pgResult);
+      expect(zqlResult).toMatchInlineSnapshot(`
+              [
+                {
+                  "comments": [
+                    {
+                      "hash": "hash-1",
+                      "id": "comment1",
+                      "issueId": "issue1",
+                      "weight": 1.11,
+                    },
+                    {
+                      "hash": "hash-2",
+                      "id": "comment2",
+                      "issueId": "issue1",
+                      "weight": 2.22,
+                    },
+                  ],
+                  "id": "issue1",
+                  "title": "Test Issue 1",
+                },
+                {
+                  "comments": [
+                    {
+                      "hash": "hash-3",
+                      "id": "comment3",
+                      "issueId": "issue2",
+                      "weight": 3.33,
+                    },
+                    {
+                      "hash": "hash-4",
+                      "id": "comment4",
+                      "issueId": "issue2",
+                      "weight": 4.44,
+                    },
+                  ],
+                  "id": "issue2",
+                  "title": "Test Issue 2",
+                },
+              ]
+            `);
+    });
+
+    test('comparison operators with char(6)', async () => {
+      // Here we test that while 'hash-51' is longer than the char(6) limit of
+      // the hash column, we do not truncate it to 'hash-5' before comparison
+      // thus we do not incorrectly include 'hash-5' in the results.
+      const query = issueQuery.related('comments', q =>
+        q.where('hash', '>=', 'hash-51'),
+      );
+      const c = compile(serverSchema, schema, completedAST(query));
+      const sqlQuery = formatPgInternalConvert(c);
+      const pgResult = extractZqlResult(
+        await runPgQuery(sqlQuery.text, sqlQuery.values as JSONValue[]),
+      );
+      const zqlResult = mapResultToClientNames(await query, schema, 'issue');
+      expect(zqlResult).toEqualPg(pgResult);
+      expect(zqlResult).toMatchInlineSnapshot(`
+      [
+        {
+          "comments": [],
+          "id": "issue1",
+          "title": "Test Issue 1",
+        },
+        {
+          "comments": [],
+          "id": "issue2",
+          "title": "Test Issue 2",
+        },
+        {
+          "comments": [
+            {
+              "hash": "hash-6",
+              "id": "comment6",
+              "issueId": "issue3",
+              "weight": 6.66,
+            },
+          ],
+          "id": "issue3",
+          "title": "Test Issue 3",
+        },
+      ]
+    `);
 
       const q2 = issueQuery.related('comments', q =>
-        q.where('hash', '=', Number.MAX_SAFE_INTEGER - 3),
+        q.where('hash', '=', 'hash-1'),
       );
       const c2 = compile(serverSchema, schema, completedAST(q2));
       const sqlQuery2 = formatPgInternalConvert(c2);
@@ -326,30 +372,117 @@ describe('compiling ZQL to SQL', () => {
       const zqlResult2 = mapResultToClientNames(await q2, schema, 'issue');
       expect(zqlResult2).toEqualPg(pgResult2);
       expect(zqlResult2).toMatchInlineSnapshot(`
-        [
-          {
-            "comments": [
-              {
-                "hash": 9007199254740988,
-                "id": "comment2",
-                "issueId": "issue1",
-              },
-            ],
-            "id": "issue1",
-            "title": "Test Issue 1",
-          },
-          {
-            "comments": [],
-            "id": "issue2",
-            "title": "Test Issue 2",
-          },
-          {
-            "comments": [],
-            "id": "issue3",
-            "title": "Test Issue 3",
-          },
-        ]
-      `);
+              [
+                {
+                  "comments": [
+                    {
+                      "hash": "hash-1",
+                      "id": "comment1",
+                      "issueId": "issue1",
+                      "weight": 1.11,
+                    },
+                  ],
+                  "id": "issue1",
+                  "title": "Test Issue 1",
+                },
+                {
+                  "comments": [],
+                  "id": "issue2",
+                  "title": "Test Issue 2",
+                },
+                {
+                  "comments": [],
+                  "id": "issue3",
+                  "title": "Test Issue 3",
+                },
+              ]
+            `);
+    });
+
+    test('comparison operators with numeric(10, 2)', async () => {
+      // Here we test that while '6.661' has more decimal places than
+      // numeric(10, 2), we do not truncate it to 5.55 before comparison
+      // thus we do not incorrectly include weight 5.55 in the results.
+      const query = issueQuery.related('comments', q =>
+        q.where('weight', '>=', 5.551),
+      );
+      const c = compile(serverSchema, schema, completedAST(query));
+      const sqlQuery = formatPgInternalConvert(c);
+      const pgResult = extractZqlResult(
+        await runPgQuery(sqlQuery.text, sqlQuery.values as JSONValue[]),
+      );
+      const zqlResult = mapResultToClientNames(await query, schema, 'issue');
+      expect(zqlResult).toEqualPg(pgResult);
+      expect(zqlResult).toMatchInlineSnapshot(`
+              [
+                {
+                  "comments": [],
+                  "id": "issue1",
+                  "title": "Test Issue 1",
+                },
+                {
+                  "comments": [],
+                  "id": "issue2",
+                  "title": "Test Issue 2",
+                },
+                {
+                  "comments": [
+                    {
+                      "hash": "hash-6",
+                      "id": "comment6",
+                      "issueId": "issue3",
+                      "weight": 6.66,
+                    },
+                  ],
+                  "id": "issue3",
+                  "title": "Test Issue 3",
+                },
+              ]
+            `);
+
+      const q2 = issueQuery.related('comments', q =>
+        q.where('weight', '=', 1.11),
+      );
+      const c2 = compile(serverSchema, schema, completedAST(q2));
+      const sqlQuery2 = formatPgInternalConvert(c2);
+      const pgResult2 = extractZqlResult(
+        await runPgQuery(sqlQuery2.text, sqlQuery2.values as JSONValue[]),
+      );
+      const zqlResult2 = mapResultToClientNames(await q2, schema, 'issue');
+      expect(zqlResult2).toEqualPg(pgResult2);
+      expect(zqlResult2).toMatchInlineSnapshot(`
+              [
+                {
+                  "comments": [
+                    {
+                      "hash": "hash-1",
+                      "id": "comment1",
+                      "issueId": "issue1",
+                      "weight": 1.11,
+                    },
+                  ],
+                  "id": "issue1",
+                  "title": "Test Issue 1",
+                },
+                {
+                  "comments": [],
+                  "id": "issue2",
+                  "title": "Test Issue 2",
+                },
+                {
+                  "comments": [],
+                  "id": "issue3",
+                  "title": "Test Issue 3",
+                },
+              ]
+            `);
     });
   }
 });
+
+function mapWeight(value: Row): Row {
+  return {
+    ...value,
+    weight: Number(value['weight']),
+  };
+}

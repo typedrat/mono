@@ -43,6 +43,24 @@ describe('makeSchemaCRUD', () => {
 
   const basicRow = {id: '1', a: 2, b: 'foo', c: true};
 
+  const typesWithParamsRow = {
+    id: '1',
+    char: 'hello',
+    varchar: 'goodbye',
+    numeric: 10.1234,
+    decimal: 5.01,
+  };
+
+  const typesWithParamsExpectedRow = {
+    id: '1',
+    // char gets padded to 10
+    char: 'hello'.padEnd(10),
+    varchar: 'goodbye',
+    // NUMERIC(8, 3) gets truncated to 3 decimal places
+    numeric: 10.123,
+    decimal: 5.01,
+  };
+
   const uuidAndEnumRow = {
     id: '123e4567-e89b-12d3-a456-426614174000',
     reference_id: '987fcdeb-a89b-12d3-a456-426614174000',
@@ -65,6 +83,7 @@ describe('makeSchemaCRUD', () => {
         crud.dateTypes.insert(timeRow),
         crud.jsonCases.insert(jsonRow),
         crud.jsonbCases.insert(jsonRow),
+        crud.typesWithParams.insert(typesWithParamsRow),
         crud.uuidAndEnum.insert(uuidAndEnumRow),
         crud.alternate_basic.insert(basicRow),
       ]);
@@ -83,6 +102,7 @@ describe('makeSchemaCRUD', () => {
         checkDb(tx, 'dateTypes', [timeRow]),
         checkDb(tx, 'jsonCases', [jsonRow]),
         checkDb(tx, 'jsonbCases', [jsonRow]),
+        checkDb(tx, 'types_with_params', [typesWithParamsExpectedRow]),
         checkDb(tx, 'uuidAndEnum', [uuidAndEnumRow]),
         checkDb(tx, 'alternate_schema.basic', [basicRow]),
       ]);
@@ -152,6 +172,7 @@ describe('makeSchemaCRUD', () => {
         crud.dateTypes.upsert(timeRow),
         crud.jsonCases.upsert(jsonRow),
         crud.jsonbCases.upsert(jsonRow),
+        crud.typesWithParams.upsert(typesWithParamsRow),
         crud.uuidAndEnum.upsert(uuidAndEnumRow),
         crud.alternate_basic.upsert(basicRow),
       ]);
@@ -170,6 +191,7 @@ describe('makeSchemaCRUD', () => {
         checkDb(tx, 'dateTypes', [timeRow]),
         checkDb(tx, 'jsonCases', [jsonRow]),
         checkDb(tx, 'jsonbCases', [jsonRow]),
+        checkDb(tx, 'types_with_params', [typesWithParamsExpectedRow]),
         checkDb(tx, 'uuidAndEnum', [uuidAndEnumRow]),
         checkDb(tx, 'alternate_schema.basic', [basicRow]),
       ]);
@@ -196,6 +218,13 @@ describe('makeSchemaCRUD', () => {
           bool: false,
           obj: {foo: 'baz'},
           arr: ['d', 'e', 'f'],
+        }),
+        crud.typesWithParams.upsert({
+          id: '1',
+          char: 'foo',
+          varchar: 'bar',
+          decimal: 100.5,
+          numeric: 5.001,
         }),
         crud.uuidAndEnum.upsert({
           ...uuidAndEnumRow,
@@ -246,6 +275,15 @@ describe('makeSchemaCRUD', () => {
             arr: ['d', 'e', 'f'],
           },
         ]),
+        checkDb(tx, 'types_with_params', [
+          {
+            id: '1',
+            char: 'foo'.padEnd(10),
+            varchar: 'bar',
+            decimal: 100.5,
+            numeric: 5.001,
+          },
+        ]),
         checkDb(tx, 'uuidAndEnum', [
           {
             ...uuidAndEnumRow,
@@ -275,6 +313,7 @@ describe('makeSchemaCRUD', () => {
         crud.dateTypes.insert(timeRow),
         crud.jsonCases.insert(jsonRow),
         crud.jsonbCases.insert(jsonRow),
+        crud.typesWithParams.insert(typesWithParamsRow),
         crud.uuidAndEnum.insert(uuidAndEnumRow),
         crud.alternate_basic.insert(basicRow),
       ]);
@@ -300,6 +339,13 @@ describe('makeSchemaCRUD', () => {
           bool: false,
           obj: {foo: 'baz'},
           arr: ['d', 'e', 'f'],
+        }),
+        crud.typesWithParams.update({
+          id: '1',
+          char: 'foo',
+          varchar: 'bar',
+          decimal: 100.5,
+          numeric: 5.001,
         }),
         crud.uuidAndEnum.update({
           id: uuidAndEnumRow.id,
@@ -349,6 +395,15 @@ describe('makeSchemaCRUD', () => {
             arr: ['d', 'e', 'f'],
           },
         ]),
+        checkDb(tx, 'types_with_params', [
+          {
+            id: '1',
+            char: 'foo'.padEnd(10),
+            varchar: 'bar',
+            decimal: 100.5,
+            numeric: 5.001,
+          },
+        ]),
         checkDb(tx, 'uuidAndEnum', [
           {
             ...uuidAndEnumRow,
@@ -379,6 +434,7 @@ describe('makeSchemaCRUD', () => {
         crud.dateTypes.insert(timeRow),
         crud.jsonCases.insert(jsonRow),
         crud.jsonbCases.insert(jsonRow),
+        crud.typesWithParams.insert(typesWithParamsRow),
         crud.uuidAndEnum.insert(uuidAndEnumRow),
         crud.alternate_basic.insert(basicRow),
       ]);
@@ -390,6 +446,7 @@ describe('makeSchemaCRUD', () => {
         crud.dateTypes.delete({ts: timeRow.ts}),
         crud.jsonCases.delete({str: jsonRow.str}),
         crud.jsonbCases.delete({str: jsonRow.str}),
+        crud.typesWithParams.delete({id: typesWithParamsRow.id}),
         crud.uuidAndEnum.delete({id: uuidAndEnumRow.id}),
         crud.alternate_basic.delete({id: '1'}),
       ]);
@@ -401,6 +458,7 @@ describe('makeSchemaCRUD', () => {
         checkDb(tx, 'dateTypes', []),
         checkDb(tx, 'jsonCases', []),
         checkDb(tx, 'jsonbCases', []),
+        checkDb(tx, 'types_with_params', []),
         checkDb(tx, 'uuidAndEnum', []),
         checkDb(tx, 'alternate_schema.basic', []),
       ]);
