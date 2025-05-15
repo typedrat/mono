@@ -223,6 +223,11 @@ const trackRelationships = relationships(track, ({one, many}) => ({
       destSchema: playlist,
     },
   ),
+  playlistEdge: many({
+    sourceField: ['id'],
+    destField: ['trackId'],
+    destSchema: playlistTrack,
+  }),
   invoiceLines: many({
     sourceField: ['id'],
     destField: ['trackId'],
