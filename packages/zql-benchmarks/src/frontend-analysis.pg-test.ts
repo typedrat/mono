@@ -1,12 +1,19 @@
 /* eslint-disable no-console */
-import {B, do_not_optimize, type trial} from 'mitata';
+import {B, do_not_optimize} from 'mitata';
 import {getChinook} from '../../zql-integration-tests/src/chinook/get-deps.ts';
 import {bootstrap} from '../../zql-integration-tests/src/helpers/runner.ts';
 import {schema} from '../../zql-integration-tests/src/chinook/schema.ts';
-import {expect, test} from 'vitest';
-import {must} from '../../shared/src/must.ts';
-import type {Row} from '../../zero-protocol/src/data.ts';
-import type {JSONValue} from '../../shared/src/json.ts';
+
+import {
+  avg,
+  frameMaintStats,
+  frameStats,
+  log,
+  makeEdit,
+  makeMiddle,
+  p99,
+  stat,
+} from './shared.ts';
 
 const pgContent = await getChinook();
 
@@ -15,7 +22,9 @@ const harness = await bootstrap({
   zqlSchema: schema,
   pgContent,
 });
-const edit = makeEdit();
+const {raw} = harness.dbs;
+const edit = makeEdit(raw);
+const middle = makeMiddle(raw);
 
 log`
 # Point Queries
@@ -295,89 +304,3 @@ Well this is surprisingly faster than maintaining point queries!!!
 - avg ${stat(avg(maintain100PointTrial) / avg(maintainRangeAltFieldTrial))}x faster than point queries
 
 The time is dominated by number of pipelines to visit?`;
-
-function frameStats(trial: trial) {
-  const p99ms = p99(trial);
-  const avgms = avg(trial);
-  return `
-  - Total time: ${stat(p99ms)}p99, ${stat(avgms)}avg
-  - Frame budget: 16ms
-  - FPS: ${stat(1 / (p99ms / 16))}p99, ${stat(1 / (avgms / 16))}avg`;
-}
-
-function frameMaintStats(trial: trial) {
-  const p99ms = p99(trial);
-  const avgms = avg(trial);
-  return `
-  - Maintain queries over 1 write: ${stat(p99ms)}ms p99 ${stat(avgms)}ms avg.
-  - Frame budget: 16ms
-  - Writes per frame: ${stat(16 / p99ms, 10)}p99, ${stat(16 / avgms, 10)}avg`;
-}
-
-function p99(trial: trial) {
-  const stats = must(trial.runs[0].stats);
-  return nanosToMs(stats.p99);
-}
-
-function avg(trial: trial) {
-  const stats = must(trial.runs[0].stats);
-  return nanosToMs(stats.avg);
-}
-
-function nanosToMs(nanos: number) {
-  return nanos / 1_000_000;
-}
-
-test('noop', () => expect(true).toBe(true));
-
-function log(strings: TemplateStringsArray, ...values: unknown[]): void {
-  let result = '';
-  strings.forEach((string, i) => {
-    result += string;
-    if (i < values.length) {
-      result += values[i];
-    }
-  });
-
-  console.log(result);
-}
-
-function stat(s: number, precision = 2) {
-  return (
-    '`' +
-    s.toLocaleString('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: precision,
-    }) +
-    '`'
-  );
-}
-
-function makeEdit() {
-  const currentValues = new Map<string, Row>();
-  return (
-    table: keyof (typeof schema)['tables'],
-    index: number,
-    column: string,
-    value: JSONValue,
-  ) => {
-    const key = `${table}-${index}`;
-    const dataset = must(harness.dbs.raw.get(table));
-    const row = must(currentValues.get(key) ?? dataset[index]);
-    const newRow = {
-      ...row,
-      [column]: value,
-    };
-    currentValues.set(key, newRow);
-    return {
-      type: 'edit',
-      oldRow: row,
-      row: newRow,
-    } as const;
-  };
-}
-
-function middle(table: keyof (typeof schema)['tables']) {
-  const dataset = must(harness.dbs.raw.get(table));
-  return dataset[Math.floor(dataset.length / 2)];
-}
