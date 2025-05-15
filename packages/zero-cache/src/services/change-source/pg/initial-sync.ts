@@ -4,6 +4,7 @@ import {Writable} from 'node:stream';
 import {pipeline} from 'node:stream/promises';
 import postgres from 'postgres';
 import type {JSONValue} from '../../../../../shared/src/json.ts';
+import {promiseVoid} from '../../../../../shared/src/resolved-promises.ts';
 import {Database} from '../../../../../zqlite/src/db.ts';
 import {
   createIndexStatement,
@@ -136,7 +137,7 @@ export async function initialSync(
 
       const rowCounts = await Promise.all(
         tables.map(table =>
-          copiers.processReadTask(db =>
+          copiers.processReadTask((db, lc) =>
             copy(lc, table, copyPool, db, tx, initialVersion),
           ),
         ),
@@ -150,7 +151,6 @@ export async function initialSync(
       );
     } finally {
       copiers.setDone();
-      await copiers.done();
     }
 
     await addReplica(sql, shard, slotName, initialVersion, published);
@@ -173,7 +173,10 @@ export async function initialSync(
   } finally {
     await replicationSession.end();
     await sql.end();
-    await copyPool.end();
+    // Postgres sometimes gets stuck on the COMMIT of the read transaction
+    // after running COPY TO. No need to bother waiting for that, since the
+    // results of the COPY TO have already been returned by the pool.
+    void copyPool.end().catch(e => lc.error?.(e));
   }
 }
 
@@ -334,9 +337,30 @@ async function copy(
   lc.info?.(`Starting copy stream of ${tableName}:`, selectStmt);
 
   const valuesPerRow = columnSpecs.length + 1; // includes _0_version column
-  // Accumulates row values up to INSERT_BATCH_SIZE batchedRows.
+  const valuesPerBatch = valuesPerRow * INSERT_BATCH_SIZE;
   let values: LiteValueType[] = [];
-  let batchedRows = 0;
+  let pendingRows = 0;
+
+  function flush(vals: LiteValueType[], rows: number) {
+    const start = performance.now();
+    const total = rows;
+
+    let l = 0;
+    for (; rows > INSERT_BATCH_SIZE; rows -= INSERT_BATCH_SIZE) {
+      insertBatchStmt.run(vals.slice(l, (l += valuesPerBatch)));
+      totalRows += INSERT_BATCH_SIZE;
+    }
+    // Insert the remaining rows individually.
+    for (; rows > 0; rows--) {
+      insertStmt.run(vals.slice(l, (l += valuesPerRow)));
+      totalRows++;
+    }
+    lc.debug?.(
+      `flushed ${total} rows in ${(performance.now() - start).toFixed(3)} ms`,
+    );
+  }
+
+  let lastFlush = promiseVoid;
 
   await pipeline(
     await from.unsafe(`COPY (${selectStmt}) TO STDOUT`).readable(),
@@ -345,7 +369,7 @@ async function copy(
     new Writable({
       objectMode: true,
 
-      write: (
+      write: async (
         row: JSONValue[],
         _encoding: string,
         callback: (error?: Error) => void,
@@ -355,19 +379,14 @@ async function copy(
             ...liteValues(row, columnSpecs, JSON_STRINGIFIED),
             initialVersion,
           );
-          if (++batchedRows === INSERT_BATCH_SIZE) {
-            insertBatchStmt.run(values);
+          if (++pendingRows === INSERT_BATCH_SIZE * 200) {
+            const valuesToFlush = values;
+            const rowsToFlush = pendingRows;
             values = [];
-            totalRows += batchedRows;
-            batchedRows = 0;
+            pendingRows = 0;
 
-            if (totalRows % 10_000 === 0) {
-              lc.debug?.(
-                `Copied ${totalRows} rows from ${table.schema}.${table.name} (${(
-                  performance.now() - start
-                ).toFixed(3)} ms)`,
-              );
-            }
+            await lastFlush;
+            lastFlush = runAfterIO(() => flush(valuesToFlush, rowsToFlush));
           }
           callback();
         } catch (e) {
@@ -375,14 +394,10 @@ async function copy(
         }
       },
 
-      final: (callback: (error?: Error) => void) => {
+      final: async (callback: (error?: Error) => void) => {
         try {
-          // Remaining set of rows is < INSERT_BATCH_SIZE
-          for (let i = 0; i < batchedRows; i++) {
-            const l = i * valuesPerRow;
-            insertStmt.run(values.slice(l, l + valuesPerRow));
-          }
-          totalRows += batchedRows;
+          await lastFlush;
+          flush(values, pendingRows);
           callback();
         } catch (e) {
           callback(e instanceof Error ? e : new Error(String(e)));
@@ -397,4 +412,17 @@ async function copy(
     ).toFixed(3)} ms)`,
   );
   return totalRows;
+}
+
+function runAfterIO(fn: () => void): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    setTimeout(() => {
+      try {
+        fn();
+        resolve();
+      } catch (e) {
+        reject(e);
+      }
+    }, 0);
+  });
 }
