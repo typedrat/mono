@@ -6,6 +6,17 @@
     },
     {
       "source": "/issue/(.*)",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*bot|Bot.*"
+        }
+      ],
+      "destination": "/api/(.*)"
+    },
+    {
+      "source": "/issue/(.*)",
       "destination": "/index.html"
     }
   ]

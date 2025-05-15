@@ -64,6 +64,7 @@ import {CommentComposer} from './comment-composer.tsx';
 import {Comment} from './comment.tsx';
 import {isCtrlEnter} from './is-ctrl-enter.ts';
 import type {Mutators} from '../../../shared/mutators.ts';
+import {parseIssueId} from '../../../shared/id-parse.ts';
 
 function softNavigate(path: string, state?: ZbugsHistoryState) {
   navigate(path, {state});
@@ -79,10 +80,7 @@ export const INITIAL_COMMENT_LIMIT = 100;
 export function IssuePage({onReady}: {onReady: () => void}) {
   const z = useZero();
   const params = useParams();
-
-  const idStr = must(params.id);
-  const idField = /[^\d]/.test(idStr) ? 'id' : 'shortID';
-  const id = idField === 'shortID' ? parseInt(idStr) : idStr;
+  const [idField, id] = parseIssueId(must(params.id));
 
   const zbugsHistoryState = useHistoryState<ZbugsHistoryState | undefined>();
   const listContext = zbugsHistoryState?.zbugsListContext;
@@ -543,7 +541,7 @@ export function IssuePage({onReady}: {onReady: () => void}) {
           {login.loginState?.decoded.role === 'crew' ? (
             <div className="sidebar-item">
               <p className="issue-detail-label">Visibility</p>
-              <Combobox
+              <Combobox<'public' | 'internal'>
                 editable={false}
                 disabled={!canEdit}
                 items={[

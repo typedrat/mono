@@ -35,7 +35,7 @@ const issue = table('issue')
     creatorID: string(),
     assigneeID: string().optional(),
     description: string(),
-    visibility: string(),
+    visibility: enumeration<'public' | 'internal'>(),
   })
   .primaryKey('id');
 

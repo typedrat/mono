@@ -11,7 +11,9 @@ import {handlePush} from '../server/push-handler.ts';
 import {must} from '../../../packages/shared/src/must.ts';
 import assert from 'assert';
 import {authDataSchema, type AuthData} from '../shared/auth.ts';
-import type {ReadonlyJSONValue} from '@rocicorp/zero';
+import type {ReadonlyJSONValue, Row} from '@rocicorp/zero';
+import {parseIssueId} from '../shared/id-parse.ts';
+import type {Schema} from '../shared/schema.ts';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -147,10 +149,93 @@ fastify.post<{
   reply.send(response);
 });
 
+type Issue = Row<Schema['tables']['issue']>;
+fastify.get<{
+  Params: {issueId: string};
+}>('/api/issue/:issueId', async function (request, reply) {
+  const [idField, id] = parseIssueId(request.params.issueId);
+
+  const issues = await sql<
+    Issue[]
+  >`SELECT * FROM "issue" WHERE ${sql(idField)} = ${id}`;
+  if (issues.length === 0) {
+    reply.status(404).send('Not found');
+    return;
+  }
+  const issue = issues[0];
+
+  if (issue.visibility !== 'public') {
+    reply.status(404).send('Not found');
+    return;
+  }
+
+  const html = generateIssueSocialPreview(issue);
+  return reply
+    .code(200)
+    .header('Content-Type', 'text/html; charset=utf-8')
+    .send(html);
+});
+
 export default async function handler(
   req: FastifyRequest,
   reply: FastifyReply,
 ) {
   await fastify.ready();
   fastify.server.emit('request', req, reply);
+}
+
+function generateIssueSocialPreview(
+  issue: Issue,
+  baseUrl = 'https://bugs.rocicorp.dev',
+) {
+  const escapeHTML = (unsafe: string) => {
+    return unsafe
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  };
+
+  const truncatedDescription =
+    issue.description.length > 160
+      ? issue.description.substring(0, 157) + '...'
+      : issue.description;
+
+  const titleWithId = `#${issue.shortID || issue.id} - ${issue.title}`;
+  const issueUrl = `${baseUrl}/issues/${issue.id}`;
+  const status = issue.open ? 'Open' : 'Closed';
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <title>${escapeHTML(issue.title)}</title>
+  
+  <!-- Primary Meta Tags -->
+  <meta name="title" content="${escapeHTML(titleWithId)}">
+  <meta name="description" content="${escapeHTML(truncatedDescription)}">
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="${issueUrl}">
+  <meta property="og:title" content="${escapeHTML(titleWithId)}">
+  <meta property="og:description" content="${escapeHTML(truncatedDescription)}">
+  <meta property="og:image" content="${baseUrl}/assets/logo-CBxyi1z2.svg">
+  <meta property="og:site_name" content="Rocicorp Bug Tracker">
+  
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image">
+  <meta property="twitter:url" content="${issueUrl}">
+  <meta property="twitter:title" content="${escapeHTML(titleWithId)}">
+  <meta property="twitter:description" content="${escapeHTML(truncatedDescription)}">
+  <meta property="twitter:image" content="${baseUrl}/assets/logo-CBxyi1z2.svg">
+  
+  <!-- Additional Meta Data -->
+  <meta name="issue:id" content="${issue.id}">
+  <meta name="issue:status" content="${status}">
+  <meta name="issue:visibility" content="${issue.visibility}">
+</head>
+<body>
+</body>
+</html>`;
 }
