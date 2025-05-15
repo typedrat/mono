@@ -767,6 +767,7 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
     );
 
     for (const [hash, query] of gotQueries) {
+      assert(query.type !== 'custom', 'custom queries are not yet supported');
       const {ast, transformationHash} = query;
       if (
         query.type !== 'internal' &&
@@ -849,6 +850,7 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
       const hashToIDs = new Map<string, string[]>();
       const now = Date.now();
       const serverQueries = Object.entries(cvr.queries).map(([id, q]) => {
+        assert(q.type !== 'custom', 'custom queries are not yet supported');
         const {query: ast, hash: transformationHash} = transformAndHashQuery(
           lc,
           q.ast,
@@ -886,11 +888,12 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
       );
 
       for (const q of addQueries) {
+        const from = cvr.queries[q.id];
         lc.debug?.(
           'ViewSyncer adding query',
           q.ast,
           'transformed from',
-          cvr.queries[q.id].ast,
+          from.type === 'custom' ? from.name : from.ast,
         );
       }
 
@@ -1327,6 +1330,7 @@ export class ViewSyncerService implements ViewSyncer, ActivityBasedService {
         const q = cvr.queries[hash];
         assert(q, 'query not found in CVR');
         assert(q.type !== 'internal', 'internal queries should not be evicted');
+        assert(q.type !== 'custom', 'custom queries are not yet supported');
 
         const rowCountBeforeCurrentEviction = this.#cvrStore.rowCount;
 

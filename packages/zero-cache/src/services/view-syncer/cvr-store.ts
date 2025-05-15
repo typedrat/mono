@@ -37,6 +37,7 @@ import {
   type ClientQueryRecord,
   type ClientRecord,
   cmpVersions,
+  type CustomQueryRecord,
   type CVRVersion,
   EMPTY_CVR_VERSION,
   type InternalQueryRecord,
@@ -398,39 +399,12 @@ export class CVRStore {
   }
 
   putQuery(query: QueryRecord): void {
-    const maybeVersionString = (v: CVRVersion | undefined) =>
-      v ? versionString(v) : null;
-
     const change: QueriesRow =
       query.type === 'internal'
-        ? {
-            clientGroupID: this.#id,
-            queryHash: query.id,
-            clientAST: query.ast,
-            queryName: null,
-            queryArgs: null,
-            patchVersion: null,
-            transformationHash: query.transformationHash ?? null,
-            transformationVersion: maybeVersionString(
-              query.transformationVersion,
-            ),
-            internal: true,
-            deleted: false, // put vs del "got" query
-          }
-        : {
-            clientGroupID: this.#id,
-            queryHash: query.id,
-            clientAST: query.ast,
-            queryName: null,
-            queryArgs: null,
-            patchVersion: maybeVersionString(query.patchVersion),
-            transformationHash: query.transformationHash ?? null,
-            transformationVersion: maybeVersionString(
-              query.transformationVersion,
-            ),
-            internal: null,
-            deleted: false, // put vs del "got" query
-          };
+        ? asInternalQueryRow(this.#id, query)
+        : query.type === 'client'
+          ? asClientQueryRow(this.#id, query)
+          : asCustomQueryRow(this.#id, query);
     this.#writes.add({
       stats: {queries: 1},
       write: tx => tx`INSERT INTO ${this.#cvr('queries')} ${tx(change)}
@@ -594,7 +568,11 @@ export class CVRStore {
         ]),
       );
 
-      const ast = (id: string) => must(upToCVR.queries[id]).ast;
+      const ast = (id: string) => {
+        const q = must(upToCVR.queries[id]);
+        assert(q.type === 'client', 'custom queries are not yet supported');
+        return q.ast;
+      };
 
       const patches: PatchToVersion[] = [];
       for (const row of queryRows) {
@@ -901,3 +879,54 @@ export class RowsVersionBehindError extends Error {
     this.rowsVersion = rowsVersion;
   }
 }
+
+function asInternalQueryRow(
+  cgid: string,
+  query: InternalQueryRecord,
+): QueriesRow {
+  return {
+    clientGroupID: cgid,
+    queryHash: query.id,
+    clientAST: query.ast,
+    queryName: null,
+    queryArgs: null,
+    patchVersion: null,
+    transformationHash: query.transformationHash ?? null,
+    transformationVersion: maybeVersionString(query.transformationVersion),
+    internal: true,
+    deleted: false, // put vs del "got" query
+  };
+}
+
+function asClientQueryRow(cgid: string, query: ClientQueryRecord): QueriesRow {
+  return {
+    clientGroupID: cgid,
+    queryHash: query.id,
+    clientAST: query.ast,
+    queryName: null,
+    queryArgs: null,
+    patchVersion: maybeVersionString(query.patchVersion),
+    transformationHash: query.transformationHash ?? null,
+    transformationVersion: maybeVersionString(query.transformationVersion),
+    internal: null,
+    deleted: false, // put vs del "got" query
+  };
+}
+
+function asCustomQueryRow(cgid: string, query: CustomQueryRecord): QueriesRow {
+  return {
+    clientGroupID: cgid,
+    queryHash: query.id,
+    clientAST: null,
+    queryName: query.name,
+    queryArgs: query.args,
+    patchVersion: maybeVersionString(query.patchVersion),
+    transformationHash: query.transformationHash ?? null,
+    transformationVersion: maybeVersionString(query.transformationVersion),
+    internal: null,
+    deleted: false, // put vs del "got" query
+  };
+}
+
+const maybeVersionString = (v: CVRVersion | undefined) =>
+  v ? versionString(v) : null;

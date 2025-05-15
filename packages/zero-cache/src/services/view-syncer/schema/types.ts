@@ -115,9 +115,6 @@ export const baseQueryRecordSchema = v.object({
   /** The client-specified ID used to identify this query. Typically a hash. */
   id: v.string(),
 
-  /** The original AST as supplied by the client. */
-  ast: astSchema,
-
   /**
    * The hash of the query after server-side transformations, which include:
    *
@@ -162,9 +159,8 @@ export const baseQueryRecordSchema = v.object({
  */
 export const internalQueryRecordSchema = baseQueryRecordSchema.extend({
   type: v.literal('internal'),
+  ast: astSchema,
 });
-
-export type InternalQueryRecord = v.Infer<typeof internalQueryRecordSchema>;
 
 const clientStateSchema = v.object({
   /**
@@ -188,9 +184,7 @@ const clientStateSchema = v.object({
   version: cvrVersionSchema,
 });
 
-export const clientQueryRecordSchema = baseQueryRecordSchema.extend({
-  type: v.literal('client'),
-
+const baseClientQueryRecordSchema = baseQueryRecordSchema.extend({
   /**
    * The client state for this query, which includes the inactivatedAt, ttl and
    * version. The client state is stored in a record with the client ID as the
@@ -203,10 +197,24 @@ export const clientQueryRecordSchema = baseQueryRecordSchema.extend({
   patchVersion: cvrVersionSchema.optional(),
 });
 
+const customQueryRecordSchema = baseClientQueryRecordSchema.extend({
+  type: v.literal('custom'),
+  name: v.string(),
+  args: v.array(jsonValueSchema),
+});
+const clientQueryRecordSchema = baseClientQueryRecordSchema.extend({
+  type: v.literal('client'),
+  ast: astSchema,
+});
+
 export type ClientQueryRecord = v.Infer<typeof clientQueryRecordSchema>;
+export type CustomQueryRecord = v.Infer<typeof customQueryRecordSchema>;
+
+export type InternalQueryRecord = v.Infer<typeof internalQueryRecordSchema>;
 
 export const queryRecordSchema = v.union(
   clientQueryRecordSchema,
+  customQueryRecordSchema,
   internalQueryRecordSchema,
 );
 
