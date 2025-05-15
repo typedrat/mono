@@ -1,12 +1,12 @@
 import {describe, expect, test} from 'vitest';
+import type {ServerColumnSchema} from './schema.ts';
 import {
   formatPg,
   formatPgInternalConvert,
-  sqlConvertSingularLiteralArg,
   sql,
   sqlConvertColumnArg,
+  sqlConvertSingularLiteralArg,
 } from './sql.ts';
-import type {ServerColumnSchema} from './schema.ts';
 
 test('identical values result in a single placeholder', () => {
   const userId = 1;
@@ -46,6 +46,7 @@ describe('string arg packing', () => {
       formatPgInternalConvert(
         sql`SELECT * FROM "user" WHERE "id" = ${sqlConvertColumnArg(
           {
+            isArray: false,
             isEnum: false,
             type: 'numeric',
           },
@@ -70,6 +71,7 @@ describe('string arg packing', () => {
       formatPgInternalConvert(
         sql`SELECT * FROM "user" WHERE "id" = ${sqlConvertColumnArg(
           {
+            isArray: false,
             isEnum: false,
             type: 'numeric',
           },
@@ -78,6 +80,7 @@ describe('string arg packing', () => {
           true,
         )} OR "other_id" = ${sqlConvertColumnArg(
           {
+            isArray: false,
             isEnum: false,
             type: 'numeric',
           },
@@ -101,6 +104,7 @@ describe('string arg packing', () => {
       formatPgInternalConvert(
         sql`SELECT * FROM "foo" WHERE "jsonb" = ${sqlConvertColumnArg(
           {
+            isArray: false,
             isEnum: false,
             type: 'jsonb',
           },
@@ -109,6 +113,7 @@ describe('string arg packing', () => {
           true,
         )} OR "numeric" = ${sqlConvertColumnArg(
           {
+            isArray: false,
             isEnum: false,
             type: 'numeric',
           },
@@ -118,6 +123,7 @@ describe('string arg packing', () => {
         )}
         OR "str" = ${sqlConvertColumnArg(
           {
+            isArray: false,
             isEnum: false,
             type: 'text',
           },
@@ -126,6 +132,7 @@ describe('string arg packing', () => {
           true,
         )} OR "boolean" = ${sqlConvertColumnArg(
           {
+            isArray: false,
             isEnum: false,
             type: 'boolean',
           },
@@ -134,6 +141,7 @@ describe('string arg packing', () => {
           true,
         )} OR "uuid"::text = ${sqlConvertColumnArg(
           {
+            isArray: false,
             isEnum: false,
             type: 'uuid',
           },
@@ -142,6 +150,7 @@ describe('string arg packing', () => {
           true,
         )} OR "enum"::text = ${sqlConvertColumnArg(
           {
+            isArray: false,
             isEnum: true,
             type: 'some_enum',
           },
@@ -150,6 +159,7 @@ describe('string arg packing', () => {
           true,
         )} OR "timestamp" = ${sqlConvertColumnArg(
           {
+            isArray: false,
             isEnum: false,
             type: 'timestamp',
           },
@@ -158,6 +168,7 @@ describe('string arg packing', () => {
           true,
         )} OR "timestampz" = ${sqlConvertColumnArg(
           {
+            isArray: false,
             isEnum: false,
             type: 'timestamptz',
           },
@@ -210,6 +221,7 @@ describe('string arg packing', () => {
     const values: [ServerColumnSchema, unknown][] = [
       [
         {
+          isArray: false,
           isEnum: false,
           type: 'numeric',
         },
@@ -217,6 +229,7 @@ describe('string arg packing', () => {
       ],
       [
         {
+          isArray: false,
           isEnum: false,
           type: 'numeric',
         },
@@ -225,6 +238,7 @@ describe('string arg packing', () => {
       // This MUST NOT insert with a COLLATION
       [
         {
+          isArray: false,
           isEnum: false,
           type: 'text',
         },
@@ -232,10 +246,19 @@ describe('string arg packing', () => {
       ],
       [
         {
+          isArray: false,
           isEnum: false,
           type: 'boolean',
         },
         true,
+      ],
+      [
+        {
+          isArray: true,
+          isEnum: false,
+          type: 'numeric',
+        },
+        [1, 2, 3],
       ],
     ];
     expect(
@@ -249,12 +272,15 @@ describe('string arg packing', () => {
       ),
     ).toMatchInlineSnapshot(`
       {
-        "text": "INSERT INTO "foo" VALUES ($1::text::numeric, $2::text::numeric, $3::text::text, $4::text::boolean)",
+        "text": "INSERT INTO "foo" VALUES ($1::text::numeric, $2::text::numeric, $3::text::text, $4::text::boolean, ARRAY(
+                SELECT value::text::numeric FROM jsonb_array_elements_text($5::text::jsonb)
+              ))",
         "values": [
           "1",
           "1.1",
           "two",
           "true",
+          "[1,2,3]",
         ],
       }
     `);

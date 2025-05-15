@@ -1,6 +1,12 @@
 import type {ReadonlyJSONValue} from '../../../shared/src/json.ts';
+import type {ColumnSchema} from '../../../zero-protocol/src/client-schema.ts';
 import type {PrimaryKey} from '../../../zero-protocol/src/primary-key.ts';
-import type {SchemaValue, TableSchema} from '../table-schema.ts';
+import type {
+  SchemaValue,
+  SchemaValueToTSType,
+  SchemaValueWithCustomType,
+  TableSchema,
+} from '../table-schema.ts';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export function table<TName extends string>(name: TName) {
@@ -51,12 +57,39 @@ export function enumeration<T extends string>() {
   });
 }
 
+// export function array<T extends BaseValueType>(
+export function array<ElemType extends ColumnBuilder<ColumnSchema>>(
+  elementType: ElemType,
+  // ): ColumnBuilder<SchemaValueToTSType<T>[]> {
+) {
+  if (elementType.schema.type.endsWith('[]')) {
+    throw new Error('Nested array types are not supported');
+  }
+
+  type F = SchemaValueToTSType<ElemType['schema']['type']>;
+
+  const x: SchemaValueWithCustomType<F[]> = {
+    type: 'json',
+    optional: false,
+    customType: null as unknown as F[],
+  };
+
+  return new ColumnBuilder(x);
+
+  // return new ColumnBuilder({
+  //   type: (elementType.schema.type + '[]'),
+  //   optional: false,
+  //   customType: null as unknown as T,
+  // });
+}
+
 export const column = {
   string,
   number,
   boolean,
   json,
   enumeration,
+  array,
 };
 
 export class TableBuilder<TShape extends TableSchema> {

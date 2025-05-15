@@ -1,6 +1,7 @@
-export type {ValueType} from '../../zero-protocol/src/client-schema.ts';
 import type {ValueType} from '../../zero-protocol/src/client-schema.ts';
 import type {PrimaryKey} from '../../zero-protocol/src/primary-key.ts';
+
+export type {ValueType} from '../../zero-protocol/src/client-schema.ts';
 
 /**
  * `related` calls need to know what the available relationships are.
@@ -55,6 +56,13 @@ export type TypeNameToTypeMap = {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   json: any;
+
+  // 'string[]': string[];
+  // 'number[]': number[];
+  // 'boolean[]': boolean[];
+  // 'null[]': null[];
+  // // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // 'json[]': any[];
 };
 
 export type ColumnTypeName<T extends SchemaValue | ValueType> =

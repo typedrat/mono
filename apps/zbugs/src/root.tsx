@@ -1,15 +1,7 @@
-import Cookies from 'js-cookie';
-import {ZeroProvider} from '@rocicorp/zero/react';
-import {useCallback, useState, useSyncExternalStore} from 'react';
-import {Route, Switch} from 'wouter';
-import {Nav} from './components/nav.tsx';
-import {useSoftNav} from './hooks/use-softnav.ts';
-import {ErrorPage} from './pages/error/error-page.tsx';
-import {IssuePage} from './pages/issue/issue-page.tsx';
-import {ListPage} from './pages/list/list-page.tsx';
-import {routes} from './routes.ts';
+import {useQuery, ZeroProvider} from '@rocicorp/zero/react';
+import {useCallback, useSyncExternalStore} from 'react';
+import {useZero} from './hooks/use-zero.ts';
 import {zeroRef} from './zero-setup.ts';
-import {OnboardingModal} from './components/onboarding-modal.tsx';
 
 export function Root() {
   const z = useSyncExternalStore(
@@ -17,50 +9,67 @@ export function Root() {
     useCallback(() => zeroRef.value, []),
   );
 
-  const [contentReady, setContentReady] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(
-    () => !Cookies.get('onboardingDismissed'),
-  );
-
-  useSoftNav();
-
   if (!z) {
     return null;
   }
 
   return (
     <ZeroProvider zero={z}>
-      <div
-        className="app-container flex p-8"
-        style={{visibility: contentReady ? 'visible' : 'hidden'}}
-      >
-        <div className="primary-nav w-48 shrink-0 grow-0">
-          <Nav />
-        </div>
-        <div className="primary-content">
-          <Switch>
-            <Route path={routes.home}>
-              <ListPage onReady={() => setContentReady(true)} />
-            </Route>
-            <Route path={routes.issue}>
-              {params => (
-                <IssuePage
-                  key={params.id}
-                  onReady={() => setContentReady(true)}
-                />
-              )}
-            </Route>
-            <Route component={ErrorPage} />
-          </Switch>
-        </div>
-      </div>
-      <OnboardingModal
-        isOpen={showOnboarding}
-        onDismiss={() => {
-          Cookies.set('onboardingDismissed', 'true', {expires: 365});
-          setShowOnboarding(false);
-        }}
-      />
+      <Content />
     </ZeroProvider>
+  );
+}
+
+function randomMood() {
+  const moods = ['sad', 'ok', 'happy'] as const;
+  return moods[Math.floor(Math.random() * moods.length)];
+}
+
+function randomInt(): number {
+  return Math.floor(Math.random() * 100);
+}
+
+function TestRow({name, random}: {name: any; random: () => any}) {
+  const z = useZero();
+  const [labelRow] = useQuery(z.query.label.where('name', '=', 'bug').one());
+  return (
+    <div>
+      <button
+        onClick={() => {
+          z.mutate.label.change({
+            id: labelRow!.id,
+            col: name,
+            value: random(),
+          });
+        }}
+      >
+        Click to Change <code>{name}</code>
+      </button>
+      <p>
+        {name}: {JSON.stringify(labelRow![name])}
+      </p>
+    </div>
+  );
+}
+
+function randomText(): string {
+  const text = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit.';
+  return text.substring(0, Math.floor(Math.random() * text.length));
+}
+
+function Content() {
+  return (
+    <div>
+      <TestRow
+        name="testEnumArray"
+        random={() => [randomMood(), randomMood()]}
+      />
+      <TestRow name="testMood" random={randomMood} />
+      <TestRow name="testIntArray" random={() => [randomInt(), randomInt()]} />
+      <TestRow
+        name="testTextArray"
+        random={() => [randomText(), randomText()]}
+      />
+    </div>
   );
 }

@@ -1,20 +1,27 @@
 import {assert} from '../../shared/src/asserts.ts';
+import type {Enum} from '../../shared/src/enum.ts';
+import {must} from '../../shared/src/must.ts';
 import type {ServerSchema} from '../../z2s/src/schema.ts';
 import {formatPg, sql} from '../../z2s/src/sql.ts';
+import * as PostgresTypeClass from '../../zero-cache/src/db/postgres-type-class-enum.ts';
 import {dataTypeToZqlValueType} from '../../zero-cache/src/types/pg.ts';
 import type {Schema} from '../../zero-schema/src/builder/schema-builder.ts';
 import type {DBTransaction} from '../../zql/src/mutate/custom.ts';
 
-export type ServerSchemaRow = {
+type PostgresTypeClass = Enum<typeof PostgresTypeClass>;
+
+type ServerSchemaRow = {
   schema: string;
   table: string;
   column: string;
-  type: string;
+  dataType: string;
   length: string | null;
   precision: string | null;
   scale: string | null;
-  enum: string;
-  enumtype: string;
+  typtype: PostgresTypeClass;
+  typename: string;
+  elemTyptype: PostgresTypeClass | null;
+  elemTypname: string | null;
 };
 
 export async function getServerSchema<S extends Schema>(
@@ -54,16 +61,20 @@ export async function getServerSchema<S extends Schema>(
           c.table_schema::text AS schema,
           c.table_name::text AS table,
           c.column_name::text AS column,
-          c.data_type::text AS type,
+          c.data_type::text AS "dataType",
           c.character_maximum_length AS length,
           c.numeric_precision AS precision,
           c.numeric_scale AS scale,
-          (t.typtype = 'e')::text AS enum,
-          t.typname::text AS enumtype
+          t.typtype::text AS typtype,
+          t.typname::text AS typename,
+          CASE WHEN t.typelem <> 0 THEN et.typtype::text ELSE NULL END AS "elemTyptype",
+          CASE WHEN t.typelem <> 0 THEN et.typname::text ELSE NULL END AS "elemTypname"
       FROM
           information_schema.columns c
       JOIN
           pg_catalog.pg_type t ON c.udt_name = t.typname
+      LEFT JOIN
+          pg_catalog.pg_type et ON t.typelem = et.oid
       JOIN
           pg_catalog.pg_namespace n ON t.typnamespace = n.oid
       WHERE
@@ -85,11 +96,15 @@ export async function getServerSchema<S extends Schema>(
       tableSchema = {};
       serverSchema[tableName] = tableSchema;
     }
-    const isEnum = row.enum.toLowerCase().startsWith('t');
-    let type = row.type.toLocaleLowerCase();
-    if (isEnum) {
-      type = row.enumtype;
+    const isArray = row.elemTyptype !== null;
+    const isEnum = (row.elemTyptype ?? row.typtype) === PostgresTypeClass.Enum;
+    let type = row.dataType;
+    if (isArray) {
+      type = must(row.elemTypname);
+    } else if (isEnum) {
+      type = row.typename;
     }
+    type = type.toLowerCase();
     if (
       (type === 'bpchar' ||
         type === 'character' ||
@@ -109,6 +124,7 @@ export async function getServerSchema<S extends Schema>(
     tableSchema[row.column] = {
       type,
       isEnum,
+      isArray,
     };
   }
 
@@ -140,9 +156,10 @@ function makeSchemaIncompatibleErrorMessage(
         );
         break;
       case 'typeError':
-        messages.push(
-          `Type mismatch for column "${error.column}" in table "${error.table}": ${error.requiredType === undefined ? `${error.pgType} is currently unsupported in Zero. Please file a bug at https://bugs.rocicorp.dev/` : `${error.pgType} should be mapped to ${error.requiredType} in Zero not ${error.declaredType}.`}`,
-        );
+        messages.push('XXX ' + JSON.stringify(error, null, 2));
+        // `Type mismatch for column "${error.column}" in table "${error.table}": ${error.requiredType === undefined ?
+        //     `${error.pgType} is currently unsupported in Zero. Please file a bug at https://bugs.rocicorp.dev/` : `${error.pgType} should be mapped to ${error.requiredType} in Zero not ${error.declaredType}.`}`,
+        // );
         break;
     }
   }
@@ -209,7 +226,11 @@ export function checkSchemasAreCompatible(
       const serverColumn = serverSchema[serverTableName][serverColumnName];
       const declaredType = column.type;
       const pgType = serverColumn.type;
-      const requiredType = dataTypeToZqlValueType(pgType, serverColumn.isEnum);
+      const requiredType = dataTypeToZqlValueType(
+        pgType,
+        serverColumn.isEnum,
+        serverColumn.isArray,
+      );
       if (requiredType !== declaredType) {
         errors.push({
           type: 'typeError',

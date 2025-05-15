@@ -57,7 +57,9 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
       json JSON,
       jsonb JSONB,
       numz ENUMZ,
-      uuid UUID
+      uuid UUID,
+      intarr INT4[]
+      
     );
 
     CREATE SCHEMA IF NOT EXISTS my;
@@ -1050,9 +1052,9 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
       'data types',
       `
       ALTER PUBLICATION zero_some_public SET TABLE foo (
-        id, int, big, flt, bool, timea, date, json, jsonb, numz, uuid);
+        id, int, big, flt, bool, timea, date, json, jsonb, numz, uuid, intarr);
 
-      INSERT INTO foo (id, int, big, flt, bool, timea, date, json, jsonb, numz, uuid)
+      INSERT INTO foo (id, int, big, flt, bool, timea, date, json, jsonb, numz, uuid, intarr)
          VALUES (
           'abc', 
           -2, 
@@ -1064,10 +1066,12 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
           '[{"foo":"bar","bar":"foo"},123]',
           '{"far": 456, "boo" : {"baz": 123}}',
           '2',
-          'A0EEBC99-9C0B-4EF8-BB6D-6BB9BD380A11'
+          'A0EEBC99-9C0B-4EF8-BB6D-6BB9BD380A11',
+          ARRAY[1,2,3,4,5]
         );
       `,
       [
+        {tag: 'add-column'},
         {tag: 'add-column'},
         {tag: 'add-column'},
         {tag: 'add-column'},
@@ -1090,6 +1094,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             jsonb: '{"boo": {"baz": 123}, "far": 456}',
             numz: '2',
             uuid: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+            intarr: [1, 2, 3, 4, 5],
           },
         },
       ],
@@ -1107,6 +1112,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             jsonb: '{"boo": {"baz": 123}, "far": 456}',
             numz: '2', // Verifies TEXT affinity
             uuid: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
+            intarr: '[1,2,3,4,5]',
             ['_0_version']: expect.stringMatching(/[a-z0-9]+/),
           },
         ],
@@ -1157,6 +1163,13 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
               notNull: false,
               pos: 7,
             },
+            // intarr: {
+            //   characterMaximumLength: null,
+            //   dataType: 'int4[]',
+            //   dflt: null,
+            //   notNull: false,
+            //   pos: 13,
+            // },
             json: {
               characterMaximumLength: null,
               dataType: 'json',
@@ -1192,6 +1205,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
               notNull: false,
               pos: 12,
             },
+
             ['_0_version']: {
               characterMaximumLength: null,
               dataType: 'TEXT',

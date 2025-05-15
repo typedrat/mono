@@ -2,7 +2,15 @@ import {expect, expectTypeOf, test} from 'vitest';
 import type {Query} from '../../../zql/src/query/query.ts';
 import {relationships} from './relationship-builder.ts';
 import {clientSchemaFrom, createSchema} from './schema-builder.ts';
-import {boolean, number, string, table} from './table-builder.ts';
+import {
+  array,
+  boolean,
+  enumeration,
+  json,
+  number,
+  string,
+  table,
+} from './table-builder.ts';
 
 const mockQuery = {
   select() {
@@ -655,4 +663,58 @@ test('clientSchemaFrom', () => {
       "hash": "qw9u2r398f0z"
     }"
   `);
+});
+
+test('array column', () => {
+  const schema = createSchema({
+    tables: [
+      table('issue')
+        .from('issues')
+        .columns({
+          id: string(),
+          stringArray: array(string()),
+          numberArray: array(number()),
+          booleanArray: array(boolean()),
+          jsonArray: array(json()),
+          enumArray: array(enumeration<'A' | 'B'>()),
+        })
+        .primaryKey('id'),
+    ],
+  });
+
+  expect(stringify(clientSchemaFrom(schema))).toMatchInlineSnapshot(`
+    "{
+      "clientSchema": {
+        "tables": {
+          "issues": {
+            "columns": {
+              "booleanArray": {
+                "type": "boolean[]"
+              },
+              "enumArray": {
+                "type": "string[]"
+              },
+              "id": {
+                "type": "string"
+              },
+              "jsonArray": {
+                "type": "json[]"
+              },
+              "numberArray": {
+                "type": "number[]"
+              },
+              "stringArray": {
+                "type": "string[]"
+              }
+            }
+          }
+        }
+      },
+      "hash": "3d7l8jwlis11r"
+    }"
+  `);
+
+  expect(() => array(array(string()))).toThrowErrorMatchingInlineSnapshot(
+    `[Error: Nested array types are not supported]`,
+  );
 });

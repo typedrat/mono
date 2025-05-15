@@ -1,13 +1,13 @@
-import type {SQLQuery, FormatConfig, SQLItem} from '@databases/sql';
-import baseSql, {SQLItemType} from '@databases/sql';
 import {
   escapePostgresIdentifier,
   escapeSQLiteIdentifier,
 } from '@databases/escape-identifier';
+import type {FormatConfig, SQLItem, SQLQuery} from '@databases/sql';
+import baseSql, {SQLItemType} from '@databases/sql';
 import {assert, unreachable} from '../../shared/src/asserts.ts';
-import type {ServerColumnSchema} from './schema.ts';
-import type {LiteralValue} from '../../zero-protocol/src/ast.ts';
 import {isPgNumberType, isPgStringType} from '../../zero-cache/src/types/pg.ts';
+import type {LiteralValue} from '../../zero-protocol/src/ast.ts';
+import type {ServerColumnSchema} from './schema.ts';
 
 export const Z2S_COLLATION = 'ucs_basic';
 
@@ -27,15 +27,17 @@ export function formatSqlite(sql: SQLQuery) {
 }
 
 const sqlConvert = Symbol('fromJson');
+
 export type LiteralType = 'boolean' | 'number' | 'string' | 'null';
 export type PluralLiteralType = Exclude<LiteralType, 'null'>;
 
 type ColumnSqlConvertArg = {
   [sqlConvert]: 'column';
   type: string;
-  isEnum: boolean;
   value: unknown;
   plural: boolean;
+  isEnum: boolean;
+  isArray: boolean;
   isComparison: boolean;
 };
 
@@ -85,8 +87,7 @@ export function sqlConvertColumnArg(
 ): SQLQuery {
   return sql.value({
     [sqlConvert]: 'column',
-    type: serverColumnSchema.type,
-    isEnum: serverColumnSchema.isEnum,
+    ...serverColumnSchema,
     value,
     plural,
     isComparison,
@@ -123,11 +124,13 @@ function stringify(arg: SqlConvertArg): string | null {
   if (arg[sqlConvert] === 'literal' && arg.type === 'string') {
     return arg.value as unknown as string;
   }
-  if (
-    arg[sqlConvert] === 'column' &&
-    (arg.isEnum || isPgStringType(arg.type))
-  ) {
-    return arg.value as string;
+  if (arg[sqlConvert] === 'column') {
+    if (arg.isArray) {
+      return JSON.stringify(arg.value);
+    }
+    if (arg.isEnum || isPgStringType(arg.type)) {
+      return arg.value as string;
+    }
   }
   return JSON.stringify(arg.value);
 }
@@ -175,7 +178,13 @@ function createPlaceholder(index: number, arg: SqlConvertArg) {
   }
 
   const common = formatCommonToSingularAndPlural(index, arg);
-  return arg.plural ? formatPlural(index, common) : common;
+  if (arg.plural) {
+    return formatPlural(index, common);
+  }
+  if (arg.isArray) {
+    return formatPlural(index, common);
+  }
+  return common;
 }
 
 function formatCommonToSingularAndPlural(
@@ -188,7 +197,7 @@ function formatCommonToSingularAndPlural(
   // as being text. Without the text cast the args are described as
   // being bool/json/numeric/whatever and the bindings try to coerce
   // the inputs to those types.
-  const valuePlaceholder = arg.plural ? 'value' : `$${index}`;
+  const valuePlaceholder = arg.plural || arg.isArray ? 'value' : `$${index}`;
   switch (arg.type) {
     case 'date':
     case 'timestamp':
@@ -206,7 +215,8 @@ function formatCommonToSingularAndPlural(
   if (arg.isEnum) {
     return arg.isComparison
       ? `${valuePlaceholder}::text COLLATE "${Z2S_COLLATION}"`
-      : `${valuePlaceholder}::text::"${arg.type}"`;
+      : // : `${valuePlaceholder}::text::"${arg.type}"${arg.isArray ? '[]' : ''}`;
+        `${valuePlaceholder}::text::"${arg.type}"`;
   }
   if (isPgStringType(arg.type)) {
     // For comparison cast to the general `text` type, not the
@@ -216,6 +226,8 @@ function formatCommonToSingularAndPlural(
     return arg.isComparison
       ? `${valuePlaceholder}::text COLLATE "${Z2S_COLLATION}"`
       : `${valuePlaceholder}::text::${arg.type}`;
+
+    // TODO(arv): Add [] as needed?
   }
   if (isPgNumberType(arg.type)) {
     // For comparison cast to `double precision` which uses IEEE 754 (the same
@@ -255,6 +267,7 @@ function pgTypeForLiteralType(type: Exclude<LiteralType, 'null'>) {
 export const sql = baseSql.default;
 
 const PREVIOUSLY_SEEN_VALUE = Symbol('PREVIOUSLY_SEEN_VALUE');
+
 function formatFn(
   items: readonly SQLItem[],
   {escapeIdentifier, formatValue}: FormatConfig,

@@ -29,6 +29,7 @@ export const columnSpec = v.object({
   characterMaximumLength: v.number().nullable().optional(),
   notNull: v.boolean().nullable().optional(),
   dflt: v.string().nullable().optional(),
+  elemPgTypeClass: pgTypeClassSchema.nullable().optional(),
 });
 
 export type ColumnSpec = Readonly<v.Infer<typeof columnSpec>>;

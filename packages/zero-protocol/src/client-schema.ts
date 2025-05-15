@@ -1,6 +1,10 @@
 import {mapAllEntries} from '../../shared/src/objects.ts';
 import * as v from '../../shared/src/valita.ts';
 
+// export type BaseValueType = 'string' | 'number' | 'boolean' | 'null' | 'json';
+
+// export type ValueType = BaseValueType | `${BaseValueType}[]`;
+
 export type ValueType = 'string' | 'number' | 'boolean' | 'null' | 'json';
 
 export const valueTypeSchema: v.Type<ValueType> = v.literalUnion(

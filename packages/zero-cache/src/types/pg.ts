@@ -193,14 +193,14 @@ export function pgClient(
   });
 }
 
-export const typeNameByOID: Record<number, string> = Object.fromEntries(
-  Object.entries(OID).map(([name, oid]) => [
-    oid,
-    name.startsWith('_') ? `${name.substring(1)}[]` : name,
-  ]),
+export const typeNameByOID: Record<number, string> = Object.freeze(
+  Object.fromEntries(
+    Object.entries(OID).map(([name, oid]) => [
+      oid,
+      name.startsWith('_') ? `${name.substring(1)}[]` : name,
+    ]),
+  ),
 );
-
-Object.freeze(typeNameByOID);
 
 export const pgToZqlNumericTypeMap = Object.freeze({
   'smallint': 'number',
@@ -270,12 +270,42 @@ export const pgToZqlTypeMap = Object.freeze({
 export function dataTypeToZqlValueType(
   pgType: string,
   isEnum: boolean,
+  isArray: boolean,
 ): ValueType | undefined {
+  // We treat pg arrays as JSON values.
+  // if (pgType[0] === '_') {
+  //   // This is a PG array type.
+  //   const elementType = dataTypeToZqlValueType(pgType.substring(1), isEnum);
+  //   if (elementType === undefined) {
+  //     // If we do not support the element type, we do not support the array type.
+  //     return undefined;
+  //   }
+  //   return 'json';
+  // }
+
+  // if (pgType.endsWith('[]')) {
+  //   const elementType = dataTypeToZqlValueType(
+  //     pgType.substring(0, pgType.length - 2),
+  //     isEnum,
+  //   );
+  //   if (elementType === undefined) {
+  //     // If we do not support the element type, we do not support the array type.
+  //     return undefined;
+  //   }
+
+  //   return 'json';
+  // }
+  if (isArray) {
+    return 'json';
+  }
+
   const valueType = (pgToZqlTypeMap as Record<string, ValueType>)[
     formatTypeForLookup(pgType)
   ];
-  if (valueType === undefined && isEnum) {
-    return 'string';
+  if (valueType === undefined) {
+    if (isEnum) {
+      return 'string';
+    }
   }
   return valueType;
 }

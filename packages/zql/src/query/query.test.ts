@@ -7,6 +7,7 @@ import {relationships} from '../../../zero-schema/src/builder/relationship-build
 import type {Schema as ZeroSchema} from '../../../zero-schema/src/builder/schema-builder.ts';
 import {createSchema} from '../../../zero-schema/src/builder/schema-builder.ts';
 import {
+  array,
   boolean,
   enumeration,
   json,
@@ -123,6 +124,22 @@ const schemaWithJson = table('testWithJson')
   })
   .primaryKey('a');
 
+const schemaWithArray = table('testWithArray')
+  .columns({
+    id: string(),
+
+    arrayOfNumber: array(number()),
+    arrayOfString: array(string()),
+    arrayOfBoolean: array(boolean()),
+    arrayOfJSON: array(json()),
+
+    optionalArrayOfNumber: array(number()).optional(),
+    optionalArrayOfString: array(string()).optional(),
+    optionalArrayOfBoolean: array(boolean()).optional(),
+    optionalArrayOfJSON: array(json()).optional(),
+  })
+  .primaryKey('id');
+
 const testWithRelationships = table('testWithRelationships')
   .columns({
     s: string(),
@@ -196,6 +213,7 @@ const schema = createSchema({
     testSchemaWithNulls,
     schemaWithEnums,
     schemaWithJson,
+    schemaWithArray,
     schemaWithAdvancedTypes,
     testWithRelationships,
     testWithMoreRelationships,
@@ -771,6 +789,51 @@ test('json type', () => {
   query.where('j', '=', {foo: 'bar'});
   // @ts-expect-error - json fields cannot be used in cmp yet
   query.where(({cmp}) => cmp('j', '=', {foo: 'bar'}));
+});
+
+test('array type', () => {
+  const query = mockQuery as unknown as Query<Schema, 'testWithArray'>;
+  const datum = query.one().materialize().data;
+  const {data} = query.materialize();
+
+  expectTypeOf(datum).toMatchTypeOf<
+    | {
+        readonly id: string;
+
+        readonly arrayOfNumber: number[];
+        readonly arrayOfString: string[];
+        readonly arrayOfBoolean: boolean[];
+        readonly arrayOfJSON: ReadonlyJSONValue[];
+
+        readonly optionalArrayOfNumber: number[] | null;
+        readonly optionalArrayOfString: string[] | null;
+        readonly optionalArrayOfBoolean: boolean[] | null;
+        readonly optionalArrayOfJSON: ReadonlyJSONValue[] | null;
+      }
+    | undefined
+  >();
+
+  expectTypeOf(data).toMatchTypeOf<
+    {
+      readonly id: string;
+
+      readonly arrayOfNumber: number[];
+      readonly arrayOfString: string[];
+      readonly arrayOfBoolean: boolean[];
+      readonly arrayOfJSON: ReadonlyJSONValue[];
+
+      readonly optionalArrayOfNumber: number[] | null;
+      readonly optionalArrayOfString: string[] | null;
+      readonly optionalArrayOfBoolean: boolean[] | null;
+      readonly optionalArrayOfJSON: ReadonlyJSONValue[] | null;
+    }[]
+  >();
+
+  //  @ts-expect-error - Cannot compare arrays. Should we allow this... Maybe in a follow up PR?
+  query.where('arrayOfNumber', '=', [1, 2]);
+
+  //  @ts-expect-error - Cannot compare arrays. Should we allow this... Maybe in a follow up PR?
+  query.where(({cmp}) => cmp('arrayOfString', '=', ['a', 'b']));
 });
 
 function takeSchema(x: TableSchema) {
