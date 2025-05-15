@@ -173,10 +173,12 @@ export async function initialSync(
   } finally {
     await replicationSession.end();
     await sql.end();
-    // Postgres sometimes gets stuck on the COMMIT of the read transaction
-    // after running COPY TO. No need to bother waiting for that, since the
-    // results of the COPY TO have already been returned by the pool.
-    void copyPool.end().catch(e => lc.error?.(e));
+    // Postgres sometimes hangs on COMMIT after running COPY TO, even though
+    // the latter successfully completes. The completion of the COMMIT is
+    // unimportant for a READONLY transaction, especially given that the
+    // copiers have all completed their work. As a workaround, avoid
+    // blocking on closing this client. The connection do eventually close.
+    void copyPool.end().catch(e => lc.error?.('error closing copyPool', e));
   }
 }
 
