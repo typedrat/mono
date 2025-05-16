@@ -343,26 +343,24 @@ async function copy(
       ? ''
       : /*sql*/ ` WHERE ${filterConditions.join(' OR ')}`);
 
-  lc.info?.(`Starting copy stream of ${tableName}:`, selectStmt);
-
   const valuesPerRow = columnSpecs.length + 1; // includes _0_version column
   const valuesPerBatch = valuesPerRow * INSERT_BATCH_SIZE;
-  let values: LiteValueType[] = [];
+  let pendingValues: LiteValueType[] = [];
   let pendingRows = 0;
   let pendingSize = 0;
 
-  function flush(vals: LiteValueType[], rows: number, size: number) {
+  function flush(values: LiteValueType[], rows: number, size: number) {
     const start = performance.now();
     const total = rows;
 
     let l = 0;
     for (; rows > INSERT_BATCH_SIZE; rows -= INSERT_BATCH_SIZE) {
-      insertBatchStmt.run(vals.slice(l, (l += valuesPerBatch)));
+      insertBatchStmt.run(values.slice(l, (l += valuesPerBatch)));
       totalRows += INSERT_BATCH_SIZE;
     }
     // Insert the remaining rows individually.
     for (; rows > 0; rows--) {
-      insertStmt.run(vals.slice(l, (l += valuesPerRow)));
+      insertStmt.run(values.slice(l, (l += valuesPerRow)));
       totalRows++;
     }
     lc.debug?.(
@@ -370,7 +368,14 @@ async function copy(
     );
   }
 
+  // Each flush is scheduled to runAfterIO(), or specifically, after the
+  // stream `callback` is invoked, to signal Postgres to send more data
+  // *before* blocking the CPU to flush the rows to the replica. This
+  // essentially allows the CPU latency of the SQLite operation to overlap
+  // with the I/O latency of receiving data from upstream.
   let lastFlush = promiseVoid;
+
+  lc.info?.(`Starting copy stream of ${tableName}:`, selectStmt);
 
   await pipeline(
     await from.unsafe(`COPY (${selectStmt}) TO STDOUT`).readable(),
@@ -385,7 +390,7 @@ async function copy(
         callback: (error?: Error) => void,
       ) => {
         try {
-          values.push(
+          pendingValues.push(
             ...liteValues(row.values, columnSpecs, JSON_STRINGIFIED),
             initialVersion,
           );
@@ -395,15 +400,17 @@ async function copy(
             pendingRows >= BUFFERED_ROWS_THRESHOLD ||
             pendingSize >= BUFFERED_SIZE_THRESHOLD
           ) {
-            const vals = values;
+            const values = pendingValues;
             const rows = pendingRows;
             const size = pendingSize;
-            values = [];
+            pendingValues = [];
             pendingRows = 0;
             pendingSize = 0;
 
+            // Wait for the last flush to finish.
             await lastFlush;
-            lastFlush = runAfterIO(() => flush(vals, rows, size));
+            // Then schedule the next to start in the next tick.
+            lastFlush = runAfterIO(() => flush(values, rows, size));
           }
           callback();
         } catch (e) {
@@ -414,7 +421,7 @@ async function copy(
       final: async (callback: (error?: Error) => void) => {
         try {
           await lastFlush;
-          flush(values, pendingRows, pendingSize);
+          flush(pendingValues, pendingRows, pendingSize);
           callback();
         } catch (e) {
           callback(e instanceof Error ? e : new Error(String(e)));
