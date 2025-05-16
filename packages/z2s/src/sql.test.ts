@@ -252,7 +252,7 @@ describe('string arg packing', () => {
               isEnum: false,
               type: 'timestamp',
             },
-            'abc',
+            1712345678901,
             false,
             true,
           )}`,
@@ -261,7 +261,7 @@ describe('string arg packing', () => {
       {
         "text": "SELECT * FROM "foo" WHERE "timestamp" = to_timestamp($1::text::bigint / 1000.0) AT TIME ZONE 'UTC'",
         "values": [
-          ""abc"",
+          "1712345678901",
         ],
       }
     `);
@@ -276,7 +276,7 @@ describe('string arg packing', () => {
               isEnum: false,
               type: 'timestamptz',
             },
-            'abc',
+            1712345678901,
             false,
             true,
           )}`,
@@ -285,7 +285,7 @@ describe('string arg packing', () => {
       {
         "text": "SELECT * FROM "foo" WHERE "timestampz" = to_timestamp($1::text::bigint / 1000.0)",
         "values": [
-          ""abc"",
+          "1712345678901",
         ],
       }
     `);
@@ -459,7 +459,7 @@ describe('string arg packing', () => {
               isEnum: false,
               type: 'timestamp',
             },
-            ['abc', 'def'],
+            [1712345678901, 1712345678902],
             false,
             true,
           )}`,
@@ -470,7 +470,7 @@ describe('string arg packing', () => {
                 SELECT to_timestamp(value::text::bigint / 1000.0) AT TIME ZONE 'UTC' FROM jsonb_array_elements_text($1::text::jsonb)
               )",
         "values": [
-          "["abc","def"]",
+          "[1712345678901,1712345678902]",
         ],
       }
     `);
@@ -485,7 +485,7 @@ describe('string arg packing', () => {
               isEnum: false,
               type: 'timestamptz',
             },
-            ['abc', 'def'],
+            [1712345678901, 1712345678902],
             false,
             true,
           )}`,
@@ -496,7 +496,7 @@ describe('string arg packing', () => {
                 SELECT to_timestamp(value::text::bigint / 1000.0) FROM jsonb_array_elements_text($1::text::jsonb)
               )",
         "values": [
-          "["abc","def"]",
+          "[1712345678901,1712345678902]",
         ],
       }
     `);
