@@ -273,28 +273,6 @@ export function dataTypeToZqlValueType(
   isArray: boolean,
 ): ValueType | undefined {
   // We treat pg arrays as JSON values.
-  // if (pgType[0] === '_') {
-  //   // This is a PG array type.
-  //   const elementType = dataTypeToZqlValueType(pgType.substring(1), isEnum);
-  //   if (elementType === undefined) {
-  //     // If we do not support the element type, we do not support the array type.
-  //     return undefined;
-  //   }
-  //   return 'json';
-  // }
-
-  // if (pgType.endsWith('[]')) {
-  //   const elementType = dataTypeToZqlValueType(
-  //     pgType.substring(0, pgType.length - 2),
-  //     isEnum,
-  //   );
-  //   if (elementType === undefined) {
-  //     // If we do not support the element type, we do not support the array type.
-  //     return undefined;
-  //   }
-
-  //   return 'json';
-  // }
   if (isArray) {
     return 'json';
   }
