@@ -99,99 +99,409 @@ describe('string arg packing', () => {
     `);
   });
 
-  test('many types', () => {
-    expect(
-      formatPgInternalConvert(
-        sql`SELECT * FROM "foo" WHERE "jsonb" = ${sqlConvertColumnArg(
-          {
-            isArray: false,
-            isEnum: false,
-            type: 'jsonb',
-          },
-          {},
-          false,
-          true,
-        )} OR "numeric" = ${sqlConvertColumnArg(
-          {
-            isArray: false,
-            isEnum: false,
-            type: 'numeric',
-          },
-          1,
-          false,
-          true,
-        )}
-        OR "str" = ${sqlConvertColumnArg(
-          {
-            isArray: false,
-            isEnum: false,
-            type: 'text',
-          },
-          'str',
-          false,
-          true,
-        )} OR "boolean" = ${sqlConvertColumnArg(
-          {
-            isArray: false,
-            isEnum: false,
-            type: 'boolean',
-          },
-          true,
-          false,
-          true,
-        )} OR "uuid"::text = ${sqlConvertColumnArg(
-          {
-            isArray: false,
-            isEnum: false,
-            type: 'uuid',
-          },
-          '8f1dceb2-b3dd-46cf-9deb-460e9d87541c',
-          false,
-          true,
-        )} OR "enum"::text = ${sqlConvertColumnArg(
-          {
-            isArray: false,
-            isEnum: true,
-            type: 'some_enum',
-          },
-          'ENUM_KEY',
-          false,
-          true,
-        )} OR "timestamp" = ${sqlConvertColumnArg(
-          {
-            isArray: false,
-            isEnum: false,
-            type: 'timestamp',
-          },
-          'abc',
-          false,
-          true,
-        )} OR "timestampz" = ${sqlConvertColumnArg(
-          {
-            isArray: false,
-            isEnum: false,
-            type: 'timestamptz',
-          },
-          'abc',
-          false,
-          true,
-        )}`,
-      ),
-    ).toMatchInlineSnapshot(`
+  describe('many types', () => {
+    test('jsonb type', () => {
+      expect(
+        formatPgInternalConvert(
+          sql`SELECT * FROM "foo" WHERE "jsonb" = ${sqlConvertColumnArg(
+            {
+              isArray: false,
+              isEnum: false,
+              type: 'jsonb',
+            },
+            {},
+            false,
+            true,
+          )}`,
+        ),
+      ).toMatchInlineSnapshot(`
       {
-        "text": "SELECT * FROM "foo" WHERE "jsonb" = $1::text::jsonb OR "numeric" = $2::text::double precision
-              OR "str" = $3::text COLLATE "ucs_basic" OR "boolean" = $4::text::boolean OR "uuid"::text = $5::text COLLATE "ucs_basic" OR "enum"::text = $6::text COLLATE "ucs_basic" OR "timestamp" = to_timestamp($7::text::bigint / 1000.0) AT TIME ZONE 'UTC' OR "timestampz" = to_timestamp($7::text::bigint / 1000.0)",
+        "text": "SELECT * FROM "foo" WHERE "jsonb" = $1::text::jsonb",
         "values": [
           "{}",
+        ],
+      }
+    `);
+    });
+
+    test('numeric type', () => {
+      expect(
+        formatPgInternalConvert(
+          sql`SELECT * FROM "foo" WHERE "numeric" = ${sqlConvertColumnArg(
+            {
+              isArray: false,
+              isEnum: false,
+              type: 'numeric',
+            },
+            1,
+            false,
+            true,
+          )}`,
+        ),
+      ).toMatchInlineSnapshot(`
+      {
+        "text": "SELECT * FROM "foo" WHERE "numeric" = $1::text::double precision",
+        "values": [
           "1",
+        ],
+      }
+    `);
+    });
+
+    test('text type', () => {
+      expect(
+        formatPgInternalConvert(
+          sql`SELECT * FROM "foo" WHERE "str" = ${sqlConvertColumnArg(
+            {
+              isArray: false,
+              isEnum: false,
+              type: 'text',
+            },
+            'str',
+            false,
+            true,
+          )}`,
+        ),
+      ).toMatchInlineSnapshot(`
+      {
+        "text": "SELECT * FROM "foo" WHERE "str" = $1::text COLLATE "ucs_basic"",
+        "values": [
           "str",
+        ],
+      }
+    `);
+    });
+
+    test('boolean type', () => {
+      expect(
+        formatPgInternalConvert(
+          sql`SELECT * FROM "foo" WHERE "boolean" = ${sqlConvertColumnArg(
+            {
+              isArray: false,
+              isEnum: false,
+              type: 'boolean',
+            },
+            true,
+            false,
+            true,
+          )}`,
+        ),
+      ).toMatchInlineSnapshot(`
+      {
+        "text": "SELECT * FROM "foo" WHERE "boolean" = $1::text::boolean",
+        "values": [
           "true",
+        ],
+      }
+    `);
+    });
+
+    test('uuid type', () => {
+      expect(
+        formatPgInternalConvert(
+          sql`SELECT * FROM "foo" WHERE "uuid"::text = ${sqlConvertColumnArg(
+            {
+              isArray: false,
+              isEnum: false,
+              type: 'uuid',
+            },
+            '8f1dceb2-b3dd-46cf-9deb-460e9d87541c',
+            false,
+            true,
+          )}`,
+        ),
+      ).toMatchInlineSnapshot(`
+      {
+        "text": "SELECT * FROM "foo" WHERE "uuid"::text = $1::text COLLATE "ucs_basic"",
+        "values": [
           "8f1dceb2-b3dd-46cf-9deb-460e9d87541c",
+        ],
+      }
+    `);
+    });
+
+    test('enum type', () => {
+      expect(
+        formatPgInternalConvert(
+          sql`SELECT * FROM "foo" WHERE "enum"::text = ${sqlConvertColumnArg(
+            {
+              isArray: false,
+              isEnum: true,
+              type: 'some_enum',
+            },
+            'ENUM_KEY',
+            false,
+            true,
+          )}`,
+        ),
+      ).toMatchInlineSnapshot(`
+      {
+        "text": "SELECT * FROM "foo" WHERE "enum"::text = $1::text COLLATE "ucs_basic"",
+        "values": [
           "ENUM_KEY",
+        ],
+      }
+    `);
+    });
+
+    test('timestamp type', () => {
+      expect(
+        formatPgInternalConvert(
+          sql`SELECT * FROM "foo" WHERE "timestamp" = ${sqlConvertColumnArg(
+            {
+              isArray: false,
+              isEnum: false,
+              type: 'timestamp',
+            },
+            'abc',
+            false,
+            true,
+          )}`,
+        ),
+      ).toMatchInlineSnapshot(`
+      {
+        "text": "SELECT * FROM "foo" WHERE "timestamp" = to_timestamp($1::text::bigint / 1000.0) AT TIME ZONE 'UTC'",
+        "values": [
           ""abc"",
         ],
       }
     `);
+    });
+
+    test('timestamptz type', () => {
+      expect(
+        formatPgInternalConvert(
+          sql`SELECT * FROM "foo" WHERE "timestampz" = ${sqlConvertColumnArg(
+            {
+              isArray: false,
+              isEnum: false,
+              type: 'timestamptz',
+            },
+            'abc',
+            false,
+            true,
+          )}`,
+        ),
+      ).toMatchInlineSnapshot(`
+      {
+        "text": "SELECT * FROM "foo" WHERE "timestampz" = to_timestamp($1::text::bigint / 1000.0)",
+        "values": [
+          ""abc"",
+        ],
+      }
+    `);
+    });
+
+    test('jsonb[] type', () => {
+      expect(
+        formatPgInternalConvert(
+          sql`SELECT * FROM "foo" WHERE "jsonb" = ${sqlConvertColumnArg(
+            {
+              isArray: true,
+              isEnum: false,
+              type: 'jsonb',
+            },
+            [{}, {a: 1}],
+            false,
+            true,
+          )}`,
+        ),
+      ).toMatchInlineSnapshot(`
+      {
+        "text": "SELECT * FROM "foo" WHERE "jsonb" = ARRAY(
+                SELECT value::text::jsonb FROM jsonb_array_elements_text($1::text::jsonb)
+              )",
+        "values": [
+          "[{},{"a":1}]",
+        ],
+      }
+    `);
+    });
+
+    test('numeric[] type', () => {
+      expect(
+        formatPgInternalConvert(
+          sql`SELECT * FROM "foo" WHERE "numeric" = ${sqlConvertColumnArg(
+            {
+              isArray: true,
+              isEnum: false,
+              type: 'numeric',
+            },
+            [1, 2.2, 3],
+            false,
+            true,
+          )}`,
+        ),
+      ).toMatchInlineSnapshot(`
+      {
+        "text": "SELECT * FROM "foo" WHERE "numeric" = ARRAY(
+                SELECT value::text::double precision FROM jsonb_array_elements_text($1::text::jsonb)
+              )",
+        "values": [
+          "[1,2.2,3]",
+        ],
+      }
+    `);
+    });
+
+    test('text[] type', () => {
+      expect(
+        formatPgInternalConvert(
+          sql`SELECT * FROM "foo" WHERE "str" = ${sqlConvertColumnArg(
+            {
+              isArray: true,
+              isEnum: false,
+              type: 'text',
+            },
+            ['a', 'b', 'c'],
+            false,
+            true,
+          )}`,
+        ),
+      ).toMatchInlineSnapshot(`
+      {
+        "text": "SELECT * FROM "foo" WHERE "str" = ARRAY(
+                SELECT value::text COLLATE "ucs_basic" FROM jsonb_array_elements_text($1::text::jsonb)
+              )",
+        "values": [
+          "["a","b","c"]",
+        ],
+      }
+    `);
+    });
+
+    test('boolean[] type', () => {
+      expect(
+        formatPgInternalConvert(
+          sql`SELECT * FROM "foo" WHERE "boolean" = ${sqlConvertColumnArg(
+            {
+              isArray: true,
+              isEnum: false,
+              type: 'boolean',
+            },
+            [true, false, true],
+            false,
+            true,
+          )}`,
+        ),
+      ).toMatchInlineSnapshot(`
+      {
+        "text": "SELECT * FROM "foo" WHERE "boolean" = ARRAY(
+                SELECT value::text::boolean FROM jsonb_array_elements_text($1::text::jsonb)
+              )",
+        "values": [
+          "[true,false,true]",
+        ],
+      }
+    `);
+    });
+
+    test('uuid[] type', () => {
+      expect(
+        formatPgInternalConvert(
+          sql`SELECT * FROM "foo" WHERE "uuid"::text = ${sqlConvertColumnArg(
+            {
+              isArray: true,
+              isEnum: false,
+              type: 'uuid',
+            },
+            [
+              '8f1dceb2-b3dd-46cf-9deb-460e9d87541c',
+              '11111111-1111-1111-1111-111111111111',
+            ],
+            false,
+            true,
+          )}`,
+        ),
+      ).toMatchInlineSnapshot(`
+      {
+        "text": "SELECT * FROM "foo" WHERE "uuid"::text = ARRAY(
+                SELECT value::text COLLATE "ucs_basic" FROM jsonb_array_elements_text($1::text::jsonb)
+              )",
+        "values": [
+          "["8f1dceb2-b3dd-46cf-9deb-460e9d87541c","11111111-1111-1111-1111-111111111111"]",
+        ],
+      }
+    `);
+    });
+
+    test('enum[] type', () => {
+      expect(
+        formatPgInternalConvert(
+          sql`SELECT * FROM "foo" WHERE "enum"::text = ${sqlConvertColumnArg(
+            {
+              isArray: true,
+              isEnum: true,
+              type: 'some_enum',
+            },
+            ['ENUM_KEY', 'OTHER_KEY'],
+            false,
+            true,
+          )}`,
+        ),
+      ).toMatchInlineSnapshot(`
+      {
+        "text": "SELECT * FROM "foo" WHERE "enum"::text = ARRAY(
+                SELECT value::text COLLATE "ucs_basic" FROM jsonb_array_elements_text($1::text::jsonb)
+              )",
+        "values": [
+          "["ENUM_KEY","OTHER_KEY"]",
+        ],
+      }
+    `);
+    });
+
+    test('timestamp[] type', () => {
+      expect(
+        formatPgInternalConvert(
+          sql`SELECT * FROM "foo" WHERE "timestamp" = ${sqlConvertColumnArg(
+            {
+              isArray: true,
+              isEnum: false,
+              type: 'timestamp',
+            },
+            ['abc', 'def'],
+            false,
+            true,
+          )}`,
+        ),
+      ).toMatchInlineSnapshot(`
+      {
+        "text": "SELECT * FROM "foo" WHERE "timestamp" = ARRAY(
+                SELECT to_timestamp(value::text::bigint / 1000.0) AT TIME ZONE 'UTC' FROM jsonb_array_elements_text($1::text::jsonb)
+              )",
+        "values": [
+          "["abc","def"]",
+        ],
+      }
+    `);
+    });
+
+    test('timestamptz[] type', () => {
+      expect(
+        formatPgInternalConvert(
+          sql`SELECT * FROM "foo" WHERE "timestampz" = ${sqlConvertColumnArg(
+            {
+              isArray: true,
+              isEnum: false,
+              type: 'timestamptz',
+            },
+            ['abc', 'def'],
+            false,
+            true,
+          )}`,
+        ),
+      ).toMatchInlineSnapshot(`
+      {
+        "text": "SELECT * FROM "foo" WHERE "timestampz" = ARRAY(
+                SELECT to_timestamp(value::text::bigint / 1000.0) FROM jsonb_array_elements_text($1::text::jsonb)
+              )",
+        "values": [
+          "["abc","def"]",
+        ],
+      }
+    `);
+    });
   });
 
   test('mapped and joined', () => {
