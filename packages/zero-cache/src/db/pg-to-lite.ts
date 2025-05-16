@@ -35,7 +35,7 @@ export function warnIfDataTypeSupported(
     lc.warn?.(
       `\n\nWARNING: zero does not yet support the "${upstreamDataType(
         liteTypeString,
-      )}" (from "${liteTypeString}" data type.\n` +
+      )}" data type.\n` +
         `The "${table}"."${column}" column will not be synced to clients.\n\n`,
     );
   }
@@ -91,21 +91,16 @@ export function mapPostgresToLiteColumn(
   column: {name: string; spec: ColumnSpec},
   ignoreDefault?: 'ignore-default',
 ): ColumnSpec {
-  const {
-    pos,
-    dataType,
-    pgTypeClass,
-    notNull,
-    dflt,
-    elemPgTypeClass = null,
-  } = column.spec;
+  const {pos, dataType, pgTypeClass, notNull, dflt, elemPgTypeClass} =
+    column.spec;
   return {
     pos,
     dataType: liteTypeString(
       dataType,
       notNull,
       (elemPgTypeClass ?? pgTypeClass) === PostgresTypeClass.Enum,
-      elemPgTypeClass !== null,
+      // eslint-disable-next-line eqeqeq
+      elemPgTypeClass != null,
     ),
     characterMaximumLength: null,
     // Note: NOT NULL constraints are always ignored for SQLite (replica) tables.

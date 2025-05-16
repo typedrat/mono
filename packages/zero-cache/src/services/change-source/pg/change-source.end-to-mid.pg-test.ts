@@ -1240,7 +1240,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
               characterMaximumLength: null,
               dataType: 'int4[]|TEXT_ARRAY',
               dflt: null,
-              elemPgTypeClass: null, // WHY?,
+              elemPgTypeClass: 'b',
               notNull: false,
               pos: 8,
             },

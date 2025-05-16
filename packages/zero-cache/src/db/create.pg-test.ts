@@ -479,7 +479,7 @@ describe('tables/create', () => {
             dataType: 'varchar|TEXT_ARRAY',
             characterMaximumLength: null,
             notNull: false,
-            elemPgTypeClass: null,
+            elemPgTypeClass: 'b',
             dflt: null,
           },
           nums: {
@@ -487,7 +487,7 @@ describe('tables/create', () => {
             dataType: 'int4|TEXT_ARRAY',
             characterMaximumLength: null,
             notNull: false,
-            elemPgTypeClass: null,
+            elemPgTypeClass: 'b',
             dflt: null,
           },
           enums: {

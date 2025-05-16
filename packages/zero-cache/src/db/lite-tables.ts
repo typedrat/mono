@@ -63,8 +63,11 @@ export function listTables(db: Database): LiteTableSpec[] {
       tables.push(table);
     }
 
-    const elemPgTypeClass =
-      isArray(col.type) && isEnum(col.type) ? PostgresTypeClass.Enum : null;
+    const elemPgTypeClass = isArray(col.type)
+      ? isEnum(col.type)
+        ? PostgresTypeClass.Enum
+        : PostgresTypeClass.Base
+      : null;
 
     table.columns[col.name] = {
       pos: Object.keys(table.columns).length + 1,

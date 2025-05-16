@@ -574,7 +574,7 @@ describe('change-source/pg/initial-sync', {timeout: 10000}, () => {
               dataType: 'int4[]|TEXT_ARRAY',
               notNull: false,
               dflt: null,
-              elemPgTypeClass: null,
+              elemPgTypeClass: 'b',
             },
             json: {
               pos: 8,
