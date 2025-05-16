@@ -299,8 +299,8 @@ function createLiteIndices(tx: Database, indices: IndexSpec[]) {
 export const INSERT_BATCH_SIZE = 50;
 
 const MB = 1024 * 1024;
-const BUFFERED_ROWS_THRESHOLD = 16_000;
-const BUFFERED_SIZE_THRESHOLD = 16 * MB;
+const BUFFERED_ROWS_THRESHOLD = 10_000;
+const BUFFERED_SIZE_THRESHOLD = 8 * MB;
 
 async function copy(
   lc: LogContext,
