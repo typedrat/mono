@@ -56,13 +56,6 @@ export type TypeNameToTypeMap = {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   json: any;
-
-  // 'string[]': string[];
-  // 'number[]': number[];
-  // 'boolean[]': boolean[];
-  // 'null[]': null[];
-  // // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  // 'json[]': any[];
 };
 
 export type ColumnTypeName<T extends SchemaValue | ValueType> =

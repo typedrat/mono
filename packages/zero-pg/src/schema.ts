@@ -98,13 +98,12 @@ export async function getServerSchema<S extends Schema>(
     }
     const isArray = row.elemTyptype !== null;
     const isEnum = (row.elemTyptype ?? row.typtype) === PostgresTypeClass.Enum;
-    let type = row.dataType;
+    let type = row.dataType.toLowerCase();
     if (isArray) {
       type = must(row.elemTypname);
     } else if (isEnum) {
       type = row.typename;
     }
-    type = type.toLowerCase();
     if (
       (type === 'bpchar' ||
         type === 'character' ||
@@ -156,10 +155,9 @@ function makeSchemaIncompatibleErrorMessage(
         );
         break;
       case 'typeError':
-        messages.push('XXX ' + JSON.stringify(error, null, 2));
-        // `Type mismatch for column "${error.column}" in table "${error.table}": ${error.requiredType === undefined ?
-        //     `${error.pgType} is currently unsupported in Zero. Please file a bug at https://bugs.rocicorp.dev/` : `${error.pgType} should be mapped to ${error.requiredType} in Zero not ${error.declaredType}.`}`,
-        // );
+        messages.push(
+          `Type mismatch for column "${error.column}" in table "${error.table}": ${error.requiredType === undefined ? `${error.pgType} is currently unsupported in Zero. Please file a bug at https://bugs.rocicorp.dev/` : `${error.pgType} should be mapped to ${error.requiredType} in Zero not ${error.declaredType}.`}`,
+        );
         break;
     }
   }

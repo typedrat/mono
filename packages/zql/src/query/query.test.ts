@@ -7,7 +7,6 @@ import {relationships} from '../../../zero-schema/src/builder/relationship-build
 import type {Schema as ZeroSchema} from '../../../zero-schema/src/builder/schema-builder.ts';
 import {createSchema} from '../../../zero-schema/src/builder/schema-builder.ts';
 import {
-  array,
   boolean,
   enumeration,
   json,
@@ -128,15 +127,13 @@ const schemaWithArray = table('testWithArray')
   .columns({
     id: string(),
 
-    arrayOfNumber: array(number()),
-    arrayOfString: array(string()),
-    arrayOfBoolean: array(boolean()),
-    arrayOfJSON: array(json()),
+    arrayOfNumber: json<number[]>(),
+    arrayOfString: json<string[]>(),
+    arrayOfBoolean: json<boolean[]>(),
 
-    optionalArrayOfNumber: array(number()).optional(),
-    optionalArrayOfString: array(string()).optional(),
-    optionalArrayOfBoolean: array(boolean()).optional(),
-    optionalArrayOfJSON: array(json()).optional(),
+    optionalArrayOfNumber: json<number[]>().optional(),
+    optionalArrayOfString: json<string[]>().optional(),
+    optionalArrayOfBoolean: json<boolean[]>().optional(),
   })
   .primaryKey('id');
 
@@ -803,12 +800,10 @@ test('array type', () => {
         readonly arrayOfNumber: number[];
         readonly arrayOfString: string[];
         readonly arrayOfBoolean: boolean[];
-        readonly arrayOfJSON: ReadonlyJSONValue[];
 
         readonly optionalArrayOfNumber: number[] | null;
         readonly optionalArrayOfString: string[] | null;
         readonly optionalArrayOfBoolean: boolean[] | null;
-        readonly optionalArrayOfJSON: ReadonlyJSONValue[] | null;
       }
     | undefined
   >();
@@ -820,19 +815,17 @@ test('array type', () => {
       readonly arrayOfNumber: number[];
       readonly arrayOfString: string[];
       readonly arrayOfBoolean: boolean[];
-      readonly arrayOfJSON: ReadonlyJSONValue[];
 
       readonly optionalArrayOfNumber: number[] | null;
       readonly optionalArrayOfString: string[] | null;
       readonly optionalArrayOfBoolean: boolean[] | null;
-      readonly optionalArrayOfJSON: ReadonlyJSONValue[] | null;
     }[]
   >();
 
-  //  @ts-expect-error - Cannot compare arrays. Should we allow this... Maybe in a follow up PR?
+  //  @ts-expect-error - Cannot compare json/arrays. Should we allow this... Maybe in a follow up PR?
   query.where('arrayOfNumber', '=', [1, 2]);
 
-  //  @ts-expect-error - Cannot compare arrays. Should we allow this... Maybe in a follow up PR?
+  //  @ts-expect-error - Cannot compare json/arrays. Should we allow this... Maybe in a follow up PR?
   query.where(({cmp}) => cmp('arrayOfString', '=', ['a', 'b']));
 });
 

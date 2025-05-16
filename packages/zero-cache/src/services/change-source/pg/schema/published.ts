@@ -58,11 +58,7 @@ tables AS (SELECT json_build_object(
                        THEN "type" 
                        ELSE substring("type" from 2) || repeat('[]', "arrayDims") END,
       'pgTypeClass', "typtype",
---      'elemPgTypeClass', CASE WHEN "arrayDims" = 0 
---                              THEN NULL 
---                              ELSE "elemTyptype" END,
       'elemPgTypeClass', "elemTyptype",
-
       'typeOID', "typeOID",
       -- https://stackoverflow.com/a/52376230
       'characterMaximumLength', CASE WHEN "typeOID" = 1043 OR "typeOID" = 1042 
