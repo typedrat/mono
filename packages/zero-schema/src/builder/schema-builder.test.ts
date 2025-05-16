@@ -2,15 +2,7 @@ import {expect, expectTypeOf, test} from 'vitest';
 import type {Query} from '../../../zql/src/query/query.ts';
 import {relationships} from './relationship-builder.ts';
 import {clientSchemaFrom, createSchema} from './schema-builder.ts';
-import {
-  array,
-  boolean,
-  enumeration,
-  json,
-  number,
-  string,
-  table,
-} from './table-builder.ts';
+import {boolean, json, number, string, table} from './table-builder.ts';
 
 const mockQuery = {
   select() {
@@ -672,11 +664,11 @@ test('array column', () => {
         .from('issues')
         .columns({
           id: string(),
-          stringArray: array(string()),
-          numberArray: array(number()),
-          booleanArray: array(boolean()),
-          jsonArray: array(json()),
-          enumArray: array(enumeration<'A' | 'B'>()),
+          stringArray: json<string[]>(),
+          numberArray: json<number[]>(),
+          booleanArray: json<boolean[]>(),
+          jsonArray: json(),
+          enumArray: json<('A' | 'B')[]>(),
         })
         .primaryKey('id'),
     ],
@@ -689,32 +681,28 @@ test('array column', () => {
           "issues": {
             "columns": {
               "booleanArray": {
-                "type": "boolean[]"
+                "type": "json"
               },
               "enumArray": {
-                "type": "string[]"
+                "type": "json"
               },
               "id": {
                 "type": "string"
               },
               "jsonArray": {
-                "type": "json[]"
+                "type": "json"
               },
               "numberArray": {
-                "type": "number[]"
+                "type": "json"
               },
               "stringArray": {
-                "type": "string[]"
+                "type": "json"
               }
             }
           }
         }
       },
-      "hash": "3d7l8jwlis11r"
+      "hash": "qeez7tx1u29h"
     }"
   `);
-
-  expect(() => array(array(string()))).toThrowErrorMatchingInlineSnapshot(
-    `[Error: Nested array types are not supported]`,
-  );
 });
