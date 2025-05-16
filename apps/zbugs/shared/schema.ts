@@ -4,7 +4,6 @@ import {
   createSchema,
   definePermissions,
   enumeration,
-  json,
   number,
   relationships,
   string,
@@ -58,16 +57,10 @@ const comment = table('comment')
   })
   .primaryKey('id');
 
-type Mood = 'sad' | 'ok' | 'happy';
-
 const label = table('label')
   .columns({
     id: string(),
     name: string(),
-    testEnumArray: json<Mood[]>(),
-    testTextArray: json<string[]>(),
-    testMood: enumeration<Mood>(),
-    testIntArray: json<number[]>(),
   })
   .primaryKey('id');
 

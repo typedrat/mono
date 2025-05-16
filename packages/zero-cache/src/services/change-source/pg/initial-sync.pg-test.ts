@@ -405,7 +405,7 @@ describe('change-source/pg/initial-sync', {timeout: 10000}, () => {
               typeOID: 1007,
               notNull: false,
               dflt: null,
-              elemPgTypeClass: null,
+              elemPgTypeClass: 'b',
             },
             json: {
               pos: 8,
@@ -571,7 +571,7 @@ describe('change-source/pg/initial-sync', {timeout: 10000}, () => {
             intArray: {
               pos: 7,
               characterMaximumLength: null,
-              dataType: 'int4[]',
+              dataType: 'int4[]|TEXT_ARRAY',
               notNull: false,
               dflt: null,
               elemPgTypeClass: null,

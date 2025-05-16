@@ -152,6 +152,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             id: {
               characterMaximumLength: null,
               dataType: 'int8|NOT_NULL',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 1,
@@ -159,6 +160,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             ['_0_version']: {
               characterMaximumLength: null,
               dataType: 'TEXT',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 2,
@@ -187,6 +189,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             id: {
               characterMaximumLength: null,
               dataType: 'int8|NOT_NULL',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 1,
@@ -194,6 +197,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             ['_0_version']: {
               characterMaximumLength: null,
               dataType: 'TEXT',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 2,
@@ -221,6 +225,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             ['_0_version']: {
               characterMaximumLength: null,
               dataType: 'TEXT',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 2,
@@ -228,6 +233,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             id: {
               characterMaximumLength: null,
               dataType: 'int8|NOT_NULL',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 1,
@@ -235,6 +241,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             name: {
               characterMaximumLength: null,
               dataType: 'int8',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 3,
@@ -256,6 +263,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             ['_0_version']: {
               characterMaximumLength: null,
               dataType: 'TEXT',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 2,
@@ -263,6 +271,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             id: {
               characterMaximumLength: null,
               dataType: 'int8|NOT_NULL',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 1,
@@ -270,6 +279,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             handle: {
               characterMaximumLength: null,
               dataType: 'int8',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 3,
@@ -291,6 +301,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             ['_0_version']: {
               characterMaximumLength: null,
               dataType: 'TEXT',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 2,
@@ -298,6 +309,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             id: {
               characterMaximumLength: null,
               dataType: 'int8|NOT_NULL',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 1,
@@ -305,6 +317,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             handle: {
               characterMaximumLength: null,
               dataType: 'TEXT',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 3,
@@ -343,6 +356,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             ['_0_version']: {
               characterMaximumLength: null,
               dataType: 'TEXT',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 2,
@@ -350,6 +364,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             id: {
               characterMaximumLength: null,
               dataType: 'int8|NOT_NULL',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 1,
@@ -357,6 +372,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             handle: {
               characterMaximumLength: null,
               dataType: 'text|NOT_NULL',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 3,
@@ -385,6 +401,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             ['_0_version']: {
               characterMaximumLength: null,
               dataType: 'TEXT',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 2,
@@ -392,6 +409,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             id: {
               characterMaximumLength: null,
               dataType: 'int8|NOT_NULL',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 1,
@@ -399,6 +417,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             handle: {
               characterMaximumLength: null,
               dataType: 'text|NOT_NULL',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 3,
@@ -406,6 +425,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             username: {
               characterMaximumLength: null,
               dataType: 'TEXT',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 4,
@@ -434,6 +454,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             ['_0_version']: {
               characterMaximumLength: null,
               dataType: 'TEXT',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 2,
@@ -441,6 +462,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             id: {
               characterMaximumLength: null,
               dataType: 'int8|NOT_NULL',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 1,
@@ -448,6 +470,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             handle: {
               characterMaximumLength: null,
               dataType: 'text|NOT_NULL',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 3,
@@ -455,6 +478,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             login: {
               characterMaximumLength: null,
               dataType: 'TEXT',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 4,
@@ -483,6 +507,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             ['_0_version']: {
               characterMaximumLength: null,
               dataType: 'TEXT',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 2,
@@ -490,6 +515,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             id: {
               characterMaximumLength: null,
               dataType: 'int8|NOT_NULL',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 1,
@@ -497,6 +523,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             handle: {
               characterMaximumLength: null,
               dataType: 'text|NOT_NULL',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 3,
@@ -504,6 +531,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             login: {
               characterMaximumLength: null,
               dataType: 'varchar',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 4,
@@ -534,6 +562,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             ['_0_version']: {
               characterMaximumLength: null,
               dataType: 'TEXT',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 2,
@@ -541,6 +570,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             id: {
               characterMaximumLength: null,
               dataType: 'int8|NOT_NULL',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 1,
@@ -548,6 +578,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             handle: {
               characterMaximumLength: null,
               dataType: 'text|NOT_NULL',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 3,
@@ -555,6 +586,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             login: {
               characterMaximumLength: null,
               dataType: 'varchar|NOT_NULL',
+              elemPgTypeClass: null,
               dflt: null, // defaults should be ignored for update-column
               notNull: false,
               pos: 4,
@@ -583,6 +615,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             ['_0_version']: {
               characterMaximumLength: null,
               dataType: 'TEXT',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 2,
@@ -590,6 +623,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             id: {
               characterMaximumLength: null,
               dataType: 'int8|NOT_NULL',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 1,
@@ -597,6 +631,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             handle: {
               characterMaximumLength: null,
               dataType: 'text|NOT_NULL',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 3,
@@ -618,6 +653,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             ['_0_version']: {
               characterMaximumLength: null,
               dataType: 'TEXT',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 2,
@@ -625,6 +661,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             id: {
               characterMaximumLength: null,
               dataType: 'int8|NOT_NULL',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 1,
@@ -632,6 +669,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             handle: {
               characterMaximumLength: null,
               dataType: 'text|NOT_NULL',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 3,
@@ -639,6 +677,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             bar: {
               characterMaximumLength: null,
               dataType: 'TEXT',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 4,
@@ -646,6 +685,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             foo: {
               characterMaximumLength: null,
               dataType: 'TEXT',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 5,
@@ -667,6 +707,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             ['_0_version']: {
               characterMaximumLength: null,
               dataType: 'TEXT',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 2,
@@ -674,6 +715,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             id: {
               characterMaximumLength: null,
               dataType: 'int8|NOT_NULL',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 1,
@@ -681,6 +723,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             handle: {
               characterMaximumLength: null,
               dataType: 'text|NOT_NULL',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 3,
@@ -688,6 +731,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             foo: {
               characterMaximumLength: null,
               dataType: 'text|NOT_NULL',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 4,
@@ -695,6 +739,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             boo: {
               characterMaximumLength: null,
               dataType: 'TEXT',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 5,
@@ -716,6 +761,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             ['_0_version']: {
               characterMaximumLength: null,
               dataType: 'TEXT',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 2,
@@ -723,6 +769,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             id: {
               characterMaximumLength: null,
               dataType: 'int8|NOT_NULL',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 1,
@@ -730,6 +777,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             handle: {
               characterMaximumLength: null,
               dataType: 'text|NOT_NULL',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 3,
@@ -737,6 +785,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             foo: {
               characterMaximumLength: null,
               dataType: 'text|NOT_NULL',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 4,
@@ -744,6 +793,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             boo: {
               characterMaximumLength: null,
               dataType: 'TEXT',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 5,
@@ -774,6 +824,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             id: {
               characterMaximumLength: null,
               dataType: 'text|NOT_NULL',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 1,
@@ -781,6 +832,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             int: {
               characterMaximumLength: null,
               dataType: 'int4',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 2,
@@ -788,6 +840,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             ['_0_version']: {
               characterMaximumLength: null,
               dataType: 'TEXT',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 3,
@@ -821,6 +874,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             id: {
               characterMaximumLength: null,
               dataType: 'text|NOT_NULL',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 1,
@@ -828,6 +882,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             ['_0_version']: {
               characterMaximumLength: null,
               dataType: 'TEXT',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 2,
@@ -835,6 +890,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             newInt: {
               characterMaximumLength: null,
               dataType: 'int4',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 3,
@@ -865,6 +921,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             id: {
               characterMaximumLength: null,
               dataType: 'text|NOT_NULL',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 1,
@@ -872,6 +929,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             ['_0_version']: {
               characterMaximumLength: null,
               dataType: 'TEXT',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 2,
@@ -879,6 +937,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             newInt: {
               characterMaximumLength: null,
               dataType: 'int4',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 3,
@@ -886,6 +945,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             flt: {
               characterMaximumLength: null,
               dataType: 'float8',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 4,
@@ -893,6 +953,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             int: {
               characterMaximumLength: null,
               dataType: 'int4',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 5,
@@ -928,6 +989,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             id: {
               characterMaximumLength: null,
               dataType: 'text|NOT_NULL',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 1,
@@ -935,6 +997,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             ['_0_version']: {
               characterMaximumLength: null,
               dataType: 'TEXT',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 2,
@@ -942,6 +1005,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             flt: {
               characterMaximumLength: null,
               dataType: 'float8',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 3,
@@ -954,6 +1018,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             id: {
               characterMaximumLength: null,
               dataType: 'int8|NOT_NULL',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 1,
@@ -961,6 +1026,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             name: {
               characterMaximumLength: null,
               dataType: 'TEXT',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 2,
@@ -968,6 +1034,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             ['_0_version']: {
               characterMaximumLength: null,
               dataType: 'TEXT',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 3,
@@ -1056,12 +1123,12 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
 
       INSERT INTO foo (id, int, big, flt, bool, timea, date, json, jsonb, numz, uuid, intarr)
          VALUES (
-          'abc', 
-          -2, 
-          9007199254740993, 
-          3.45, 
-          true, 
-          '2019-01-12T00:30:35.381101032Z', 
+          'abc',
+          -2,
+          9007199254740993,
+          3.45,
+          true,
+          '2019-01-12T00:30:35.381101032Z',
           'April 12, 2003',
           '[{"foo":"bar","bar":"foo"},123]',
           '{"far": 456, "boo" : {"baz": 123}}',
@@ -1125,6 +1192,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
               characterMaximumLength: null,
               dataType: 'text|NOT_NULL',
               dflt: null,
+              elemPgTypeClass: null,
               notNull: false,
               pos: 1,
             },
@@ -1132,6 +1200,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
               characterMaximumLength: null,
               dataType: 'float8',
               dflt: null,
+              elemPgTypeClass: null,
               notNull: false,
               pos: 3,
             },
@@ -1139,6 +1208,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
               characterMaximumLength: null,
               dataType: 'int8',
               dflt: null,
+              elemPgTypeClass: null,
               notNull: false,
               pos: 4,
             },
@@ -1146,6 +1216,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
               characterMaximumLength: null,
               dataType: 'bool',
               dflt: null,
+              elemPgTypeClass: null,
               notNull: false,
               pos: 5,
             },
@@ -1153,6 +1224,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
               characterMaximumLength: null,
               dataType: 'date',
               dflt: null,
+              elemPgTypeClass: null,
               notNull: false,
               pos: 6,
             },
@@ -1160,56 +1232,64 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
               characterMaximumLength: null,
               dataType: 'int4',
               dflt: null,
+              elemPgTypeClass: null,
               notNull: false,
               pos: 7,
             },
-            // intarr: {
-            //   characterMaximumLength: null,
-            //   dataType: 'int4[]',
-            //   dflt: null,
-            //   notNull: false,
-            //   pos: 13,
-            // },
-            json: {
+            intarr: {
               characterMaximumLength: null,
-              dataType: 'json',
+              dataType: 'int4[]|TEXT_ARRAY',
               dflt: null,
+              elemPgTypeClass: null, // WHY?,
               notNull: false,
               pos: 8,
             },
-            jsonb: {
+            json: {
               characterMaximumLength: null,
-              dataType: 'jsonb',
+              dataType: 'json',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 9,
             },
-            numz: {
+            jsonb: {
               characterMaximumLength: null,
-              dataType: 'enumz|TEXT_ENUM',
+              dataType: 'jsonb',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 10,
             },
-            timea: {
+            numz: {
               characterMaximumLength: null,
-              dataType: 'timestamptz',
+              dataType: 'enumz|TEXT_ENUM',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 11,
             },
-            uuid: {
+            timea: {
               characterMaximumLength: null,
-              dataType: 'uuid',
+              dataType: 'timestamptz',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 12,
+            },
+            uuid: {
+              characterMaximumLength: null,
+              dataType: 'uuid',
+              elemPgTypeClass: null,
+              dflt: null,
+              notNull: false,
+              pos: 13,
             },
 
             ['_0_version']: {
               characterMaximumLength: null,
               dataType: 'TEXT',
               dflt: null,
+              elemPgTypeClass: null,
               notNull: false,
               pos: 2,
             },
@@ -1246,6 +1326,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             a: {
               characterMaximumLength: null,
               dataType: 'text|NOT_NULL',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 1,
@@ -1253,6 +1334,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             b: {
               characterMaximumLength: null,
               dataType: 'TEXT',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 2,
@@ -1260,6 +1342,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             ['_0_version']: {
               characterMaximumLength: null,
               dataType: 'TEXT',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 3,
@@ -1313,6 +1396,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             a: {
               characterMaximumLength: null,
               dataType: 'text|NOT_NULL',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 1,
@@ -1320,6 +1404,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             b: {
               characterMaximumLength: null,
               dataType: 'TEXT',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 2,
@@ -1327,6 +1412,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             ['_0_version']: {
               characterMaximumLength: null,
               dataType: 'TEXT',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 3,
@@ -1339,6 +1425,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             a: {
               characterMaximumLength: null,
               dataType: 'text|NOT_NULL',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 1,
@@ -1346,6 +1433,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             b: {
               characterMaximumLength: null,
               dataType: 'TEXT',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 2,
@@ -1353,6 +1441,7 @@ describe('change-source/pg/end-to-mid-test', {timeout: 30000}, () => {
             ['_0_version']: {
               characterMaximumLength: null,
               dataType: 'TEXT',
+              elemPgTypeClass: null,
               dflt: null,
               notNull: false,
               pos: 3,

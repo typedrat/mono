@@ -1,17 +1,14 @@
-import type {
-  CustomMutatorDefs,
-  Row,
-  Transaction,
-  UpdateValue,
-} from '@rocicorp/zero';
+import {schema} from './schema.ts';
+import {assert} from '../../../packages/shared/src/asserts.ts';
+import type {UpdateValue, Transaction, CustomMutatorDefs} from '@rocicorp/zero';
 import {
   assertIsCreatorOrAdmin,
-  assertIsLoggedIn,
-  assertUserCanSeeComment,
   assertUserCanSeeIssue,
+  assertUserCanSeeComment,
+  isAdmin,
   type AuthData,
+  assertIsLoggedIn,
 } from './auth.ts';
-import {schema} from './schema.ts';
 
 export type AddEmojiArgs = {
   id: string;
@@ -124,26 +121,22 @@ export function createMutators(authData: AuthData | undefined) {
     },
 
     label: {
-      async changeTest(
-        tx,
-        {id, test}: {id: string; test: ('sad' | 'ok' | 'happy')[]},
-      ) {
-        await tx.mutate.label.update({id, test});
+      async create(tx, {id, name}: {id: string; name: string}) {
+        assert(isAdmin(authData), 'Only admins can create labels');
+        await tx.mutate.label.insert({id, name});
       },
 
-      async change<K extends keyof typeof schema.tables.label.columns>(
-        tx: Transaction<typeof schema>,
+      async createAndAddToIssue(
+        tx,
         {
-          id,
-          col,
-          value,
-        }: {
-          id: string;
-          col: K;
-          value: Row<typeof schema.tables.label>[K];
-        },
+          issueID,
+          labelID,
+          labelName,
+        }: {labelID: string; issueID: string; labelName: string},
       ) {
-        await tx.mutate.label.update({id, [col]: value});
+        assert(isAdmin(authData), 'Only admins can create labels');
+        await tx.mutate.label.insert({id: labelID, name: labelName});
+        await tx.mutate.issueLabel.insert({issueID, labelID});
       },
     },
 

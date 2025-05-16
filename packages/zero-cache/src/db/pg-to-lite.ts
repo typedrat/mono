@@ -22,7 +22,7 @@ export const ZERO_VERSION_COLUMN_SPEC: ColumnSpec = {
   dataType: 'text',
   notNull: false,
   dflt: null,
-  // elemPgTypeClass: null,
+  elemPgTypeClass: null,
 };
 
 export function warnIfDataTypeSupported(
@@ -91,16 +91,21 @@ export function mapPostgresToLiteColumn(
   column: {name: string; spec: ColumnSpec},
   ignoreDefault?: 'ignore-default',
 ): ColumnSpec {
-  const {pos, dataType, pgTypeClass, notNull, dflt, elemPgTypeClass} =
-    column.spec;
+  const {
+    pos,
+    dataType,
+    pgTypeClass,
+    notNull,
+    dflt,
+    elemPgTypeClass = null,
+  } = column.spec;
   return {
     pos,
     dataType: liteTypeString(
       dataType,
       notNull,
       (elemPgTypeClass ?? pgTypeClass) === PostgresTypeClass.Enum,
-      // eslint-disable-next-line eqeqeq
-      elemPgTypeClass != null,
+      elemPgTypeClass !== null,
     ),
     characterMaximumLength: null,
     // Note: NOT NULL constraints are always ignored for SQLite (replica) tables.
