@@ -136,7 +136,7 @@ export async function initialSync(
 
       const rowCounts = await Promise.all(
         tables.map(table =>
-          copiers.processReadTask(db =>
+          copiers.processReadTask((db, lc) =>
             copy(lc, table, copyPool, db, tx, initialVersion),
           ),
         ),
