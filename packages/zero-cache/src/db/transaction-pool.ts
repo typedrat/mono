@@ -213,7 +213,8 @@ export class TransactionPool {
           }
         }
 
-        lc.debug?.('closing transaction');
+        lc.debug?.('exiting worker');
+        last.then(() => lc.debug?.('exited worker'));
         // Given the semantics of a Postgres transaction, the last statement
         // will only succeed if all of the preceding statements succeeded.
         return last;
@@ -238,7 +239,10 @@ export class TransactionPool {
             throw e;
           }
         })
-        .finally(() => this.#numWorkers--),
+        .finally(() => {
+          lc.debug?.('closed transaction');
+          this.#numWorkers--;
+        }),
     );
 
     // After adding the worker, enqueue a terminal signal if we are in either of the
