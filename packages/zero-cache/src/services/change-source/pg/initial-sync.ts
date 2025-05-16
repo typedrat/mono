@@ -3,7 +3,6 @@ import type {LogContext} from '@rocicorp/logger';
 import {Writable} from 'node:stream';
 import {pipeline} from 'node:stream/promises';
 import postgres from 'postgres';
-import type {JSONValue} from '../../../../../shared/src/json.ts';
 import {promiseVoid} from '../../../../../shared/src/resolved-promises.ts';
 import {Database} from '../../../../../zqlite/src/db.ts';
 import {
@@ -11,7 +10,11 @@ import {
   createTableStatement,
 } from '../../../db/create.ts';
 import * as Mode from '../../../db/mode-enum.ts';
-import {RowTransform, TextTransform} from '../../../db/pg-copy.ts';
+import {
+  RowTransform,
+  TextTransform,
+  type RowTransformOutput,
+} from '../../../db/pg-copy.ts';
 import {
   mapPostgresToLite,
   mapPostgresToLiteIndex,
@@ -295,6 +298,10 @@ function createLiteIndices(tx: Database, indices: IndexSpec[]) {
 // Exported for testing.
 export const INSERT_BATCH_SIZE = 50;
 
+const MB = 1024 * 1024;
+const BUFFERED_ROWS_THRESHOLD = 10_000;
+const BUFFERED_SIZE_THRESHOLD = 10 * MB;
+
 async function copy(
   lc: LogContext,
   table: PublishedTableSpec,
@@ -342,8 +349,9 @@ async function copy(
   const valuesPerBatch = valuesPerRow * INSERT_BATCH_SIZE;
   let values: LiteValueType[] = [];
   let pendingRows = 0;
+  let pendingSize = 0;
 
-  function flush(vals: LiteValueType[], rows: number) {
+  function flush(vals: LiteValueType[], rows: number, size: number) {
     const start = performance.now();
     const total = rows;
 
@@ -358,7 +366,7 @@ async function copy(
       totalRows++;
     }
     lc.debug?.(
-      `flushed ${total} rows in ${(performance.now() - start).toFixed(3)} ms`,
+      `flushed ${total} rows (${size} bytes) in ${(performance.now() - start).toFixed(3)} ms`,
     );
   }
 
@@ -372,23 +380,30 @@ async function copy(
       objectMode: true,
 
       write: async (
-        row: JSONValue[],
+        row: RowTransformOutput,
         _encoding: string,
         callback: (error?: Error) => void,
       ) => {
         try {
           values.push(
-            ...liteValues(row, columnSpecs, JSON_STRINGIFIED),
+            ...liteValues(row.values, columnSpecs, JSON_STRINGIFIED),
             initialVersion,
           );
-          if (++pendingRows === INSERT_BATCH_SIZE * 200) {
-            const valuesToFlush = values;
-            const rowsToFlush = pendingRows;
+          pendingRows++;
+          pendingSize += row.size;
+          if (
+            pendingRows >= BUFFERED_ROWS_THRESHOLD ||
+            pendingSize >= BUFFERED_SIZE_THRESHOLD
+          ) {
+            const vals = values;
+            const rows = pendingRows;
+            const size = pendingSize;
             values = [];
             pendingRows = 0;
+            pendingSize = 0;
 
             await lastFlush;
-            lastFlush = runAfterIO(() => flush(valuesToFlush, rowsToFlush));
+            lastFlush = runAfterIO(() => flush(vals, rows, size));
           }
           callback();
         } catch (e) {
@@ -399,7 +414,7 @@ async function copy(
       final: async (callback: (error?: Error) => void) => {
         try {
           await lastFlush;
-          flush(values, pendingRows);
+          flush(values, pendingRows, pendingSize);
           callback();
         } catch (e) {
           callback(e instanceof Error ? e : new Error(String(e)));
