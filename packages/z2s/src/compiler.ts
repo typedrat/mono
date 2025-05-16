@@ -21,7 +21,6 @@ import type {
   ValuePosition,
 } from '../../zero-protocol/src/ast.ts';
 import type {Schema} from '../../zero-schema/src/builder/schema-builder.ts';
-
 import {
   clientToServer,
   type NameMapper,
@@ -603,6 +602,10 @@ function selectIdent(server: ServerSpec, column: QualifiedColumn): SQLQuery {
       serverType === 'timestamptz' ||
       serverType === 'timestamp with time zone')
   ) {
+    if (serverColumnSchema.isArray) {
+      // Map EXTRACT(EPOCH FROM ...) * 1000 over array elements
+      return sql`ARRAY(SELECT EXTRACT(EPOCH FROM unnest(${colIdent(server, column)})) * 1000) as ${sql.ident(column.zql)}`;
+    }
     return sql`EXTRACT(EPOCH FROM ${colIdent(server, column)}) * 1000 as ${sql.ident(column.zql)}`;
   }
   return sql`${colIdent(server, column)} as ${sql.ident(column.zql)}`;

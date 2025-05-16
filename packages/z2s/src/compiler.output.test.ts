@@ -93,7 +93,9 @@ const timestampsTable = table('timestampsTable')
   .columns({
     id: string(),
     timestampWithTz: number(),
+    timestampWithTzArray: json<number[]>(),
     timestampWithoutTz: number(),
+    timestampWithoutTzArray: json<number[]>(),
   })
   .primaryKey('id');
 
@@ -158,11 +160,12 @@ const serverSchema: ServerSchema = {
     status: {type: 'statusEnum', isArray: false, isEnum: true},
     statusArray: {type: 'statusEnum', isArray: true, isEnum: true},
   },
-
   'timestampsTable': {
     id: {type: 'text', isArray: false, isEnum: false},
     timestampWithoutTz: {type: 'timestamp', isArray: false, isEnum: false},
+    timestampWithoutTzArray: {type: 'timestamp', isArray: true, isEnum: false},
     timestampWithTz: {type: 'timestamptz', isArray: false, isEnum: false},
+    timestampWithTzArray: {type: 'timestamptz', isArray: true, isEnum: false},
   },
   'alternate_schema.user': {
     id: {type: 'text', isArray: false, isEnum: false},
@@ -351,9 +354,7 @@ test('compile with enumArray', () => {
         
         ) "root"",
       "values": [
-        [
-          "active",
-        ],
+        "["active"]",
       ],
     }
   `);
@@ -377,9 +378,42 @@ test('compile with timestamp (with timezone)', () => {
     {
       "text": "SELECT 
         COALESCE(json_agg(row_to_json("root")), '[]'::json)::text AS "zql_result"
-        FROM (SELECT "timestampsTable_0"."id" as "id",EXTRACT(EPOCH FROM "timestampsTable_0"."timestampWithTz") * 1000 as "timestampWithTz",EXTRACT(EPOCH FROM "timestampsTable_0"."timestampWithoutTz") * 1000 as "timestampWithoutTz"
+        FROM (SELECT "timestampsTable_0"."id" as "id",EXTRACT(EPOCH FROM "timestampsTable_0"."timestampWithTz") * 1000 as "timestampWithTz",ARRAY(SELECT EXTRACT(EPOCH FROM unnest("timestampsTable_0"."timestampWithTzArray")) * 1000) as "timestampWithTzArray",EXTRACT(EPOCH FROM "timestampsTable_0"."timestampWithoutTz") * 1000 as "timestampWithoutTz",ARRAY(SELECT EXTRACT(EPOCH FROM unnest("timestampsTable_0"."timestampWithoutTzArray")) * 1000) as "timestampWithoutTzArray"
         FROM "timestampsTable" AS "timestampsTable_0"
         WHERE "timestampsTable_0"."timestampWithTz" = to_timestamp($1::text::bigint / 1000.0)
+         
+        
+        ) "root"",
+      "values": [
+        ""abc"",
+      ],
+    }
+  `);
+});
+
+test('compile with timestamp array (with timezone)', () => {
+  expect(
+    formatPgInternalConvert(
+      compile(serverSchema, schema, {
+        table: 'timestampsTable',
+        related: [],
+        where: {
+          type: 'simple',
+          op: '=',
+          left: {type: 'column', name: 'timestampWithTzArray'},
+          right: {type: 'literal', value: 'abc'},
+        },
+      }),
+    ),
+  ).toMatchInlineSnapshot(`
+    {
+      "text": "SELECT 
+        COALESCE(json_agg(row_to_json("root")), '[]'::json)::text AS "zql_result"
+        FROM (SELECT "timestampsTable_0"."id" as "id",EXTRACT(EPOCH FROM "timestampsTable_0"."timestampWithTz") * 1000 as "timestampWithTz",ARRAY(SELECT EXTRACT(EPOCH FROM unnest("timestampsTable_0"."timestampWithTzArray")) * 1000) as "timestampWithTzArray",EXTRACT(EPOCH FROM "timestampsTable_0"."timestampWithoutTz") * 1000 as "timestampWithoutTz",ARRAY(SELECT EXTRACT(EPOCH FROM unnest("timestampsTable_0"."timestampWithoutTzArray")) * 1000) as "timestampWithoutTzArray"
+        FROM "timestampsTable" AS "timestampsTable_0"
+        WHERE "timestampsTable_0"."timestampWithTzArray" = ARRAY(
+              SELECT to_timestamp(value::text::bigint / 1000.0) FROM jsonb_array_elements_text($1::text::jsonb)
+            )
          
         
         ) "root"",
@@ -408,9 +442,42 @@ test('compile with timestamp (without timezone)', () => {
     {
       "text": "SELECT 
         COALESCE(json_agg(row_to_json("root")), '[]'::json)::text AS "zql_result"
-        FROM (SELECT "timestampsTable_0"."id" as "id",EXTRACT(EPOCH FROM "timestampsTable_0"."timestampWithTz") * 1000 as "timestampWithTz",EXTRACT(EPOCH FROM "timestampsTable_0"."timestampWithoutTz") * 1000 as "timestampWithoutTz"
+        FROM (SELECT "timestampsTable_0"."id" as "id",EXTRACT(EPOCH FROM "timestampsTable_0"."timestampWithTz") * 1000 as "timestampWithTz",ARRAY(SELECT EXTRACT(EPOCH FROM unnest("timestampsTable_0"."timestampWithTzArray")) * 1000) as "timestampWithTzArray",EXTRACT(EPOCH FROM "timestampsTable_0"."timestampWithoutTz") * 1000 as "timestampWithoutTz",ARRAY(SELECT EXTRACT(EPOCH FROM unnest("timestampsTable_0"."timestampWithoutTzArray")) * 1000) as "timestampWithoutTzArray"
         FROM "timestampsTable" AS "timestampsTable_0"
         WHERE "timestampsTable_0"."timestampWithoutTz" = to_timestamp($1::text::bigint / 1000.0) AT TIME ZONE 'UTC'
+         
+        
+        ) "root"",
+      "values": [
+        ""abc"",
+      ],
+    }
+  `);
+});
+
+test('compile with timestamp (without timezone) array', () => {
+  expect(
+    formatPgInternalConvert(
+      compile(serverSchema, schema, {
+        table: 'timestampsTable',
+        related: [],
+        where: {
+          type: 'simple',
+          op: '=',
+          left: {type: 'column', name: 'timestampWithoutTzArray'},
+          right: {type: 'literal', value: 'abc'},
+        },
+      }),
+    ),
+  ).toMatchInlineSnapshot(`
+    {
+      "text": "SELECT 
+        COALESCE(json_agg(row_to_json("root")), '[]'::json)::text AS "zql_result"
+        FROM (SELECT "timestampsTable_0"."id" as "id",EXTRACT(EPOCH FROM "timestampsTable_0"."timestampWithTz") * 1000 as "timestampWithTz",ARRAY(SELECT EXTRACT(EPOCH FROM unnest("timestampsTable_0"."timestampWithTzArray")) * 1000) as "timestampWithTzArray",EXTRACT(EPOCH FROM "timestampsTable_0"."timestampWithoutTz") * 1000 as "timestampWithoutTz",ARRAY(SELECT EXTRACT(EPOCH FROM unnest("timestampsTable_0"."timestampWithoutTzArray")) * 1000) as "timestampWithoutTzArray"
+        FROM "timestampsTable" AS "timestampsTable_0"
+        WHERE "timestampsTable_0"."timestampWithoutTzArray" = ARRAY(
+              SELECT to_timestamp(value::text::bigint / 1000.0) AT TIME ZONE 'UTC' FROM jsonb_array_elements_text($1::text::jsonb)
+            )
          
         
         ) "root"",
