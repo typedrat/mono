@@ -299,8 +299,8 @@ function createLiteIndices(tx: Database, indices: IndexSpec[]) {
 export const INSERT_BATCH_SIZE = 50;
 
 const MB = 1024 * 1024;
-const BUFFERED_ROWS_THRESHOLD = 10_000;
-const BUFFERED_SIZE_THRESHOLD = 10 * MB;
+const BUFFERED_ROWS_THRESHOLD = 16_000;
+const BUFFERED_SIZE_THRESHOLD = 16 * MB;
 
 async function copy(
   lc: LogContext,
@@ -366,7 +366,7 @@ async function copy(
       totalRows++;
     }
     lc.debug?.(
-      `flushed ${total} rows (${size} bytes) in ${(performance.now() - start).toFixed(3)} ms`,
+      `flushed ${total} ${tableName} rows (${size} bytes) in ${(performance.now() - start).toFixed(3)} ms`,
     );
   }
 
