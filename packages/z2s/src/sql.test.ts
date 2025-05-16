@@ -1,5 +1,4 @@
 import {describe, expect, test} from 'vitest';
-import type {ServerColumnSchema} from './schema.ts';
 import {
   formatPg,
   formatPgInternalConvert,
@@ -527,72 +526,344 @@ describe('string arg packing', () => {
     `);
   });
 
-  test('insert', () => {
-    const values: [ServerColumnSchema, unknown][] = [
-      [
+  describe('insert', () => {
+    test('insert numeric', () => {
+      expect(
+        formatPgInternalConvert(
+          sql`INSERT INTO "foo" VALUES (${sqlConvertColumnArg(
+            {isArray: false, isEnum: false, type: 'numeric'},
+            1,
+            false,
+            false,
+          )})`,
+        ),
+      ).toMatchInlineSnapshot(`
         {
-          isArray: false,
-          isEnum: false,
-          type: 'numeric',
-        },
-        1,
-      ],
-      [
+          "text": "INSERT INTO "foo" VALUES ($1::text::numeric)",
+          "values": [
+            "1",
+          ],
+        }
+      `);
+    });
+
+    test('insert numeric[]', () => {
+      expect(
+        formatPgInternalConvert(
+          sql`INSERT INTO "foo" VALUES (${sqlConvertColumnArg(
+            {isArray: true, isEnum: false, type: 'numeric'},
+            [1, 2, 3],
+            false,
+            false,
+          )})`,
+        ),
+      ).toMatchInlineSnapshot(`
         {
-          isArray: false,
-          isEnum: false,
-          type: 'numeric',
-        },
-        1.1,
-      ],
-      // This MUST NOT insert with a COLLATION
-      [
+          "text": "INSERT INTO "foo" VALUES (ARRAY(
+                  SELECT value::text::numeric FROM jsonb_array_elements_text($1::text::jsonb)
+                ))",
+          "values": [
+            "[1,2,3]",
+          ],
+        }
+      `);
+    });
+
+    test('insert text', () => {
+      expect(
+        formatPgInternalConvert(
+          sql`INSERT INTO "foo" VALUES (${sqlConvertColumnArg(
+            {isArray: false, isEnum: false, type: 'text'},
+            'two',
+            false,
+            false,
+          )})`,
+        ),
+      ).toMatchInlineSnapshot(`
         {
-          isArray: false,
-          isEnum: false,
-          type: 'text',
-        },
-        'two',
-      ],
-      [
+          "text": "INSERT INTO "foo" VALUES ($1::text::text)",
+          "values": [
+            "two",
+          ],
+        }
+      `);
+    });
+
+    test('insert text[]', () => {
+      expect(
+        formatPgInternalConvert(
+          sql`INSERT INTO "foo" VALUES (${sqlConvertColumnArg(
+            {isArray: true, isEnum: false, type: 'text'},
+            ['a', 'b', 'c'],
+            false,
+            false,
+          )})`,
+        ),
+      ).toMatchInlineSnapshot(`
         {
-          isArray: false,
-          isEnum: false,
-          type: 'boolean',
-        },
-        true,
-      ],
-      [
+          "text": "INSERT INTO "foo" VALUES (ARRAY(
+                  SELECT value::text::text FROM jsonb_array_elements_text($1::text::jsonb)
+                ))",
+          "values": [
+            "["a","b","c"]",
+          ],
+        }
+      `);
+    });
+
+    test('insert boolean', () => {
+      expect(
+        formatPgInternalConvert(
+          sql`INSERT INTO "foo" VALUES (${sqlConvertColumnArg(
+            {isArray: false, isEnum: false, type: 'boolean'},
+            true,
+            false,
+            false,
+          )})`,
+        ),
+      ).toMatchInlineSnapshot(`
         {
-          isArray: true,
-          isEnum: false,
-          type: 'numeric',
-        },
-        [1, 2, 3],
-      ],
-    ];
-    expect(
-      formatPgInternalConvert(
-        sql`INSERT INTO "foo" VALUES (${sql.join(
-          values.map(([schema, v]) =>
-            sqlConvertColumnArg(schema, v, false, false),
-          ),
-          ', ',
-        )})`,
-      ),
-    ).toMatchInlineSnapshot(`
-      {
-        "text": "INSERT INTO "foo" VALUES ($1::text::numeric, $2::text::numeric, $3::text::text, $4::text::boolean, ARRAY(
-                SELECT value::text::numeric FROM jsonb_array_elements_text($5::text::jsonb)
-              ))",
-        "values": [
-          "1",
-          "1.1",
-          "two",
-          "true",
-          "[1,2,3]",
-        ],
-      }
-    `);
+          "text": "INSERT INTO "foo" VALUES ($1::text::boolean)",
+          "values": [
+            "true",
+          ],
+        }
+      `);
+    });
+
+    test('insert boolean[]', () => {
+      expect(
+        formatPgInternalConvert(
+          sql`INSERT INTO "foo" VALUES (${sqlConvertColumnArg(
+            {isArray: true, isEnum: false, type: 'boolean'},
+            [true, false],
+            false,
+            false,
+          )})`,
+        ),
+      ).toMatchInlineSnapshot(`
+        {
+          "text": "INSERT INTO "foo" VALUES (ARRAY(
+                  SELECT value::text::boolean FROM jsonb_array_elements_text($1::text::jsonb)
+                ))",
+          "values": [
+            "[true,false]",
+          ],
+        }
+      `);
+    });
+
+    test('insert jsonb', () => {
+      expect(
+        formatPgInternalConvert(
+          sql`INSERT INTO "foo" VALUES (${sqlConvertColumnArg(
+            {isArray: false, isEnum: false, type: 'jsonb'},
+            {a: 1},
+            false,
+            false,
+          )})`,
+        ),
+      ).toMatchInlineSnapshot(`
+        {
+          "text": "INSERT INTO "foo" VALUES ($1::text::jsonb)",
+          "values": [
+            "{"a":1}",
+          ],
+        }
+      `);
+    });
+
+    test('insert jsonb[]', () => {
+      expect(
+        formatPgInternalConvert(
+          sql`INSERT INTO "foo" VALUES (${sqlConvertColumnArg(
+            {isArray: true, isEnum: false, type: 'jsonb'},
+            [{}, {a: 1}],
+            false,
+            false,
+          )})`,
+        ),
+      ).toMatchInlineSnapshot(`
+        {
+          "text": "INSERT INTO "foo" VALUES (ARRAY(
+                  SELECT value::text::jsonb FROM jsonb_array_elements_text($1::text::jsonb)
+                ))",
+          "values": [
+            "[{},{"a":1}]",
+          ],
+        }
+      `);
+    });
+
+    test('insert enum', () => {
+      expect(
+        formatPgInternalConvert(
+          sql`INSERT INTO "foo" VALUES (${sqlConvertColumnArg(
+            {isArray: false, isEnum: true, type: 'some_enum'},
+            'ENUM_KEY',
+            false,
+            false,
+          )})`,
+        ),
+      ).toMatchInlineSnapshot(`
+        {
+          "text": "INSERT INTO "foo" VALUES ($1::text::"some_enum")",
+          "values": [
+            "ENUM_KEY",
+          ],
+        }
+      `);
+    });
+
+    test('insert enum[]', () => {
+      expect(
+        formatPgInternalConvert(
+          sql`INSERT INTO "foo" VALUES (${sqlConvertColumnArg(
+            {isArray: true, isEnum: true, type: 'some_enum'},
+            ['ENUM_KEY', 'OTHER_KEY'],
+            false,
+            false,
+          )})`,
+        ),
+      ).toMatchInlineSnapshot(`
+        {
+          "text": "INSERT INTO "foo" VALUES (ARRAY(
+                  SELECT value::text::"some_enum" FROM jsonb_array_elements_text($1::text::jsonb)
+                ))",
+          "values": [
+            "["ENUM_KEY","OTHER_KEY"]",
+          ],
+        }
+      `);
+    });
+
+    test('insert uuid', () => {
+      expect(
+        formatPgInternalConvert(
+          sql`INSERT INTO "foo" VALUES (${sqlConvertColumnArg(
+            {isArray: false, isEnum: false, type: 'uuid'},
+            '8f1dceb2-b3dd-46cf-9deb-460e9d87541c',
+            false,
+            false,
+          )})`,
+        ),
+      ).toMatchInlineSnapshot(`
+        {
+          "text": "INSERT INTO "foo" VALUES ($1::text::uuid)",
+          "values": [
+            "8f1dceb2-b3dd-46cf-9deb-460e9d87541c",
+          ],
+        }
+      `);
+    });
+
+    test('insert uuid[]', () => {
+      expect(
+        formatPgInternalConvert(
+          sql`INSERT INTO "foo" VALUES (${sqlConvertColumnArg(
+            {isArray: true, isEnum: false, type: 'uuid'},
+            [
+              '8f1dceb2-b3dd-46cf-9deb-460e9d87541c',
+              '11111111-1111-1111-1111-111111111111',
+            ],
+            false,
+            false,
+          )})`,
+        ),
+      ).toMatchInlineSnapshot(`
+        {
+          "text": "INSERT INTO "foo" VALUES (ARRAY(
+                  SELECT value::text::uuid FROM jsonb_array_elements_text($1::text::jsonb)
+                ))",
+          "values": [
+            "["8f1dceb2-b3dd-46cf-9deb-460e9d87541c","11111111-1111-1111-1111-111111111111"]",
+          ],
+        }
+      `);
+    });
+
+    test('insert timestamp', () => {
+      expect(
+        formatPgInternalConvert(
+          sql`INSERT INTO "foo" VALUES (${sqlConvertColumnArg(
+            {isArray: false, isEnum: false, type: 'timestamp'},
+            1712345678901, // JS epoch ms
+            false,
+            false,
+          )})`,
+        ),
+      ).toMatchInlineSnapshot(`
+        {
+          "text": "INSERT INTO "foo" VALUES (to_timestamp($1::text::bigint / 1000.0) AT TIME ZONE 'UTC')",
+          "values": [
+            "1712345678901",
+          ],
+        }
+      `);
+    });
+
+    test('insert timestamp[]', () => {
+      expect(
+        formatPgInternalConvert(
+          sql`INSERT INTO "foo" VALUES (${sqlConvertColumnArg(
+            {isArray: true, isEnum: false, type: 'timestamp'},
+            [1712345678901, 1712345678902],
+            false,
+            false,
+          )})`,
+        ),
+      ).toMatchInlineSnapshot(`
+        {
+          "text": "INSERT INTO "foo" VALUES (ARRAY(
+                  SELECT to_timestamp(value::text::bigint / 1000.0) AT TIME ZONE 'UTC' FROM jsonb_array_elements_text($1::text::jsonb)
+                ))",
+          "values": [
+            "[1712345678901,1712345678902]",
+          ],
+        }
+      `);
+    });
+
+    test('insert timestamptz', () => {
+      expect(
+        formatPgInternalConvert(
+          sql`INSERT INTO "foo" VALUES (${sqlConvertColumnArg(
+            {isArray: false, isEnum: false, type: 'timestamptz'},
+            1712345678901, // JS epoch ms
+            false,
+            false,
+          )})`,
+        ),
+      ).toMatchInlineSnapshot(`
+        {
+          "text": "INSERT INTO "foo" VALUES (to_timestamp($1::text::bigint / 1000.0))",
+          "values": [
+            "1712345678901",
+          ],
+        }
+      `);
+    });
+
+    test('insert timestamptz[]', () => {
+      expect(
+        formatPgInternalConvert(
+          sql`INSERT INTO "foo" VALUES (${sqlConvertColumnArg(
+            {isArray: true, isEnum: false, type: 'timestamptz'},
+            [1712345678901, 1712345678902],
+            false,
+            false,
+          )})`,
+        ),
+      ).toMatchInlineSnapshot(`
+        {
+          "text": "INSERT INTO "foo" VALUES (ARRAY(
+                  SELECT to_timestamp(value::text::bigint / 1000.0) FROM jsonb_array_elements_text($1::text::jsonb)
+                ))",
+          "values": [
+            "[1712345678901,1712345678902]",
+          ],
+        }
+      `);
+    });
   });
 });
